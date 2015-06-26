@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"time"
@@ -22,6 +21,7 @@ type Repo interface {
 	User(id string) (*domain.User, error)
 	SetUser(user *domain.User) error
 	Team(id string) (*domain.Team, error)
+	Teams() ([]domain.Team, error)
 	SetTeam(team *domain.Team) error
 	SetTeamAndUser(team *domain.Team, user *domain.User) error
 	GetTeamMembers(team string) ([]domain.User, error)
@@ -52,6 +52,10 @@ func New() (Repo, error) {
 			return err
 		}
 		_, err = tx.CreateBucketIfNotExists([]byte("teams"))
+		if err != nil {
+			return err
+		}
+		_, err = tx.CreateBucketIfNotExists([]byte("teamusers"))
 		if err != nil {
 			return err
 		}
@@ -127,15 +131,39 @@ func (r *repo) SetTeam(team *domain.Team) error {
 	return r.set("teams", team.ID, team)
 }
 
+func (r *repo) Teams() ([]domain.Team, error) {
+	var teams []domain.Team
+	err := r.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("teams"))
+		return b.ForEach(func(k []byte, v []byte) error {
+			var team domain.Team
+			err := json.Unmarshal(v, &team)
+			if err != nil {
+				return err
+			}
+			teams = append(teams, team)
+			return nil
+		})
+	})
+	return teams, err
+}
+
 func (r *repo) GetTeamMembers(team string) ([]domain.User, error) {
 	var users []domain.User
 	err := r.db.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket([]byte("teams")).Cursor()
-		b := tx.Bucket([]byte("users"))
-		prefix := []byte(team + "#")
-		for k, _ := c.Seek(prefix); bytes.HasPrefix(k, prefix); k, _ = c.Next() {
-			id := k[len(prefix):]
-			u := b.Get(id)
+		tb := tx.Bucket([]byte("teamusers"))
+		ub := tx.Bucket([]byte("users"))
+		var ids []string
+		members := tb.Get([]byte(team))
+		if members == nil {
+			return nil
+		}
+		err := json.Unmarshal(members, &ids)
+		if err != nil {
+			return err
+		}
+		for _, id := range ids {
+			u := ub.Get([]byte(id))
 			var user domain.User
 			err := json.Unmarshal(u, &user)
 			if err != nil {
@@ -152,6 +180,7 @@ func (r *repo) SetTeamAndUser(team *domain.Team, user *domain.User) error {
 	err := r.db.Batch(func(tx *bolt.Tx) error {
 		ub := tx.Bucket([]byte("users"))
 		tb := tx.Bucket([]byte("teams"))
+		tub := tx.Bucket([]byte("teamusers"))
 		tv, err := json.Marshal(team)
 		if err != nil {
 			return err
@@ -164,14 +193,24 @@ func (r *repo) SetTeamAndUser(team *domain.Team, user *domain.User) error {
 		if err != nil {
 			return err
 		}
-		// Index the user in the team
-		err = tb.Put([]byte(team.ID+"#"+user.ID), []byte{})
-		_, err = tx.CreateBucketIfNotExists([]byte("oauth"))
+		err = ub.Put([]byte(user.ID), uv)
 		if err != nil {
 			return err
 		}
-		err = ub.Put([]byte(user.ID), uv)
-		return err
+		var ids []string
+		members := tub.Get([]byte(team.ID))
+		if members != nil {
+			err = json.Unmarshal(members, &ids)
+			if err != nil {
+				return err
+			}
+		}
+		ids = append(ids, user.ID)
+		members, err = json.Marshal(&ids)
+		if err != nil {
+			return err
+		}
+		return tub.Put([]byte(team.ID), members)
 	})
 	return err
 }

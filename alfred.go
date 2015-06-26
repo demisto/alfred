@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/demisto/alfred/bot"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/repo"
 	"github.com/demisto/alfred/web"
@@ -42,8 +43,16 @@ func main() {
 		logrus.Fatal(err)
 	}
 	defer r.Close()
-
-	appC := web.NewContext(r)
+	b, err := bot.New(r)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	err = b.Start()
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	defer b.Stop()
+	appC := web.NewContext(r, b)
 	router := web.New(appC, *public)
 	logrus.Fatal(http.ListenAndServe(":7070", router))
 }

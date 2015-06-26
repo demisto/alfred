@@ -39,8 +39,10 @@ func (ac *AppContext) info(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	for i := range ch.Channels {
-		selected := util.In(savedChannels.Channels, ch.Channels[i].ID)
-		res.Channels = append(res.Channels, idName{ID: ch.Channels[i].ID, Name: ch.Channels[i].Name, Selected: selected})
+		if ch.Channels[i].IsMember {
+			selected := util.In(savedChannels.Channels, ch.Channels[i].ID)
+			res.Channels = append(res.Channels, idName{ID: ch.Channels[i].ID, Name: ch.Channels[i].Name, Selected: selected})
+		}
 	}
 	gr, err := s.GroupList(true)
 	if err != nil {
@@ -61,6 +63,7 @@ func (ac *AppContext) save(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+	ac.b.SubscriptionChanged(u, req)
 	w.WriteHeader(http.StatusNoContent)
 	w.Write([]byte("\n"))
 }
