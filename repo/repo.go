@@ -19,8 +19,10 @@ var (
 // Repo provides access to a persistent storage
 type Repo interface {
 	User(id string) (*domain.User, error)
+	UserByExternalID(id string) (*domain.User, error)
 	SetUser(user *domain.User) error
 	Team(id string) (*domain.Team, error)
+	TeamByExternalID(id string) (*domain.Team, error)
 	Teams() ([]domain.Team, error)
 	SetTeam(team *domain.Team) error
 	SetTeamAndUser(team *domain.Team, user *domain.User) error
@@ -117,6 +119,24 @@ func (r *repo) User(id string) (*domain.User, error) {
 	return user, err
 }
 
+func (r *repo) UserByExternalID(id string) (*domain.User, error) {
+	user := &domain.User{}
+	err := r.db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket([]byte("users")).Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			err := json.Unmarshal(v, user)
+			if err != nil {
+				return err
+			}
+			if user.ExternalID == id {
+				break
+			}
+		}
+		return nil
+	})
+	return user, err
+}
+
 func (r *repo) SetUser(user *domain.User) error {
 	return r.set("users", user.ID, user)
 }
@@ -124,6 +144,24 @@ func (r *repo) SetUser(user *domain.User) error {
 func (r *repo) Team(id string) (*domain.Team, error) {
 	team := &domain.Team{}
 	err := r.get("teams", id, team)
+	return team, err
+}
+
+func (r *repo) TeamByExternalID(id string) (*domain.Team, error) {
+	team := &domain.Team{}
+	err := r.db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket([]byte("teams")).Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			err := json.Unmarshal(v, team)
+			if err != nil {
+				return err
+			}
+			if team.ExternalID == id {
+				break
+			}
+		}
+		return nil
+	})
 	return team, err
 }
 

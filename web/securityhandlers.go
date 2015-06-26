@@ -79,14 +79,6 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, &Error{"oauth_err", 401, "Slack OAuth Error", err.Error()})
 		return
 	}
-	userID, err := random.New()
-	if err != nil {
-		panic(err)
-	}
-	teamID, err := random.New()
-	if err != nil {
-		panic(err)
-	}
 	s, err := slack.New(slack.SetToken(token.AccessToken))
 	if err != nil {
 		panic(err)
@@ -100,36 +92,56 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	ourTeam := domain.Team{
-		ID:          "T" + teamID.String(),
-		Name:        team.Team.Name,
-		EmailDomain: team.Team.EmailDomain,
-		Domain:      team.Team.Domain,
-		Plan:        team.Team.Plan,
-		ExternalID:  team.Team.ID,
-	}
 	user, err := s.UserInfo(test.UserID)
 	if err != nil {
 		panic(err)
 	}
-	ourUser := domain.User{
-		ID:                "U" + userID.String(),
-		Team:              "T" + teamID.String(),
-		Name:              user.User.Name,
-		Type:              domain.UserTypeSlack,
-		Status:            domain.UserStatusActive,
-		RealName:          user.User.RealName,
-		Email:             user.User.Profile.Email,
-		IsBot:             user.User.IsBot,
-		IsAdmin:           user.User.IsAdmin,
-		IsOwner:           user.User.IsOwner,
-		IsPrimaryOwner:    user.User.IsPrimaryOwner,
-		IsRestricted:      user.User.IsRestricted,
-		IsUltraRestricted: user.User.IsUltraRestricted,
-		ExternalID:        user.User.ID,
-		Token:             token.AccessToken,
+	ourTeam, err := ac.r.TeamByExternalID(team.Team.ID)
+	if ourTeam == nil {
+		teamID, err := random.New()
+		if err != nil {
+			panic(err)
+		}
+		ourTeam = &domain.Team{
+			ID:          "T" + teamID.String(),
+			Name:        team.Team.Name,
+			EmailDomain: team.Team.EmailDomain,
+			Domain:      team.Team.Domain,
+			Plan:        team.Team.Plan,
+			ExternalID:  team.Team.ID,
+		}
+	} else {
+		ourTeam.Name, ourTeam.EmailDomain, ourTeam.Domain, ourTeam.Plan =
+			team.Team.Name, team.Team.EmailDomain, team.Team.Domain, team.Team.Plan
 	}
-	err = ac.r.SetTeamAndUser(&ourTeam, &ourUser)
+	ourUser, err := ac.r.UserByExternalID(user.User.ID)
+	if ourUser == nil {
+		userID, err := random.New()
+		if err != nil {
+			panic(err)
+		}
+		ourUser = &domain.User{
+			ID:                "U" + userID.String(),
+			Team:              ourTeam.ID,
+			Name:              user.User.Name,
+			Type:              domain.UserTypeSlack,
+			Status:            domain.UserStatusActive,
+			RealName:          user.User.RealName,
+			Email:             user.User.Profile.Email,
+			IsBot:             user.User.IsBot,
+			IsAdmin:           user.User.IsAdmin,
+			IsOwner:           user.User.IsOwner,
+			IsPrimaryOwner:    user.User.IsPrimaryOwner,
+			IsRestricted:      user.User.IsRestricted,
+			IsUltraRestricted: user.User.IsUltraRestricted,
+			ExternalID:        user.User.ID,
+			Token:             token.AccessToken,
+		}
+	} else {
+		ourUser.Name, ourUser.RealName, ourUser.Email, ourUser.Token =
+			user.User.Name, user.User.RealName, user.User.Profile.Email, token.AccessToken
+	}
+	err = ac.r.SetTeamAndUser(ourTeam, ourUser)
 	if err != nil {
 		panic(err)
 	}
