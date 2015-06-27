@@ -120,15 +120,17 @@ func (r *repo) User(id string) (*domain.User, error) {
 }
 
 func (r *repo) UserByExternalID(id string) (*domain.User, error) {
-	user := &domain.User{}
+	var user *domain.User
 	err := r.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket([]byte("users")).Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			err := json.Unmarshal(v, user)
+			var u domain.User
+			err := json.Unmarshal(v, &u)
 			if err != nil {
 				return err
 			}
-			if user.ExternalID == id {
+			if u.ExternalID == id {
+				user = &u
 				break
 			}
 		}
@@ -148,15 +150,17 @@ func (r *repo) Team(id string) (*domain.Team, error) {
 }
 
 func (r *repo) TeamByExternalID(id string) (*domain.Team, error) {
-	team := &domain.Team{}
+	var team *domain.Team
 	err := r.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket([]byte("teams")).Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			err := json.Unmarshal(v, team)
+			var t domain.Team
+			err := json.Unmarshal(v, &t)
 			if err != nil {
 				return err
 			}
-			if team.ExternalID == id {
+			if t.ExternalID == id {
+				team = &t
 				break
 			}
 		}
@@ -279,21 +283,21 @@ func (r *repo) cleanOAuthState() {
 		select {
 		case <-ticker.C:
 			err := r.db.Batch(func(tx *bolt.Tx) error {
-				b := tx.Bucket([]byte("oauth"))
-				return b.ForEach(func(k []byte, v []byte) error {
+				c := tx.Bucket([]byte("oauth")).Cursor()
+				for k, v := c.First(); k != nil; k, v = c.Next() {
 					var state domain.OAuthState
 					err := json.Unmarshal(v, &state)
 					if err != nil {
 						return err
 					}
 					if time.Since(state.Timestamp) > 5*time.Minute {
-						err = b.Delete(k)
+						err = c.Delete()
 						if err != nil {
 							return err
 						}
 					}
-					return nil
-				})
+				}
+				return nil
 			})
 			if err != nil {
 				logrus.WithField("error", err).Warnln("Unable to delete OAuth state")

@@ -79,10 +79,12 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, &Error{"oauth_err", 401, "Slack OAuth Error", err.Error()})
 		return
 	}
+	log.Debugln("OAuth successful, creating Slack client")
 	s, err := slack.New(slack.SetToken(token.AccessToken))
 	if err != nil {
 		panic(err)
 	}
+	log.Debugln("Slack client created")
 	// Get our own user id
 	test, err := s.AuthTest()
 	if err != nil {
@@ -96,6 +98,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+	log.Debugln("Got all details about myself from Slack")
 	ourTeam, err := ac.r.TeamByExternalID(team.Team.ID)
 	if ourTeam == nil {
 		teamID, err := random.New()
