@@ -8,11 +8,9 @@ machine:
 
 dependencies:
   pre:
-    - cd $HOME/alfred/static/master
     - npm install --global gulp
-    - npm install
-    - bower install
-    - gulp build
-    - cd $HOME/alfred
+    - (cd $HOME/alfred/static/master; npm install)
+    - (cd $HOME/alfred/static/master; bower install)
+    - (cd $HOME/alfred/static/master; gulp build)
     - go get github.com/slavikm/esc
-    - esc -o web/static.go -pkg web -prefix static/site/ -condense static/site/
+    - (cd $HOME/alfred; esc -o web/static.go -pkg web -prefix static/site/ -condense static/site/)
