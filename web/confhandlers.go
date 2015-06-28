@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/demisto/alfred/domain"
-	"github.com/demisto/server/util"
+	"github.com/demisto/alfred/util"
 	"github.com/demisto/slack"
 	"github.com/gorilla/context"
 )

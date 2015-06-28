@@ -8,7 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
-	"github.com/demisto/server/util"
+	"github.com/demisto/alfred/util"
 	"github.com/demisto/slack"
 	"github.com/gorilla/context"
 	"github.com/wayn3h0/go-uuid/random"
