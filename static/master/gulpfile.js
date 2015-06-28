@@ -211,7 +211,7 @@ gulp.task('watch', function() {
 //---------------
 
 // build for production (minify)
-gulp.task('build', ['prod', 'default']);
+gulp.task('build', ['prod', 'default-finish']);
 gulp.task('prod', function() { isProduction = true; });
 // build with sourcemaps (no minify)
 gulp.task('sourcemaps', ['usesources', 'default']);
@@ -224,6 +224,12 @@ gulp.task('start',[
           'watch'
         ]);
 
+gulp.task('finish',[
+          'styles:site',
+          'styles:themes',
+          'templates:pages'
+        ]);
+
 gulp.task('default', gulpsync.sync([
           'scripts:vendor',
           'scripts:site',
@@ -232,6 +238,18 @@ gulp.task('default', gulpsync.sync([
 
   gutil.log(gutil.colors.cyan('************'));
   gutil.log(gutil.colors.cyan('* All Done *'), 'You can start editing your code, LiveReload will update your browser after any change..');
+  gutil.log(gutil.colors.cyan('************'));
+
+});
+
+gulp.task('default-finish', gulpsync.sync([
+          'scripts:vendor',
+          'scripts:site',
+          'finish'
+        ]), function(){
+
+  gutil.log(gutil.colors.cyan('************'));
+  gutil.log(gutil.colors.cyan('* All Done *'));
   gutil.log(gutil.colors.cyan('************'));
 
 });

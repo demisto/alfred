@@ -1,0 +1,18 @@
+## Customize the test machine
+machine:
+  timezone:
+    America/Los_Angeles # Set the timezone
+#  pre:
+#    - bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+#    - source $HOME/.gvm/scripts/gvm; gvm install go1.4.2 --binary
+
+dependencies:
+  pre:
+    - cd $HOME/alfred/static/master
+    - npm install --global gulp
+    - npm install
+    - bower install
+    - gulp build
+    - cd $HOME/alfred
+    - go get github.com/slavikm/esc
+    - esc -o web/static.go -pkg web -prefix static/site/ -condense static/site/
