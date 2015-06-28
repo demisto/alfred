@@ -85,7 +85,7 @@ func (b *Bot) loadSubscriptions() error {
 	}
 	for i := range teams {
 		var teamSubs subscriptions
-		users, err := b.r.GetTeamMembers(teams[i].ID)
+		users, err := b.r.TeamMembers(teams[i].ID)
 		if err != nil {
 			return err
 		}
