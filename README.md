@@ -1,4 +1,4 @@
-# Alfred - Demisto Security Bot
+# Alfred - Demisto Security Bot [![Circle CI](https://circleci.com/gh/demisto/alfred/tree/master.svg?style=svg)](https://circleci.com/gh/demisto/alfred/tree/master)
 
 A Slack / Hipchat bot to add security info to messages containing URLs, hashes and IPs
 
