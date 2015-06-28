@@ -45,6 +45,12 @@
       });
     });
   });
+
+// load the feedback widget
+	FreshWidget.init("", {"queryString": "&widgetType=popup", "utf8": "✓",
+    "widgetType": "popup", "buttonType": "text", "buttonText": "Feedback", "buttonColor": "white", "buttonBg": "#006063",
+    "alignment": "2", "offset": "500px", "formHeight": "500px", "url": "https://demisto.freshdesk.com"} );
+
 })(window.jQuery);
 
 // END Settings Handler
