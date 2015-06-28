@@ -1,6 +1,6 @@
 package domain
 
-import "github.com/demisto/server/util"
+import "github.com/demisto/alfred/util"
 
 // Configuration holds the user configuration
 type Configuration struct {
