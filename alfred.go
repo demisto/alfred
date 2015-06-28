@@ -14,7 +14,6 @@ import (
 
 func main() {
 	confFile := flag.String("conf", "conf.json", "Path to configuration file in JSON format")
-	public := flag.String("public", "site", "Path to the web directory containing the public files")
 	logLevel := flag.String("loglevel", "info", "Specify the log level for output (debug/info/warn/error/fatal/panic) - default is info")
 	logFile := flag.String("logfile", "", "The log file location")
 	flag.Parse()
@@ -53,6 +52,6 @@ func main() {
 	}
 	defer b.Stop()
 	appC := web.NewContext(r, b)
-	router := web.New(appC, *public)
+	router := web.New(appC)
 	logrus.Fatal(http.ListenAndServe(":7070", router))
 }

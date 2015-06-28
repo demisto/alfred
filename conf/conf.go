@@ -27,15 +27,13 @@ var Options struct {
 		// ClientSecret is used to verify Slack reply
 		ClientSecret string
 	}
+	VT string
 	// DB file name
 	DB string
 }
 
 // The pipe writer to wrap around standard logger. It is configured in main.
 var LogWriter *io.PipeWriter
-
-// PublicPath holds the path to the web directories
-var PublicPath string
 
 // IsDev checks if we are running in the development environment.
 func IsDev() bool {
@@ -49,6 +47,7 @@ func Load(filename string, useDefault bool) error {
       "Security" : {"SessionKey": "***REMOVED***", "Timeout": 525600},
       "Env": "DEV",
       "DB": "alfred.db",
+			"VT": "***REMOVED***",
       "Slack": {"ClientID": "***REMOVED***", "ClientSecret": "***REMOVED***"}
     }`)
 	// Start the options with the defaults and override with the file

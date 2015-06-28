@@ -22,3 +22,19 @@ _testmain.go
 *.exe
 *.test
 *.prof
+alfred
+alfred.db
+
+*.sw*
+*~
+
+node_modules/
+vendor/
+bower_components/
+static/site/js/
+static/site/css/
+static/site/*.html
+.DS_Store
+
+# Web static embedded files
+static.go

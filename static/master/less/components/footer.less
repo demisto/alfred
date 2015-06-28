@@ -1,0 +1,37 @@
+/* ========================================================================
+   Component: Footer
+ ========================================================================== */
+ 
+footer {
+  background: #fff;
+  border-top: 1px solid @gray-light;
+  padding: 30px 0;
+  font-size: 14px;
+  text-align: center;
+
+  @media @mobile {
+    text-align: left;
+  }
+  
+  .footer-nav {
+    .list-inline;
+    list-style-type: none;
+    padding: 0;
+    @media @mobile {
+      margin-bottom: 0;
+    }
+    a {
+      color: @text-color;
+      &:hover {
+        color: @link-color;
+      }
+    }
+  }
+
+  .copyright {
+    margin: 0;
+    @media @mobile {
+      text-align: right;
+    }
+  }
+}

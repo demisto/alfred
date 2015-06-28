@@ -1,0 +1,45 @@
+{
+  "name": "Alfred",
+  "version": "0.0.1",
+  "authors": [
+    "@demisto"
+  ],
+  "description": "Alfred - Demisto bot for slack and hipchat integration",
+  "main": "index.html",
+  "keywords": [
+    "demisto",
+    "slack",
+    "hipchat",
+    "integration",
+    "security",
+    "threat intelligence"
+  ],
+  "license": "https://raw.github.com/demisto/alfred-web/master/LICENSE",
+  "homepage": "https://www.demisto.com",
+  "private": true,
+  "dependencies": {
+    "bootstrap": "3.3.4",
+    "html5shiv": "3.7.2",
+    "background-video": "*",
+    "jQuery-One-Page-Nav": "3.0.0",
+    "jquery.scrollTo": "1.4.14",
+    "matchMedia": "0.2.0",
+    "respond": "1.4.2",
+    "retina.js": "1.3.0",
+    "wow": "1.0.2",
+    "modernizr": "2.8.3",
+    "animate.css": "3.2.0",
+    "Nivo-Lightbox": "gilbitron/Nivo-Lightbox#1.2.0",
+    "jquery.easing": "1.3.1",
+    "smoothscroll": "themicon/smoothscroll",
+    "nprogress": "0.1.6",
+    "owl.carousel": "*",
+    "jQuery-Storage-API": "1.7.3",
+    "font-awesome": "4.3.0",
+    "chosen": "1.4.2",
+    "js-cookie": "2.0.1"
+  },
+  "resolutions": {
+    "jquery": ">= 1.9.1"
+  }
+}

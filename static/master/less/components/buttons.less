@@ -1,0 +1,27 @@
+/* ========================================================================
+   Component: Button theme
+ ========================================================================== */
+ 
+.btn-theme {
+  font-size: 18px;
+  border-radius: 4px;
+  background-color: @brand-info;
+  color: #fff;
+  &:hover, &:focus, &:active {
+    background-color: darken(@brand-info, 8%);
+    color: #fff;
+  }
+
+  &.btn-lg {
+    min-width: 180px;
+    padding: 14px 24px;
+    margin: 5px;
+  }
+
+  em {
+    vertical-align: inherit;
+    margin-right: 8px;
+    font-size: 20px;
+  }
+}
+

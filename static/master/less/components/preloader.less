@@ -1,0 +1,72 @@
+/* ========================================================================
+   Component: Site Preloader
+ ========================================================================== */
+ 
+
+@preloader-z-index:   9901;
+@preloader-bar-hg:    4px;
+@preloader-color:     @brand-info;
+
+body {
+  overflow: hidden;
+  &.site-loaded {
+    overflow: auto;
+  }
+}
+
+.preloader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #fefefe;
+  z-index: @preloader-z-index;
+  height: 100%;
+  width: 100%;
+  overflow: hidden !important;
+  visibility: visible;
+  opacity: 1;
+  transition-delay:0s;
+
+  > .loading {
+    position: absolute;
+    top: 50%;
+    width: 100%;
+    height: 40px;
+    margin-top: -30px;
+    text-align: center;
+    font-size: 12px;
+    visibility: visible;
+    opacity: 1;
+    transition-delay:0s;
+  }
+  
+  .site-loaded & {
+    visibility: hidden;
+    opacity: 0;
+    .transition(~"visibility 0s linear 1s, opacity 1s ease-in");
+    // .translate3d(0,0,0);
+    .loading {
+      visibility: hidden;
+      opacity: 0;
+      .transition(~"visibility 0s linear .5s, opacity .5s ease-in");
+    }
+  }
+
+
+}
+
+
+#nprogress .bar {
+  z-index: @preloader-z-index + 10;
+  top: 50%;
+  background: @preloader-color;
+  height: @preloader-bar-hg;
+  margin-top: -(@preloader-bar-hg/2);
+}
+
+#nprogress .peg {
+  .box-shadow(0 0 0 #000);
+}
+

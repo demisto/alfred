@@ -1,0 +1,52 @@
+/* ========================================================================
+   Component: Feedback
+ ========================================================================== */
+ 
+.feedbacks {
+  padding: 110px 0;
+  color: #fff;
+  /* Background image fallback */
+  background: url('../img/bg-fallback-feedback.jpg') no-repeat center;
+  .background-size(cover);
+
+  // @media @mobile {
+  //   background: none;
+  // }
+
+
+  .feedback-client {
+    max-width: 750px;
+    margin: auto;
+  
+    .feedback-client-picture {
+      width: 80px;
+      height: 80px;
+      margin: auto;
+      line-height: 80px;
+      font-size: 24px;
+    }
+
+
+    .feedback-client-msg {
+      font-size: 18px;
+      font-style: italic;
+      margin-top: 40px;
+      margin-bottom: 30px;
+    }
+
+    .feedback-client-name {
+      margin-top: 15px;
+      font-weight: 400;
+    }
+
+    .feedback-client-company {
+      font-size: 12px;
+    }
+  }
+
+  .owl-theme .owl-controls .owl-page span {
+    border: 1px solid #fff;
+    background-color: fade(#fff, 60%);
+  }
+
+}

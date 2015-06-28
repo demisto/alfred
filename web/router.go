@@ -1,9 +1,7 @@
 package web
 
 import (
-	"fmt"
 	"net/http"
-	"os"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
@@ -18,9 +16,21 @@ var public string
 
 func pageHandler(file string) func(w http.ResponseWriter, r *http.Request) {
 	m := func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, public+file)
+		log.Debugf("Looking for file %s\n", file)
+		f, err := FS(conf.IsDev()).Open(file)
+		if err != nil {
+			log.Warn("Could not find file %s - %v", file, err)
+			WriteError(w, ErrInternalServer)
+			return
+		}
+		stat, err := f.Stat()
+		if err != nil {
+			log.Warn("Could not stat file %s - %v", file, err)
+			WriteError(w, ErrInternalServer)
+			return
+		}
+		http.ServeContent(w, r, file, stat.ModTime(), f)
 	}
-
 	return m
 }
 
@@ -51,32 +61,8 @@ func (r *Router) Delete(path string, handler http.Handler) {
 	r.DELETE(path, wrapHandler(handler))
 }
 
-func handlePublicPath(pubPath string) {
-	switch {
-	// absolute path
-	case len(pubPath) > 1 && (pubPath[0] == '/' || pubPath[0] == '\\'):
-		public = pubPath
-	// absolute path win
-	case len(pubPath) > 2 && pubPath[1] == ':':
-		public = pubPath
-	// relative
-	case len(pubPath) > 1 && pubPath[0] == '.':
-		public = pubPath
-	default:
-		public = "./" + pubPath
-	}
-	if pubPath[len(pubPath)-1] == '/' || pubPath[len(pubPath)-1] == '\\' {
-		public = pubPath
-	} else {
-		public = fmt.Sprintf("%s%c", pubPath, os.PathSeparator)
-	}
-	log.Infof("Using public path %v", public)
-	conf.PublicPath = public
-}
-
 // New creates a new router
-func New(appC *AppContext, pubPath string) *Router {
-	handlePublicPath(pubPath)
+func New(appC *AppContext) *Router {
 	r := &Router{httprouter.New()}
 	staticHandlers := alice.New(context.ClearHandler, loggingHandler, csrfHandler, recoverHandler)
 	commonHandlers := staticHandlers.Append(acceptHandler)
@@ -89,13 +75,13 @@ func New(appC *AppContext, pubPath string) *Router {
 	r.Get("/info", authHandlers.ThenFunc(appC.info))
 	r.Post("/save", authHandlers.Append(contentTypeHandler, bodyHandler(domain.Configuration{})).ThenFunc(appC.save))
 	// Static
-	r.Get("/", staticHandlers.ThenFunc(pageHandler("index.html")))
-	r.Get("/conf", staticHandlers.ThenFunc(pageHandler("conf.html")))
-	r.ServeFiles("/css/*filepath", http.Dir(public+"css"))
-	r.ServeFiles("/img/*filepath", http.Dir(public+"img"))
-	r.ServeFiles("/js/*filepath", http.Dir(public+"js"))
-	r.ServeFiles("/vendor/*filepath", http.Dir(public+"vendor"))
-	r.ServeFiles("/video/*filepath", http.Dir(public+"video"))
+	r.Get("/", staticHandlers.ThenFunc(pageHandler("/index.html")))
+	r.Get("/conf", staticHandlers.ThenFunc(pageHandler("/conf.html")))
+	r.ServeFiles("/css/*filepath", Dir(conf.IsDev(), "/css/"))
+	r.ServeFiles("/img/*filepath", Dir(conf.IsDev(), "/img/"))
+	r.ServeFiles("/js/*filepath", Dir(conf.IsDev(), "/js/"))
+	r.ServeFiles("/vendor/*filepath", Dir(conf.IsDev(), "/vendor/"))
+	r.ServeFiles("/video/*filepath", Dir(conf.IsDev(), "/video/"))
 	return r
 }
 

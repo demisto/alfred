@@ -1,0 +1,31 @@
+// START CONFIGURATION
+header#conf.header
+  .full-screen
+    // START STICKY NAVBAR
+    .navbar.navbar-default.navbar-fixed-top.navbar-fixed
+      .container
+        .navbar-header
+          a.navbar-brand(href='#')
+            img(src='img/logo.png', alt='')
+    // END STICKY NAVBAR
+
+
+    .container
+      .row
+        .col-lg-8.col-lg-offset-2.col-md-10.col-md-offset-1
+          // INTRO MESSAGE
+          .intro-section
+            h1.intro Configure Alfred
+            form(class="configform")
+              .form-group
+                label(for='channels') Select "Slack channels" that Alfred will monitor
+                select.form-control#channels(data-placeholder='Please chose channels to monitor', multiple, class='chosen-select')
+              .form-group
+                label(for='groups') Select "Private groups" that Alfred will monitor
+                select.form-control#groups(data-placeholder='Please chose groups to monitor', multiple, class='chosen-select')
+              .checkbox
+                label
+                  input#im(type='checkbox')
+                  | Monitor IM conversations
+
+// END CONFIGURATION

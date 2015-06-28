@@ -1,0 +1,99 @@
+/* ========================================================================
+   Component: Header
+ ========================================================================== */
+
+
+header {
+  overflow: hidden;
+  /* Background image fallback */
+  text-align: center;
+  background: url('../img/bg-fallback-header.jpg') no-repeat center;
+  .background-size(cover);
+
+  @media @tablet {
+    background: none;
+  }
+
+  @media @ipad {
+    background: url('../img/bg-fallback-header.jpg') no-repeat center;
+    .background-size(cover);
+  }
+
+  /* INTRO */
+
+  .intro-section {
+    margin: 0 auto;
+
+    @media @mobile {
+      padding-top: 5%;
+    }
+    @media @tablet {
+      padding-top: 9%;
+    }
+    @media @ipad-landscape {
+      padding-top: 20px;
+    }
+
+    .intro {
+      color: #fff;
+      margin-bottom: 36px;
+      margin-top: 100px;
+    }
+    .buy-link {
+      color: #fff;
+      &:hover, &:focus {
+        color: @link-color;;
+      }
+    }
+
+    h5 {
+      color: #fff;
+    }
+
+    .btn-theme {
+      margin-top: 30px;
+    }
+  }
+
+  .intro-shot {
+    padding: 0 20px;
+    margin-top: 30px;
+    @media @tablet {
+      position: absolute;
+      left: 0;
+      right: 0;
+    }
+  }
+
+  .top-logo {
+    padding: 15px;
+    text-align: center;
+    height: 70px;
+    margin: 0 auto;
+    > img {
+      display: inline-block;
+      max-height: 100%;
+      width: auto;
+    }
+    @media @tablet {
+      height: auto;
+      padding: 60px;
+    }
+    @media @ipad-landscape {
+      padding-bottom: 20px;
+    }
+
+  }
+
+  .full-screen {
+    width: 100%;
+    min-height: 90vh;
+  }
+
+}
+
+
+.background-size(@type) {
+  -webkit-background-size: @type;
+          background-size: @type;
+}

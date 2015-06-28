@@ -1,0 +1,66 @@
+
+@import "../components/variables";
+
+@theme-color: @brand-purple;
+
+/* BUTTON THEME */
+
+.btn-theme {
+  background-color: @theme-color;
+  color: #fff;
+  &:hover, &:focus, &:active {
+    background-color: darken(@theme-color, 8%);
+    color: #fff;
+  }
+}
+
+/* FEATURES  */
+
+.features-list {
+  .feature {
+    .feature-icon {
+      color: @theme-color;
+    }
+  }
+}
+
+
+/* CONTACTS */
+.list-icons {
+  li {
+    a {
+      &:hover, &:focus {
+        color: @theme-color;
+      }
+    }
+  }
+}
+
+/* PLANS  */
+.plan {
+  background-color: @gray-lighter;
+  
+  .plan-header {
+    background-color: @theme-color;
+  }
+
+  .plan-features {
+    > li {
+      > em {
+        color: @theme-color;
+      }
+    }
+  }
+
+  .plan-feature-disable {
+    color: @brand-danger !important;
+  }
+
+}
+
+/* SITE TEXT */
+.featured-list {
+  > li {
+    color: @theme-color;
+  }
+}

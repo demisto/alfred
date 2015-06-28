@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"flag"
 	"log"
 	"os"
 	"regexp"
@@ -17,8 +16,6 @@ import (
 	"github.com/demisto/slack"
 	"github.com/slavikm/govt"
 )
-
-var vtToken = flag.String("vt", "", "API token to VirusTotal")
 
 // subscription holds the interest we have for each team
 type subscription struct {
@@ -65,7 +62,7 @@ func New(r repo.Repo) (*Bot, error) {
 	if err != nil {
 		return nil, err
 	}
-	vt, err := govt.New(govt.SetApikey(*vtToken), govt.SetErrorLog(log.New(os.Stderr, "VT:", log.Lshortfile)))
+	vt, err := govt.New(govt.SetApikey(conf.Options.VT), govt.SetErrorLog(log.New(os.Stderr, "VT:", log.Lshortfile)))
 	if err != nil {
 		return nil, err
 	}

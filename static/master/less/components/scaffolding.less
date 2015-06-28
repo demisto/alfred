@@ -1,0 +1,55 @@
+/* ========================================================================
+   Component: Scaffolding
+ ========================================================================== */
+ 
+html {
+  /* @replace rtl */ direction: ltr;
+  font-size: 65%;
+  
+  @media @mobile {
+    font-size: 80%; 
+  }
+
+  @media @ls-mobile {
+    font-size: 70%;
+  }
+  
+  @media @tablet {
+    font-size: 100%;
+  }
+}
+
+body {
+  font-weight: 300;
+  overflow-x: hidden !important; // hides overflow animations
+}
+
+
+a {
+  .transition(all ease 0.3s);
+  &:hover {
+    text-decoration: none;
+  }
+}
+
+.btn {
+  &:focus,
+  &:active {
+    outline: inherit;
+  }
+}
+
+.bg-purple {
+  background-color: @brand-purple;
+}
+
+
+/* Win 8 IE 10 & Windows Phone 8 fix */
+
+// @-webkit-viewport,
+// @-moz-viewport,
+// @-ms-viewport,
+// @-o-viewport,
+// @viewport {
+//   width: device-width;
+// }
