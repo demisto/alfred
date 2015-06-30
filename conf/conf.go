@@ -28,8 +28,15 @@ var Options struct {
 		ClientSecret string
 	}
 	VT string
-	// DB file name
-	DB string
+	// DB properties
+	DB struct {
+		// ConnectString how to connect to DB
+		ConnectString string
+		// Username for the DB
+		Username string
+		// Password for DB
+		Password string
+	}
 }
 
 // The pipe writer to wrap around standard logger. It is configured in main.
@@ -46,7 +53,7 @@ func Load(filename string, useDefault bool) error {
 	defOptions := []byte(`{
       "Security" : {"SessionKey": "***REMOVED***", "Timeout": 525600},
       "Env": "DEV",
-      "DB": "alfred.db",
+      "DB": {"ConnectString": "alfred.db"},
 			"VT": "***REMOVED***",
       "Slack": {"ClientID": "***REMOVED***", "ClientSecret": "***REMOVED***"}
     }`)

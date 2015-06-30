@@ -112,6 +112,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 			Domain:      team.Team.Domain,
 			Plan:        team.Team.Plan,
 			ExternalID:  team.Team.ID,
+			Created:     time.Now(),
 		}
 	} else {
 		ourTeam.Name, ourTeam.EmailDomain, ourTeam.Domain, ourTeam.Plan =
@@ -139,6 +140,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 			IsUltraRestricted: user.User.IsUltraRestricted,
 			ExternalID:        user.User.ID,
 			Token:             token.AccessToken,
+			Created:           time.Now(),
 		}
 	} else {
 		ourUser.Name, ourUser.RealName, ourUser.Email, ourUser.Token =

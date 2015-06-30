@@ -37,7 +37,13 @@ func main() {
 	logrus.SetOutput(logf)
 	conf.LogWriter = logrus.StandardLogger().Writer()
 	defer conf.LogWriter.Close()
-	r, err := repo.New()
+	// If we are on DEV, let's use embedded DB. On test and prod we will use MySQL
+	var r repo.Repo
+	if conf.IsDev() {
+		r, err = repo.New()
+	} else {
+		r, err = repo.NewMySQL()
+	}
 	if err != nil {
 		logrus.Fatal(err)
 	}

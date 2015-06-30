@@ -18,8 +18,8 @@ type repo struct {
 func New() (Repo, error) {
 	// Open the my.db data file in your current directory.
 	// It will be created if it doesn't exist.
-	logrus.Infof("Using database file %s\n", conf.Options.DB)
-	db, err := bolt.Open(conf.Options.DB, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	logrus.Infof("Using database file %s\n", conf.Options.DB.ConnectString)
+	db, err := bolt.Open(conf.Options.DB.ConnectString, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return nil, err
 	}

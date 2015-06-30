@@ -1,7 +1,8 @@
+// +build integration
+
 package repo
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -9,29 +10,32 @@ import (
 	"github.com/demisto/alfred/domain"
 )
 
-const db = "/tmp/alfred-test.db"
-
-func TestNew(t *testing.T) {
-	conf.Options.DB.ConnectString = db
-	r, err := New()
+func getTestDB(t *testing.T) Repo {
+	conf.Options.DB.ConnectString, conf.Options.DB.Username, conf.Options.DB.Password = "tcp/demistot?parseTime=true", "demisto", "***REMOVED***"
+	r, err := NewMySQL()
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	r.Close()
-	_, err = os.Stat(db)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	os.Remove(db)
+	db := r.(*repoMySQL)
+	db.db.Exec("DELETE FROM oauth_state")
+	db.db.Exec("DELETE FROM configuration")
+	db.db.Exec("DELETE FROM users")
+	db.db.Exec("DELETE FROM teams")
+	return r
 }
 
-func TestUser(t *testing.T) {
-	conf.Options.DB.ConnectString = db
-	r, err := New()
+func TestNewMySQL(t *testing.T) {
+	r := getTestDB(t)
+	r.Close()
+}
+
+func TestUserMySQL(t *testing.T) {
+	r := getTestDB(t)
+	err := r.SetTeam(&domain.Team{ID: "zzz", Name: "test"})
 	if err != nil {
-		t.Fatalf("%v", err)
+		t.Errorf("Unable to create team - %v", err)
 	}
-	err = r.SetUser(&domain.User{ID: "xxx", Name: "test", ExternalID: "yyy"})
+	err = r.SetUser(&domain.User{ID: "xxx", Team: "zzz", Name: "test", ExternalID: "yyy"})
 	if err != nil {
 		t.Errorf("Unable to create user - %v", err)
 	}
@@ -47,16 +51,11 @@ func TestUser(t *testing.T) {
 		t.Error("User name is not retrieved")
 	}
 	r.Close()
-	os.Remove(db)
 }
 
-func TestTeam(t *testing.T) {
-	conf.Options.DB.ConnectString = db
-	r, err := New()
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	err = r.SetTeam(&domain.Team{ID: "xxx", Name: "test", ExternalID: "yyy"})
+func TestTeamMySQL(t *testing.T) {
+	r := getTestDB(t)
+	err := r.SetTeam(&domain.Team{ID: "xxx", Name: "test", ExternalID: "yyy"})
 	if err != nil {
 		t.Errorf("Unable to create team - %v", err)
 	}
@@ -79,17 +78,12 @@ func TestTeam(t *testing.T) {
 		t.Errorf("expecting only 1 team but got %d", len(teams))
 	}
 	r.Close()
-	os.Remove(db)
 }
 
-func TestTeamAndUser(t *testing.T) {
-	conf.Options.DB.ConnectString = db
-	r, err := New()
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	err = r.SetTeamAndUser(&domain.Team{ID: "t1", Name: "test-team", ExternalID: "te1"},
-		&domain.User{ID: "u1", Name: "test-user", ExternalID: "ue1"})
+func TestTeamAndUserMySQL(t *testing.T) {
+	r := getTestDB(t)
+	err := r.SetTeamAndUser(&domain.Team{ID: "t1", Name: "test-team", ExternalID: "te1"},
+		&domain.User{ID: "u1", Team: "t1", Name: "test-user", ExternalID: "ue1"})
 	if err != nil {
 		t.Errorf("Unable to create team and user - %v", err)
 	}
@@ -109,16 +103,11 @@ func TestTeamAndUser(t *testing.T) {
 		t.Error("Did not load the correct user")
 	}
 	r.Close()
-	os.Remove(db)
 }
 
-func TestOAuthState(t *testing.T) {
-	conf.Options.DB.ConnectString = db
-	r, err := New()
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	err = r.SetOAuthState(&domain.OAuthState{State: "x", Timestamp: time.Now()})
+func TestOAuthStateMySQL(t *testing.T) {
+	r := getTestDB(t)
+	err := r.SetOAuthState(&domain.OAuthState{State: "x", Timestamp: time.Now()})
 	if err != nil {
 		t.Errorf("Unable to save state - %v", err)
 	}
@@ -131,5 +120,4 @@ func TestOAuthState(t *testing.T) {
 		t.Errorf("Unable to load state - %v", err)
 	}
 	r.Close()
-	os.Remove(db)
 }
