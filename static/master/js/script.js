@@ -203,4 +203,10 @@
     });
   });
 
+  window.logout = function() {
+    $.getJSON('/logout', function() {
+      var loc = window.location;
+      loc.href = loc.protocol + '//' + loc.host;
+    });
+  };
 })(window.jQuery);
