@@ -1,6 +1,6 @@
 // START CONFIGURATION
-header#conf.header
-  .full-screen
+section#conf.config-page
+  .full-screen-conf
     // START STICKY NAVBAR
     .navbar.navbar-default.navbar-fixed-top.navbar-fixed
       .container
@@ -15,16 +15,16 @@ header#conf.header
       .row
         .col-lg-8.col-lg-offset-2.col-md-10.col-md-offset-1
           // INTRO MESSAGE
-          .intro-section
-            h1.intro Configure Alfred
+          .config-section
+            h1 Configure Alfred
             form(class="configform")
-              .form-group
+              .form-group.config-entry
                 label(for='channels') Select "Slack channels" that Alfred will monitor
                 select.form-control#channels(data-placeholder='Please chose channels to monitor', multiple, class='chosen-select')
-              .form-group
+              .form-group.config-entry
                 label(for='groups') Select "Private groups" that Alfred will monitor
                 select.form-control#groups(data-placeholder='Please chose groups to monitor', multiple, class='chosen-select')
-              .checkbox
+              .checkbox.config-entry
                 label
                   input#im(type='checkbox')
                   | Monitor IM conversations

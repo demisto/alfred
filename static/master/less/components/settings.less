@@ -1,6 +1,62 @@
 /* ========================================================================
    Component: Settings
  ========================================================================== */
+    .config-page {
+      overflow: hidden;
+      /* Background image fallback */
+      text-align: center;
+      background: #136c70;
+      .background-size(cover);
+
+      @media @tablet {
+    //    background: none;
+      }
+
+      @media @ipad {
+        background: #588C7E;
+        .background-size(cover);
+      }
+
+      .config-section {
+        margin: 0 auto;
+
+        @media @mobile {
+          padding-top: 5%;
+        }
+        @media @tablet {
+          padding-top: 9%;
+        }
+        @media @ipad-landscape {
+          padding-top: 20px;
+        }
+      }
+
+      .config-entry {
+        margin: 0 auto;
+
+        @media @mobile {
+          padding-top: 5%;
+        }
+        @media @tablet {
+          padding-top: 9%;
+        }
+        @media @ipad-landscape {
+          padding-top: 15px;
+        }
+      }
+
+      .full-screen-conf {
+        width: 100%;
+        min-height: 90vh;
+      }
+
+    }
+
+
+    .background-size(@type) {
+      -webkit-background-size: @type;
+              background-size: @type;
+    }
 
 .channels {
   width: 90%;
