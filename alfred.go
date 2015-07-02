@@ -39,7 +39,7 @@ func main() {
 	defer conf.LogWriter.Close()
 	// If we are on DEV, let's use embedded DB. On test and prod we will use MySQL
 	var r repo.Repo
-	if conf.IsDev() {
+	if conf.IsDev() || conf.Options.DB.Username == "" {
 		r, err = repo.New()
 	} else {
 		r, err = repo.NewMySQL()
