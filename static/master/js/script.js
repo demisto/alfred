@@ -197,10 +197,13 @@
   // Check if we already have the cookie and if so, change the title of the button
   // -----------------------------------
   $(function () {
-    $.getJSON('/user', function(data) {
-      $('#slack-message').text('Configure Alfred');
-      $('#action').attr('href', '/conf')
-    });
+    // If we are on the homepage
+    if ($('#slack-message').length) {
+      $.getJSON('/user', function(data) {
+        $('#slack-message').text('Configure Alfred');
+        $('#action').attr('href', '/conf')
+      });      
+    }
   });
 
   window.logout = function() {

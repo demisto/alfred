@@ -59,5 +59,9 @@ func main() {
 	defer b.Stop()
 	appC := web.NewContext(r, b)
 	router := web.New(appC)
-	logrus.Fatal(http.ListenAndServe(":7070", router))
+	if conf.IsDev() {
+		logrus.Fatal(http.ListenAndServe(":7070", router))
+	} else {
+		logrus.Fatal(http.ListenAndServe(":7070", router))
+	}
 }
