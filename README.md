@@ -25,7 +25,7 @@ Create the Go wrapper around the static files:
 ```sh
 $ go get -v github.com/slavikm/esc
 $ cd $GOPATH/src/github.com/demisto/alfred/
-$ $GOPATH/bin/esc -o web/static.go -pkg web -prefix static/site/ -condense -ignore \\.DS_Store static/site/
+$ $GOPATH/bin/esc -o web/static.go -pkg web -prefix static/site/ -ignore \\.DS_Store static/site/
 ```
 
 And finally, install and run:
