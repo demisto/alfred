@@ -8,6 +8,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
+	"github.com/demisto/alfred/util"
 )
 
 type repo struct {
@@ -222,12 +223,15 @@ func (r *repo) SetTeamAndUser(team *domain.Team, user *domain.User) error {
 				return err
 			}
 		}
-		ids = append(ids, user.ID)
-		members, err = json.Marshal(&ids)
-		if err != nil {
-			return err
+		if !util.In(ids, user.ID) {
+			ids = append(ids, user.ID)
+			members, err = json.Marshal(&ids)
+			if err != nil {
+				return err
+			}
+			return tub.Put([]byte(team.ID), members)
 		}
-		return tub.Put([]byte(team.ID), members)
+		return nil
 	})
 	return err
 }
