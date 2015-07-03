@@ -1,12 +1,18 @@
 package domain
 
-import "github.com/demisto/alfred/util"
+import (
+	"regexp"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/demisto/alfred/util"
+)
 
 // Configuration holds the user configuration
 type Configuration struct {
 	Channels []string `json:"channels"`
 	Groups   []string `json:"groups"`
 	IM       bool     `json:"im"`
+	Regexp   string   `json:"regexp"`
 }
 
 // IsActive returns true if there is at least one active part for the user
@@ -15,17 +21,28 @@ func (c *Configuration) IsActive() bool {
 }
 
 // IsInterestedIn the given channel
-func (c *Configuration) IsInterestedIn(channel string) bool {
+func (c *Configuration) IsInterestedIn(channel, channelName string) bool {
+	logrus.Debugf("Chacking interest in %s, %s for %#v\n", channel, channelName, c)
 	if len(channel) == 0 {
 		return false
 	}
+	found := false
 	switch channel[0] {
 	case 'C':
-		return util.In(c.Channels, channel)
+		found = util.In(c.Channels, channel)
 	case 'G':
-		return util.In(c.Groups, channel)
+		found = util.In(c.Groups, channel)
 	case 'D':
 		return c.IM
 	}
-	return false
+	if !found && c.Regexp != "" {
+		re, err := regexp.Compile(c.Regexp)
+		if err != nil {
+			logrus.Warnf("Found invalid regexp in configuration - %v\n", err)
+		} else {
+			logrus.Debugf("Matching %s\n", c.Regexp)
+			return re.MatchString(channelName)
+		}
+	}
+	return found
 }

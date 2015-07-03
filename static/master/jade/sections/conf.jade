@@ -20,10 +20,14 @@ section#conf.config-page
             form(class="configform")
               .form-group.config-entry
                 label(for='channels') Select "Slack channels" that Alfred will monitor
-                select.form-control#channels(data-placeholder='Please chose channels to monitor', multiple, class='chosen-select')
+                select.form-control.chosen-select#channels(data-placeholder='Please chose channels to monitor', multiple)
               .form-group.config-entry
                 label(for='groups') Select "Private groups" that Alfred will monitor
-                select.form-control#groups(data-placeholder='Please chose groups to monitor', multiple, class='chosen-select')
+                select.form-control.chosen-select#groups(data-placeholder='Please chose groups to monitor', multiple)
+              .form-group.config-entry
+                label(for='regexp') Regular expression to select both groups and channels that Alfred will monitor (you can just ignore if you don't know what this means)
+                input.form-control#regexp(placeholder='Please enter regular expression')
+                #regexpChannels
               .checkbox.config-entry
                 label
                   input#im(type='checkbox')

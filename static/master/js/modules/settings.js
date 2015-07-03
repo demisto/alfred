@@ -20,13 +20,27 @@
       }
       $('#groups').append(groups.join(''));
       $('#im').prop('checked', data.im);
+      $('#regexp').val(data.regexp);
+      $.ajax({
+        type: 'POST',
+        url: '/match',
+        data: JSON.stringify({regexp: data.regexp}),
+        headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
+        dataType: 'json',
+        contentType: 'application/json; charset=utf-8',
+        success: function(data){
+          $('#regexpChannels').html('Will monitor: ' + data.join(', '));
+        }
+      });
+
       // Enable chosen
       $(".chosen-select").chosen({no_results_text: "Oops, No matching entry found:"});
-      $('.chosen-select,#im').change(function(evt, params) {
+      var saveAll = function() {
         var save = {};
         save.channels = [];
         save.groups = [];
         save.im = $('#im').is(':checked');
+        save.regexp = $('#regexp').val();
         $('#channels option:selected').each(function() {
           save.channels.push($(this).val());
         });
@@ -44,6 +58,33 @@
             // TODO - clear the toaster
           }
         });
+      };
+      $('.chosen-select,#im').change(function(evt) {
+        saveAll();
+      });
+      $('#regexp').change(function(evt) {
+        // First, validate and load the affected channels
+        if (evt && evt.target && evt.target.value) {
+          $.ajax({
+            type: 'POST',
+            url: '/match',
+            data: JSON.stringify({regexp: evt.target.value}),
+            headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
+            dataType: 'json',
+            contentType: 'application/json; charset=utf-8',
+            success: function(data){
+              $('#regexpChannels').html('Will monitor: ' + data.join(', '));
+              saveAll();
+            },
+            error: function(xhr, status, error) {
+              var err = error;
+              if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
+                err += " - " + xhr.responseJSON.errors[0].detail;
+              }
+              $('#regexpChannels').html(err);
+            }
+          });
+        }
       });
     });
   }

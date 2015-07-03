@@ -73,6 +73,7 @@ func New(appC *AppContext) *Router {
 	r.Get("/logout", staticHandlers.ThenFunc(appC.logout))
 	r.Get("/user", authHandlers.ThenFunc(appC.currUser))
 	r.Get("/info", authHandlers.ThenFunc(appC.info))
+	r.Post("/match", authHandlers.Append(contentTypeHandler, bodyHandler(regexpMatch{})).ThenFunc(appC.match))
 	r.Post("/save", authHandlers.Append(contentTypeHandler, bodyHandler(domain.Configuration{})).ThenFunc(appC.save))
 	// Static
 	r.Get("/", staticHandlers.ThenFunc(pageHandler("/index.html")))

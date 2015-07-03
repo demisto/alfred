@@ -2,7 +2,9 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"regexp"
 
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/util"
@@ -20,6 +22,7 @@ type infoResponse struct {
 	Channels []idName `json:"channels"`
 	Groups   []idName `json:"groups"`
 	IM       bool     `json:"im"`
+	Regexp   string   `json:"regexp"`
 }
 
 func (ac *AppContext) info(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +56,49 @@ func (ac *AppContext) info(w http.ResponseWriter, r *http.Request) {
 		res.Groups = append(res.Groups, idName{ID: gr.Groups[i].ID, Name: gr.Groups[i].Name, Selected: selected})
 	}
 	res.IM = savedChannels.IM
+	res.Regexp = savedChannels.Regexp
+	json.NewEncoder(w).Encode(res)
+}
+
+type regexpMatch struct {
+	Regexp string `json:"regexp"`
+}
+
+// match the regular expression to all channels / groups from
+func (ac *AppContext) match(w http.ResponseWriter, r *http.Request) {
+	req := context.Get(r, "body").(*regexpMatch)
+	u := context.Get(r, "user").(*domain.User)
+	// First, let's compile the regexp
+	re, err := regexp.Compile(req.Regexp)
+	if err != nil {
+		WriteError(w, &Error{ID: "bad_request", Status: 400, Title: "Bad Request", Detail: fmt.Sprintf("Error parsing regexp - %v", err)})
+		return
+	}
+	s, err := slack.New(slack.SetToken(u.Token))
+	if err != nil {
+		panic(err)
+	}
+	var res []string
+	ch, err := s.ChannelList(true)
+	if err != nil {
+		panic(err)
+	}
+	for i := range ch.Channels {
+		if ch.Channels[i].IsMember {
+			if re.MatchString(ch.Channels[i].Name) {
+				res = append(res, ch.Channels[i].Name)
+			}
+		}
+	}
+	gr, err := s.GroupList(true)
+	if err != nil {
+		panic(err)
+	}
+	for i := range gr.Groups {
+		if re.MatchString(gr.Groups[i].Name) {
+			res = append(res, gr.Groups[i].Name)
+		}
+	}
 	json.NewEncoder(w).Encode(res)
 }
 

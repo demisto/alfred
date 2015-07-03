@@ -24,21 +24,59 @@ type subscription struct {
 	s        *slack.Slack // the slack client
 }
 
-type subscriptions []subscription
+type subscriptions struct {
+	subscriptions []subscription
+	info          *slack.RTMStartReply
+}
 
-func (subs subscriptions) FirstSubForChannel(channel string) *subscription {
-	for i := range subs {
-		if subs[i].interest.IsInterestedIn(channel) {
-			return &subs[i]
+func (subs *subscriptions) ChannelName(channel string, subscriber int) string {
+	for i := range subs.info.Channels {
+		if channel == subs.info.Channels[i].ID {
+			return subs.info.Channels[i].Name
+		}
+	}
+	for i := range subs.info.Groups {
+		if channel == subs.info.Groups[i].ID {
+			return subs.info.Groups[i].Name
+		}
+	}
+	// if not found, it might be a new channel or group
+	switch channel[0] {
+	case 'C':
+		info, err := subs.subscriptions[subscriber].s.ChannelInfo(channel)
+		if err != nil {
+			logrus.WithField("error", err).Warn("Unable to get channel info\n")
+			return ""
+		}
+		subs.info.Channels = append(subs.info.Channels, info.Channel)
+		return info.Channel.Name
+	case 'G':
+		info, err := subs.subscriptions[subscriber].s.GroupInfo(channel)
+		if err != nil {
+			logrus.WithField("error", err).Warn("Unable to get group info\n")
+			return ""
+		}
+		subs.info.Groups = append(subs.info.Groups, info.Group)
+		return info.Group.Name
+	}
+	return ""
+}
+
+func (subs *subscriptions) FirstSubForChannel(channel string) *subscription {
+	for i := range subs.subscriptions {
+		channelName := subs.ChannelName(channel, i)
+		logrus.Debugf("Channel %s (%s)\n", channel, channelName)
+		if subs.subscriptions[i].interest.IsInterestedIn(channel, channelName) {
+			return &subs.subscriptions[i]
 		}
 	}
 	return nil
 }
 
 func (subs subscriptions) SubForUser(user string) *subscription {
-	for i := range subs {
-		if subs[i].user.ID == user {
-			return &subs[i]
+	for i := range subs.subscriptions {
+		if subs.subscriptions[i].user.ID == user {
+			return &subs.subscriptions[i]
 		}
 	}
 	return nil
@@ -52,7 +90,7 @@ type Bot struct {
 	xfe             *goxforce.Client
 	vt              *govt.Client
 	mu              sync.RWMutex // Guards the subscriptions
-	subscriptions   map[string]subscriptions
+	subscriptions   map[string]*subscriptions
 	handledMessages map[string]map[string]*time.Time // message map per team of messages we already handled
 }
 
@@ -72,7 +110,7 @@ func New(r repo.Repo) (*Bot, error) {
 		r:               r,
 		xfe:             xfe,
 		vt:              vt,
-		subscriptions:   make(map[string]subscriptions),
+		subscriptions:   make(map[string]*subscriptions),
 		handledMessages: make(map[string]map[string]*time.Time),
 	}, nil
 }
@@ -84,7 +122,7 @@ func (b *Bot) loadSubscriptions() error {
 		return err
 	}
 	for i := range teams {
-		var teamSubs subscriptions
+		teamSubs := &subscriptions{}
 		users, err := b.r.TeamMembers(teams[i].ID)
 		if err != nil {
 			return err
@@ -104,7 +142,7 @@ func (b *Bot) loadSubscriptions() error {
 				return err
 			}
 			teamSub.s = s
-			teamSubs = append(teamSubs, teamSub)
+			teamSubs.subscriptions = append(teamSubs.subscriptions, teamSub)
 		}
 		b.subscriptions[teams[i].ID] = teamSubs
 	}
@@ -119,11 +157,15 @@ type context struct {
 func (b *Bot) startWS() error {
 	for k, v := range b.subscriptions {
 		logrus.Infof("Starting subscription for team - %s\n", k)
-		for i := range v {
-			logrus.Infof("Starting WS for user - %s (%s)\n", v[i].user.ID, v[i].user.Name)
-			_, err := v[i].s.RTMStart("slack.demisto.com", b.in, &context{Team: k, User: v[i].user.ID})
+		for i := range v.subscriptions {
+			logrus.Infof("Starting WS for user - %s (%s)\n", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
+			info, err := v.subscriptions[i].s.RTMStart("slack.demisto.com", b.in, &context{Team: k, User: v.subscriptions[i].user.ID})
 			if err != nil {
 				return err
+			}
+			// Just save the first one
+			if i == 0 {
+				v.info = info
 			}
 		}
 	}
@@ -208,10 +250,12 @@ func (b *Bot) SubscriptionChanged(user *domain.User, configuration *domain.Confi
 		if err != nil {
 			logrus.WithField("error", err).Errorf("Error creating slack client for %s (%s)\n", user.ID, user.Name)
 		}
-		b.subscriptions[user.Team] = append(subs, newSub)
-		_, err = newSub.s.RTMStart("slack.demisto.com", b.in, &context{Team: user.Team, User: user.ID})
+		b.subscriptions[user.Team] = &subscriptions{subscriptions: []subscription{newSub}}
+		info, err := newSub.s.RTMStart("slack.demisto.com", b.in, &context{Team: user.Team, User: user.ID})
 		if err != nil {
 			logrus.WithField("error", err).Errorf("Error starting RTM for %s (%s)\n", user.ID, user.Name)
+		} else {
+			b.subscriptions[user.Team].info = info
 		}
 	} else {
 		// We already have subscription - if the new one is still active, no need to touch WS

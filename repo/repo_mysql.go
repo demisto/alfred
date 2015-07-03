@@ -266,6 +266,8 @@ func (r *repoMySQL) ChannelsAndGroups(user string) (*domain.Configuration, error
 			res.Groups = append(res.Groups, s)
 		case 'D':
 			res.IM = true
+		case 'R':
+			res.Regexp = s[1:]
 		}
 	}
 	return res, err
@@ -293,6 +295,15 @@ func (r *repoMySQL) SetChannelsAndGroups(user string, configuration *domain.Conf
 	}
 	if configuration.IM {
 		_, err = stmt.Exec(user, "D")
+		if err != nil {
+			return err
+		}
+	}
+	if configuration.Regexp != "" {
+		_, err = stmt.Exec(user, "R"+configuration.Regexp)
+		if err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }
