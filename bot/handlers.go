@@ -1,7 +1,10 @@
 package bot
 
 import (
+	"crypto/md5"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -59,11 +62,27 @@ func (b *Bot) alreadyHandled(original *slack.Message) bool {
 		handled = make(map[string]*time.Time)
 		b.handledMessages[data.Team] = handled
 	}
-	if handled[original.Timestamp] != nil {
+	var field string
+	// We care only about messages
+	if original.Type == "message" {
+		switch original.Subtype {
+		case "file_shared":
+			field = original.File.Name + "|" + original.User
+		case "message_changed":
+			field = original.Message.Text + "|" + original.User
+		default:
+			field = original.Text + "|" + original.User
+		}
+	}
+	if field == "" {
+		// Ignore the message
+		return true
+	}
+	if handled[field] != nil {
 		return true
 	}
 	now := time.Now()
-	handled[original.Timestamp] = &now
+	handled[field] = &now
 	return false
 }
 
@@ -272,7 +291,10 @@ func (b *Bot) handleIP(message slack.Message, ip string) {
 	}
 }
 
-func (b *Bot) handleMD5(message slack.Message, md5 string) {
+func (b *Bot) handleMD5(message slack.Message, md5, fileName string) {
+	if fileName == "" {
+		fileName = md5
+	}
 	xfeMessage := ""
 	color := "good"
 	md5Resp, md5RespErr := b.xfe.MalwareDetails(md5)
@@ -313,7 +335,7 @@ func (b *Bot) handleMD5(message slack.Message, md5 string) {
 	}
 	postMessage := &slack.PostMessageRequest{
 		Channel:  message.Channel,
-		Text:     "File Reputation for " + md5 + poweredBy,
+		Text:     "File Reputation for " + fileName + poweredBy,
 		Username: botName,
 		Attachments: []slack.Attachment{
 			{
@@ -343,4 +365,18 @@ func (b *Bot) handleMD5(message slack.Message, md5 string) {
 	if err != nil {
 		logrus.Errorf("Unable to send message to Slack - %v\n", err)
 	}
+}
+
+func (b *Bot) handleFile(message slack.Message) {
+	hash := md5.New()
+	resp, err := http.Get(message.File.URL)
+	if err != nil {
+		logrus.Errorf("Unable to download file - %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+	io.Copy(hash, resp.Body)
+	h := fmt.Sprintf("%x", hash.Sum(nil))
+	logrus.Debugf("MD5 for file %s is %s\n", message.File.Name, h)
+	b.handleMD5(message, h, message.File.Name)
 }

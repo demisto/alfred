@@ -30,6 +30,9 @@ type subscriptions struct {
 }
 
 func (subs *subscriptions) ChannelName(channel string, subscriber int) string {
+	if channel == "" {
+		return ""
+	}
 	for i := range subs.info.Channels {
 		if channel == subs.info.Channels[i].ID {
 			return subs.info.Channels[i].Name
@@ -202,7 +205,11 @@ func (b *Bot) Start() error {
 					}
 				}
 			case msg := <-b.in:
-				logrus.Debugf("Handling message - %v\n", msg)
+				logrus.Debugf("Handling message - %#v\n", msg)
+				if !b.isThereInterestIn(&msg) {
+					logrus.Debugf("No one is interested in the channel %s\n", msg.Channel)
+					continue
+				}
 				switch msg.Type {
 				case "message":
 					logrus.Debugf("%s\n", msg.Text)
@@ -210,10 +217,12 @@ func (b *Bot) Start() error {
 						continue
 					}
 					if b.alreadyHandled(&msg) {
+						logrus.Debugln("Already handled")
 						continue
 					}
-					if !b.isThereInterestIn(&msg) {
-						logrus.Debugf("No one is interested in the channel %s\n", msg.Channel)
+					if msg.Subtype == "file_share" {
+						logrus.Debugf("File shared - %s\n", msg.File.Name)
+						go b.handleFile(msg)
 						continue
 					}
 					if strings.Contains(msg.Text, "<http") {
@@ -223,7 +232,7 @@ func (b *Bot) Start() error {
 						go b.handleIP(msg, ip)
 					}
 					if md5 := md5Reg.FindString(msg.Text); md5 != "" {
-						go b.handleMD5(msg, md5)
+						go b.handleMD5(msg, md5, "")
 					}
 				}
 			}
