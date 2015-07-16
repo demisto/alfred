@@ -68,35 +68,37 @@ type regexpMatch struct {
 func (ac *AppContext) match(w http.ResponseWriter, r *http.Request) {
 	req := context.Get(r, "body").(*regexpMatch)
 	u := context.Get(r, "user").(*domain.User)
-	// First, let's compile the regexp
-	re, err := regexp.Compile(req.Regexp)
-	if err != nil {
-		WriteError(w, &Error{ID: "bad_request", Status: 400, Title: "Bad Request", Detail: fmt.Sprintf("Error parsing regexp - %v", err)})
-		return
-	}
-	s, err := slack.New(slack.SetToken(u.Token))
-	if err != nil {
-		panic(err)
-	}
 	var res []string
-	ch, err := s.ChannelList(true)
-	if err != nil {
-		panic(err)
-	}
-	for i := range ch.Channels {
-		if ch.Channels[i].IsMember {
-			if re.MatchString(ch.Channels[i].Name) {
-				res = append(res, ch.Channels[i].Name)
+	if req.Regexp != "" {
+		// First, let's compile the regexp
+		re, err := regexp.Compile(req.Regexp)
+		if err != nil {
+			WriteError(w, &Error{ID: "bad_request", Status: 400, Title: "Bad Request", Detail: fmt.Sprintf("Error parsing regexp - %v", err)})
+			return
+		}
+		s, err := slack.New(slack.SetToken(u.Token))
+		if err != nil {
+			panic(err)
+		}
+		ch, err := s.ChannelList(true)
+		if err != nil {
+			panic(err)
+		}
+		for i := range ch.Channels {
+			if ch.Channels[i].IsMember {
+				if re.MatchString(ch.Channels[i].Name) {
+					res = append(res, ch.Channels[i].Name)
+				}
 			}
 		}
-	}
-	gr, err := s.GroupList(true)
-	if err != nil {
-		panic(err)
-	}
-	for i := range gr.Groups {
-		if re.MatchString(gr.Groups[i].Name) {
-			res = append(res, gr.Groups[i].Name)
+		gr, err := s.GroupList(true)
+		if err != nil {
+			panic(err)
+		}
+		for i := range gr.Groups {
+			if re.MatchString(gr.Groups[i].Name) {
+				res = append(res, gr.Groups[i].Name)
+			}
 		}
 	}
 	json.NewEncoder(w).Encode(res)

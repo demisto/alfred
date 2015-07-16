@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"bytes"
 	"crypto/md5"
 	"fmt"
 	"io"
@@ -291,15 +292,12 @@ func (b *Bot) handleIP(message slack.Message, ip string) {
 	}
 }
 
-func (b *Bot) handleMD5(message slack.Message, md5, fileName string) {
-	if fileName == "" {
-		fileName = md5
-	}
+func (b *Bot) handleMD5(message slack.Message, md5 string) {
 	xfeMessage := ""
 	color := "good"
 	md5Resp, md5RespErr := b.xfe.MalwareDetails(md5)
 	if md5RespErr != nil {
-		// Small hack - see if the URL was not found
+		// Small hack - see if the file was not found
 		if strings.Contains(md5RespErr.Error(), "404") {
 			xfeMessage = "File reputation not found"
 		} else {
@@ -324,7 +322,9 @@ func (b *Bot) handleMD5(message slack.Message, md5, fileName string) {
 	} else {
 		if vtResp.ResponseCode != 1 {
 			vtMessage = fmt.Sprintf("VT error %d (%s)", vtResp.ResponseCode, vtResp.VerboseMsg)
-			vtColor = "warning"
+			if vtResp.ResponseCode != 0 {
+				vtColor = "warning"
+			}
 		} else {
 			vtMessage = fmt.Sprintf("Scan Date %s, Positives: %d, Total: %d\n", vtResp.ScanDate, int(vtResp.Positives), int(vtResp.Total))
 			if vtResp.Positives >= 5 {
@@ -336,7 +336,7 @@ func (b *Bot) handleMD5(message slack.Message, md5, fileName string) {
 	}
 	postMessage := &slack.PostMessageRequest{
 		Channel:  message.Channel,
-		Text:     "File Reputation for " + fileName + poweredBy,
+		Text:     "File Reputation for " + md5 + poweredBy,
 		Username: botName,
 		Attachments: []slack.Attachment{
 			{
@@ -377,8 +377,97 @@ func (b *Bot) handleFile(message slack.Message) {
 		return
 	}
 	defer resp.Body.Close()
-	io.Copy(hash, resp.Body)
+	buf := &bytes.Buffer{}
+	io.Copy(buf, resp.Body)
+	io.Copy(hash, bytes.NewReader(buf.Bytes()))
 	h := fmt.Sprintf("%x", hash.Sum(nil))
 	logrus.Debugf("MD5 for file %s is %s\n", message.File.Name, h)
-	b.handleMD5(message, h, message.File.Name)
+	xfeMessage := ""
+	color := "good"
+	md5Resp, md5RespErr := b.xfe.MalwareDetails(h)
+	if md5RespErr != nil {
+		// Small hack - see if the URL was not found
+		if strings.Contains(md5RespErr.Error(), "404") {
+			xfeMessage = "File reputation not found"
+		} else {
+			xfeMessage = md5RespErr.Error()
+		}
+		color = "warning"
+	} else {
+		xfeMessage = fmt.Sprintf("Type: %s, Created: %s, Family: %s, MIME: %s, External: %s (%d)",
+			md5Resp.Malware.Type, md5Resp.Malware.Created.String(), strings.Join(md5Resp.Malware.Family, ","), md5Resp.Malware.MimeType,
+			strings.Join(md5Resp.Malware.Origins.External.Family, ","), md5Resp.Malware.Origins.External.DetectionCoverage)
+		if len(md5Resp.Malware.Family) > 0 || md5Resp.Malware.Origins.External.DetectionCoverage > 5 {
+			color = "danger"
+		}
+	}
+
+	vtMessage := ""
+	vtColor := "good"
+	vtResp, vtErr := b.vt.GetFileReport(h)
+	if vtErr != nil {
+		vtMessage = vtErr.Error()
+		vtColor = "warning"
+	} else {
+		if vtResp.ResponseCode != 1 {
+			vtMessage = fmt.Sprintf("VT error %d (%s)", vtResp.ResponseCode, vtResp.VerboseMsg)
+			if vtResp.ResponseCode != 0 {
+				vtColor = "warning"
+			}
+		} else {
+			vtMessage = fmt.Sprintf("Scan Date %s, Positives: %d, Total: %d\n", vtResp.ScanDate, int(vtResp.Positives), int(vtResp.Total))
+			if vtResp.Positives >= 5 {
+				vtColor = "danger"
+			} else if vtResp.Positives >= 1 {
+				vtColor = "warning"
+			}
+		}
+	}
+	postMessage := &slack.PostMessageRequest{
+		Channel:  message.Channel,
+		Text:     "File Reputation for " + message.File.Name + poweredBy,
+		Username: botName,
+		Attachments: []slack.Attachment{
+			{
+				Fallback:   xfeMessage,
+				AuthorName: "IBM X-Force Exchange",
+				Color:      color,
+			},
+			{
+				Fallback:   vtMessage,
+				AuthorName: "VirusTotal",
+				Text:       vtMessage,
+				Color:      vtColor,
+			},
+		},
+	}
+	if md5RespErr == nil {
+		postMessage.Attachments[0].Fields = []slack.AttachmentField{
+			{Title: "Type", Value: md5Resp.Malware.Type, Short: true},
+			{Title: "Created", Value: md5Resp.Malware.Created.String(), Short: true},
+			{Title: "Family", Value: strings.Join(md5Resp.Malware.Family, ","), Short: true},
+			{Title: "MIME Type", Value: md5Resp.Malware.MimeType, Short: true},
+			{Title: "External", Value: fmt.Sprintf("%s (%d)", strings.Join(md5Resp.Malware.Origins.External.Family, ","), md5Resp.Malware.Origins.External.DetectionCoverage), Short: true},
+		}
+	} else {
+		postMessage.Attachments[0].Text = xfeMessage
+	}
+	// If both reputation services are in error or not familiar with the file
+	if md5RespErr != nil && (vtErr != nil || vtResp.Status.ResponseCode != 1) {
+		virus, err := scan(message.File.Name, buf.Bytes())
+		if err == nil && virus != "" {
+			clamMessage := fmt.Sprintf("Virus [%s] found", virus)
+			postMessage.Attachments = append(postMessage.Attachments,
+				slack.Attachment{
+					Fallback:   clamMessage,
+					AuthorName: "ClamAV",
+					Text:       clamMessage,
+					Color:      "danger",
+				})
+		}
+	}
+	err = b.post(postMessage, &message)
+	if err != nil {
+		logrus.Errorf("Unable to send message to Slack - %v\n", err)
+	}
 }

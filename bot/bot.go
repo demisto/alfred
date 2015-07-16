@@ -232,7 +232,7 @@ func (b *Bot) Start() error {
 						go b.handleIP(msg, ip)
 					}
 					if md5 := md5Reg.FindString(msg.Text); md5 != "" {
-						go b.handleMD5(msg, md5, "")
+						go b.handleMD5(msg, md5)
 					}
 				}
 			}
