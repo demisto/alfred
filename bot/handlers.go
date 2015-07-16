@@ -307,9 +307,10 @@ func (b *Bot) handleMD5(message slack.Message, md5, fileName string) {
 		}
 		color = "warning"
 	} else {
-		xfeMessage = fmt.Sprintf("Type: %s, Created: %s, Family: %s, MIME: %s",
-			md5Resp.Malware.Type, md5Resp.Malware.Created.String(), strings.Join(md5Resp.Malware.Family, ","), md5Resp.Malware.MimeType)
-		if len(md5Resp.Malware.Family) > 0 {
+		xfeMessage = fmt.Sprintf("Type: %s, Created: %s, Family: %s, MIME: %s, External: %s (%d)",
+			md5Resp.Malware.Type, md5Resp.Malware.Created.String(), strings.Join(md5Resp.Malware.Family, ","), md5Resp.Malware.MimeType,
+			strings.Join(md5Resp.Malware.Origins.External.Family, ","), md5Resp.Malware.Origins.External.DetectionCoverage)
+		if len(md5Resp.Malware.Family) > 0 || md5Resp.Malware.Origins.External.DetectionCoverage > 5 {
 			color = "danger"
 		}
 	}
@@ -357,6 +358,7 @@ func (b *Bot) handleMD5(message slack.Message, md5, fileName string) {
 			{Title: "Created", Value: md5Resp.Malware.Created.String(), Short: true},
 			{Title: "Family", Value: strings.Join(md5Resp.Malware.Family, ","), Short: true},
 			{Title: "MIME Type", Value: md5Resp.Malware.MimeType, Short: true},
+			{Title: "External", Value: fmt.Sprintf("%s (%d)", strings.Join(md5Resp.Malware.Origins.External.Family, ","), md5Resp.Malware.Origins.External.DetectionCoverage), Short: true},
 		}
 	} else {
 		postMessage.Attachments[0].Text = xfeMessage
