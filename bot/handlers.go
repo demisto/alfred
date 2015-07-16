@@ -453,19 +453,19 @@ func (b *Bot) handleFile(message slack.Message) {
 		postMessage.Attachments[0].Text = xfeMessage
 	}
 	// If both reputation services are in error or not familiar with the file
-	if md5RespErr != nil && (vtErr != nil || vtResp.Status.ResponseCode != 1) {
-		virus, err := scan(message.File.Name, buf.Bytes())
-		if err == nil && virus != "" {
-			clamMessage := fmt.Sprintf("Virus [%s] found", virus)
-			postMessage.Attachments = append(postMessage.Attachments,
-				slack.Attachment{
-					Fallback:   clamMessage,
-					AuthorName: "ClamAV",
-					Text:       clamMessage,
-					Color:      "danger",
-				})
-		}
+	// if md5RespErr != nil && (vtErr != nil || vtResp.Status.ResponseCode != 1) {
+	virus, err := scan(message.File.Name, buf.Bytes())
+	if (err == nil || err.Error() == "Virus(es) detected") && virus != "" {
+		clamMessage := fmt.Sprintf("Virus [%s] found", virus)
+		postMessage.Attachments = append(postMessage.Attachments,
+			slack.Attachment{
+				Fallback:   clamMessage,
+				AuthorName: "ClamAV",
+				Text:       clamMessage,
+				Color:      "danger",
+			})
 	}
+	// }
 	err = b.post(postMessage, &message)
 	if err != nil {
 		logrus.Errorf("Unable to send message to Slack - %v\n", err)
