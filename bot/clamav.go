@@ -52,7 +52,7 @@ func initClamAV() error {
 }
 
 // scan the given bytes (file) using clamav and return the virus name
-func scan(path string) (string, error) {
+func scan(filename string, b []byte) (string, error) {
 	initOnce.Do(func() {
 		err := initClamAV()
 		if err != nil {
@@ -62,6 +62,9 @@ func scan(path string) (string, error) {
 	if onceerr != nil {
 		return "", onceerr
 	}
-	virus, _, err := engine.ScanFile(path, clamav.ScanStdopt|clamav.ScanAllmatches)
+	fmap := clamav.OpenMemory(b)
+	defer clamav.CloseMemory(fmap)
+
+	virus, _, err := engine.ScanMapCb(fmap, clamav.ScanStdopt|clamav.ScanBlockbroken, filename)
 	return virus, err
 }
