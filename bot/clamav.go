@@ -18,6 +18,8 @@ package bot
 // Now, you are ready to build alfred with the clamav tag and run it with the DB directory location pointing to ~/demisto/clamav-0.98.7
 // DYLD_LIBRARY_PATH=/Users/YOURUSERNAME/demisto/clamav-0.98.7/libclamav/.libs ./alfred --loglevel=debug --clamdb=/Users/YOURUSERNAME/demisto/clamav-0.98.7
 
+// On Ubuntu, it's all very simple. Just sudo apt-get install clamav livclamav6 libclamav-dev and no need for flags, etc.
+
 import (
 	"flag"
 	"sync"
@@ -50,7 +52,7 @@ func initClamAV() error {
 }
 
 // scan the given bytes (file) using clamav and return the virus name
-func scan(filename string, b []byte) (string, error) {
+func scan(path string) (string, error) {
 	initOnce.Do(func() {
 		err := initClamAV()
 		if err != nil {
@@ -60,9 +62,6 @@ func scan(filename string, b []byte) (string, error) {
 	if onceerr != nil {
 		return "", onceerr
 	}
-	fmap := clamav.OpenMemory(b)
-	defer clamav.CloseMemory(fmap)
-
-	virus, _, err := engine.ScanMapCb(fmap, clamav.ScanStdopt|clamav.ScanAllmatches, filename)
+	virus, _, err := engine.ScanFile(path, clamav.ScanStdopt|clamav.ScanAllmatches)
 	return virus, err
 }

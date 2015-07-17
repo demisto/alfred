@@ -5,7 +5,9 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -454,7 +456,11 @@ func (b *Bot) handleFile(message slack.Message) {
 	}
 	// If both reputation services are in error or not familiar with the file
 	// if md5RespErr != nil && (vtErr != nil || vtResp.Status.ResponseCode != 1) {
-	virus, err := scan(message.File.Name, buf.Bytes())
+	// Create file for now as the integration with memory has issues
+	file, err := ioutil.TempFile(os.TempDir(), "alfred_")
+	defer os.Remove(file.Name())
+	buf.WriteTo(file)
+	virus, err := scan(file.Name())
 	if (err == nil || err.Error() == "Virus(es) detected") && virus != "" {
 		clamMessage := fmt.Sprintf("Virus [%s] found", virus)
 		postMessage.Attachments = append(postMessage.Attachments,
