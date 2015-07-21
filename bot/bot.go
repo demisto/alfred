@@ -33,19 +33,14 @@ func (subs *subscriptions) ChannelName(channel string, subscriber int) string {
 	if channel == "" {
 		return ""
 	}
-	for i := range subs.info.Channels {
-		if channel == subs.info.Channels[i].ID {
-			return subs.info.Channels[i].Name
-		}
-	}
-	for i := range subs.info.Groups {
-		if channel == subs.info.Groups[i].ID {
-			return subs.info.Groups[i].Name
-		}
-	}
 	// if not found, it might be a new channel or group
 	switch channel[0] {
 	case 'C':
+		for i := range subs.info.Channels {
+			if channel == subs.info.Channels[i].ID {
+				return subs.info.Channels[i].Name
+			}
+		}
 		info, err := subs.subscriptions[subscriber].s.ChannelInfo(channel)
 		if err != nil {
 			logrus.WithField("error", err).Warn("Unable to get channel info\n")
@@ -54,6 +49,11 @@ func (subs *subscriptions) ChannelName(channel string, subscriber int) string {
 		subs.info.Channels = append(subs.info.Channels, info.Channel)
 		return info.Channel.Name
 	case 'G':
+		for i := range subs.info.Groups {
+			if channel == subs.info.Groups[i].ID {
+				return subs.info.Groups[i].Name
+			}
+		}
 		info, err := subs.subscriptions[subscriber].s.GroupInfo(channel)
 		if err != nil {
 			logrus.WithField("error", err).Warn("Unable to get group info\n")
@@ -205,7 +205,7 @@ func (b *Bot) Start() error {
 					}
 				}
 			case msg := <-b.in:
-				logrus.Debugf("Handling message - %#v\n", msg)
+				logrus.Debugf("Handling message - %+v\n", msg)
 				if !b.isThereInterestIn(&msg) {
 					logrus.Debugf("No one is interested in the channel %s\n", msg.Channel)
 					continue

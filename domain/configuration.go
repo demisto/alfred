@@ -22,7 +22,7 @@ func (c *Configuration) IsActive() bool {
 
 // IsInterestedIn the given channel
 func (c *Configuration) IsInterestedIn(channel, channelName string) bool {
-	logrus.Debugf("Checking interest in %s, %s for %#v\n", channel, channelName, c)
+	logrus.Debugf("Checking interest in %s, %s for %+v\n", channel, channelName, c)
 	if len(channel) == 0 {
 		return false
 	}

@@ -107,6 +107,14 @@ func (ac *AppContext) match(w http.ResponseWriter, r *http.Request) {
 func (ac *AppContext) save(w http.ResponseWriter, r *http.Request) {
 	req := context.Get(r, "body").(*domain.Configuration)
 	u := context.Get(r, "user").(*domain.User)
+	// Before saving, validate that the regexp is valid
+	if req.Regexp != "" {
+		_, err := regexp.Compile(req.Regexp)
+		if err != nil {
+			WriteError(w, &Error{ID: "bad_request", Status: 400, Title: "Bad Request", Detail: fmt.Sprintf("Error parsing regexp - %v", err)})
+			return
+		}
+	}
 	err := ac.r.SetChannelsAndGroups(u.ID, req)
 	if err != nil {
 		panic(err)

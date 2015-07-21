@@ -3,10 +3,11 @@
 package bot
 
 // This file handles the ClamAV integration and is only built when specifying -tags clamav to build
-// On OSX, you do the following to get all set up
+// On OSX, you do the following to get all set up - you need of course Xcode and the command line tools
+// See http://www.gctv.ne.jp/~yokota/clamav/
 // 1. Download the latest stable version of ClamAV and extract it to ~/demisto/clamav-0.98.7 (version might change)
 // 2. cd ~/demisto/clamav-0.98.7
-// 3. CFLAGS="-O3 -march=nocona" CXXFLAGS="-O3 -march=nocona" ./configure --build=x86_64-apple-darwin`uname -r` --enable-llvm
+// 3. CFLAGS="-O3 -march=nocona" CXXFLAGS="-O3 -march=nocona" ./configure --build=x86_64-apple-darwin`uname -r` --enable-llvm=no
 // 4. CFLAGS="-O3 -march=nocona" CXXFLAGS="-O3 -march=nocona" make
 // 5. CFLAGS="-O3 -march=nocona" CXXFLAGS="-O3 -march=nocona" make check
 // 6. CGO_CFLAGS=-I/Users/YOURUSERNAME/demisto/clamav-0.98.7/libclamav CGO_LDFLAGS=-L/Users/YOURUSERNAME/demisto/clamav-0.98.7/libclamav/.libs go get github.com/mirtchovski/clamav

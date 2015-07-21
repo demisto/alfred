@@ -2,15 +2,12 @@ package main
 
 import (
 	"flag"
-	"net/http"
 	"os"
 	"runtime"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/demisto/alfred/bot"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/repo"
-	"github.com/demisto/alfred/web"
 )
 
 func main() {
@@ -41,7 +38,6 @@ func main() {
 
 	// Let's use all the logical CPUs
 	runtime.GOMAXPROCS(runtime.NumCPU())
-
 	// If we are on DEV, let's use embedded DB. On test and prod we will use MySQL
 	var r repo.Repo
 	if conf.IsDev() || conf.Options.DB.Username == "" {
@@ -53,20 +49,5 @@ func main() {
 		logrus.Fatal(err)
 	}
 	defer r.Close()
-	b, err := bot.New(r)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-	err = b.Start()
-	if err != nil {
-		logrus.Fatal(err)
-	}
-	defer b.Stop()
-	appC := web.NewContext(r, b)
-	router := web.New(appC)
-	if conf.IsDev() {
-		logrus.Fatal(http.ListenAndServe(":7070", router))
-	} else {
-		logrus.Fatal(http.ListenAndServe(":7070", router))
-	}
+
 }

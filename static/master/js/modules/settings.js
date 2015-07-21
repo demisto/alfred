@@ -47,6 +47,7 @@
         $('#groups option:selected').each(function() {
           save.groups.push($(this).val());
         });
+        // TODO - handle error
         $.ajax({
           type: 'POST',
           url: '/save',

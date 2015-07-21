@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/demisto/goxforce"
 	"github.com/demisto/slack"
+	"github.com/slavikm/govt"
 )
 
 const (
@@ -122,7 +124,26 @@ func (b *Bot) handleURL(message slack.Message) {
 		}
 		url := message.Text[start+1 : end]
 		logrus.Debugf("URL found - %s\n", url)
-		urlResp, urlRespErr := b.xfe.URL(url)
+
+		// Do the network commands in parallel
+		c := make(chan int, 2)
+		var urlResp *goxforce.URLResp
+		var urlRespErr, resolveErr, err error
+		var resolve *goxforce.ResolveResp
+		var vtResp *govt.UrlReport
+		go func() {
+			urlResp, urlRespErr = b.xfe.URL(url)
+			resolve, resolveErr = b.xfe.Resolve(url)
+			c <- 1
+		}()
+		go func() {
+			vtResp, err = b.vt.GetUrlReport(url)
+			c <- 1
+		}()
+		for i := 0; i < 2; i++ {
+			<-c
+		}
+
 		xfeMessage := ""
 		color := "good"
 		if urlRespErr != nil {
@@ -143,7 +164,6 @@ func (b *Bot) handleURL(message slack.Message) {
 		}
 		// If there is a problem, ignore it - the fields are going to be empty
 		mx := ""
-		resolve, resolveErr := b.xfe.Resolve(url)
 		if resolveErr == nil {
 			for i := range resolve.MX {
 				mx += fmt.Sprintf("%s (%d) ", resolve.MX[i].Exchange, resolve.MX[i].Priority)
@@ -152,7 +172,6 @@ func (b *Bot) handleURL(message slack.Message) {
 
 		vtMessage := ""
 		vtColor := "good"
-		vtResp, err := b.vt.GetUrlReport(url)
 		if err != nil {
 			vtMessage = err.Error()
 			vtColor = "warning"
@@ -217,7 +236,22 @@ func (b *Bot) handleURL(message slack.Message) {
 func (b *Bot) handleIP(message slack.Message, ip string) {
 	xfeMessage := ""
 	color := "good"
-	ipResp, ipRespErr := b.xfe.IPR(ip)
+	// Do the network commands in parallel
+	c := make(chan int, 2)
+	var ipResp *goxforce.IPReputation
+	var vtResp *govt.IpReport
+	var ipRespErr, err error
+	go func() {
+		ipResp, ipRespErr = b.xfe.IPR(ip)
+		c <- 1
+	}()
+	go func() {
+		vtResp, err = b.vt.GetIpReport(ip)
+		c <- 1
+	}()
+	for i := 0; i < 2; i++ {
+		<-c
+	}
 	if ipRespErr != nil {
 		// Small hack - see if the URL was not found
 		if strings.Contains(ipRespErr.Error(), "404") {
@@ -236,7 +270,6 @@ func (b *Bot) handleIP(message slack.Message, ip string) {
 	}
 	vtMessage := ""
 	vtColor := "good"
-	vtResp, err := b.vt.GetIpReport(ip)
 	if err != nil {
 		vtMessage = err.Error()
 		vtColor = "warning"
@@ -295,7 +328,22 @@ func (b *Bot) handleIP(message slack.Message, ip string) {
 func (b *Bot) handleMD5(message slack.Message, md5 string) {
 	xfeMessage := ""
 	color := "good"
-	md5Resp, md5RespErr := b.xfe.MalwareDetails(md5)
+	// Do the network commands in parallel
+	c := make(chan int, 2)
+	var md5Resp *goxforce.MalwareResp
+	var vtResp *govt.FileReport
+	var md5RespErr, err error
+	go func() {
+		md5Resp, md5RespErr = b.xfe.MalwareDetails(md5)
+		c <- 1
+	}()
+	go func() {
+		vtResp, err = b.vt.GetFileReport(md5)
+		c <- 1
+	}()
+	for i := 0; i < 2; i++ {
+		<-c
+	}
 	if md5RespErr != nil {
 		// Small hack - see if the file was not found
 		if strings.Contains(md5RespErr.Error(), "404") {
@@ -315,7 +363,6 @@ func (b *Bot) handleMD5(message slack.Message, md5 string) {
 
 	vtMessage := ""
 	vtColor := "good"
-	vtResp, err := b.vt.GetFileReport(md5)
 	if err != nil {
 		vtMessage = err.Error()
 		vtColor = "warning"
@@ -384,7 +431,27 @@ func (b *Bot) handleFile(message slack.Message) {
 	logrus.Debugf("MD5 for file %s is %s\n", message.File.Name, h)
 	xfeMessage := ""
 	color := "good"
-	md5Resp, md5RespErr := b.xfe.MalwareDetails(h)
+	// Do the network commands in parallel
+	c := make(chan int, 3)
+	var md5Resp *goxforce.MalwareResp
+	var vtResp *govt.FileReport
+	var virus string
+	var md5RespErr, vtErr error
+	go func() {
+		md5Resp, md5RespErr = b.xfe.MalwareDetails(h)
+		c <- 1
+	}()
+	go func() {
+		vtResp, vtErr = b.vt.GetFileReport(h)
+		c <- 1
+	}()
+	go func() {
+		virus, err = scan(message.File.Name, buf.Bytes())
+		c <- 1
+	}()
+	for i := 0; i < 3; i++ {
+		<-c
+	}
 	if md5RespErr != nil {
 		// Small hack - see if the URL was not found
 		if strings.Contains(md5RespErr.Error(), "404") {
@@ -401,10 +468,8 @@ func (b *Bot) handleFile(message slack.Message) {
 			color = "danger"
 		}
 	}
-
 	vtMessage := ""
 	vtColor := "good"
-	vtResp, vtErr := b.vt.GetFileReport(h)
 	if vtErr != nil {
 		vtMessage = vtErr.Error()
 		vtColor = "warning"
@@ -454,7 +519,6 @@ func (b *Bot) handleFile(message slack.Message) {
 	}
 	// If both reputation services are in error or not familiar with the file
 	// if md5RespErr != nil && (vtErr != nil || vtResp.Status.ResponseCode != 1) {
-	virus, err := scan(message.File.Name, buf.Bytes())
 	if (err == nil || err.Error() == "Virus(es) detected") && virus != "" {
 		clamMessage := fmt.Sprintf("Virus [%s] found", virus)
 		postMessage.Attachments = append(postMessage.Attachments,
