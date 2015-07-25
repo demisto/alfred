@@ -9,6 +9,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/bot"
 	"github.com/demisto/alfred/conf"
+	"github.com/demisto/alfred/dedup"
+	"github.com/demisto/alfred/queue"
 	"github.com/demisto/alfred/repo"
 	"github.com/demisto/alfred/web"
 )
@@ -53,7 +55,12 @@ func main() {
 		logrus.Fatal(err)
 	}
 	defer r.Close()
-	b, err := bot.New(r)
+
+	// Create the queue for the various message exchanges
+	q := queue.New()
+	defer q.Close()
+
+	b, err := bot.New(r, q)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -62,7 +69,17 @@ func main() {
 		logrus.Fatal(err)
 	}
 	defer b.Stop()
-	appC := web.NewContext(r, b)
+	// If we are on dev environment, start the dedup and work process
+	if conf.IsDev() {
+		dd := dedup.New(q)
+		go dd.Start()
+		worker, err := bot.NewWorker(r, q)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		go worker.Start()
+	}
+	appC := web.NewContext(r, q)
 	router := web.New(appC)
 	if conf.IsDev() {
 		logrus.Fatal(http.ListenAndServe(":7070", router))

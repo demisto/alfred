@@ -2,19 +2,16 @@ package bot
 
 import (
 	"log"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
+	"github.com/demisto/alfred/queue"
 	"github.com/demisto/alfred/repo"
-	"github.com/demisto/goxforce"
 	"github.com/demisto/slack"
-	"github.com/slavikm/govt"
 )
 
 // subscription holds the interest we have for each team
@@ -87,34 +84,22 @@ func (subs subscriptions) SubForUser(user string) *subscription {
 
 // Bot iterates on all subscriptions and listens / responds to messages
 type Bot struct {
-	in              chan slack.Message
-	stop            chan bool
-	r               repo.Repo
-	xfe             *goxforce.Client
-	vt              *govt.Client
-	mu              sync.RWMutex // Guards the subscriptions
-	subscriptions   map[string]*subscriptions
-	handledMessages map[string]map[string]*time.Time // message map per team of messages we already handled
+	in            chan slack.Message
+	stop          chan bool
+	r             repo.Repo
+	mu            sync.RWMutex // Guards the subscriptions
+	subscriptions map[string]*subscriptions
+	q             queue.Queue // Message queue for configuration updates
 }
 
 // New returns a new bot
-func New(r repo.Repo) (*Bot, error) {
-	xfe, err := goxforce.New(goxforce.SetErrorLog(log.New(conf.LogWriter, "XFE:", log.Lshortfile)))
-	if err != nil {
-		return nil, err
-	}
-	vt, err := govt.New(govt.SetApikey(conf.Options.VT), govt.SetErrorLog(log.New(os.Stderr, "VT:", log.Lshortfile)))
-	if err != nil {
-		return nil, err
-	}
+func New(r repo.Repo, q queue.Queue) (*Bot, error) {
 	return &Bot{
-		in:              make(chan slack.Message),
-		stop:            make(chan bool, 1),
-		r:               r,
-		xfe:             xfe,
-		vt:              vt,
-		subscriptions:   make(map[string]*subscriptions),
-		handledMessages: make(map[string]map[string]*time.Time),
+		in:            make(chan slack.Message),
+		stop:          make(chan bool, 1),
+		r:             r,
+		subscriptions: make(map[string]*subscriptions),
+		q:             q,
 	}, nil
 }
 
@@ -152,7 +137,8 @@ func (b *Bot) loadSubscriptions() error {
 	return nil
 }
 
-type context struct {
+// Context to push with each message to identify the relevant team and user
+type Context struct {
 	Team string
 	User string
 }
@@ -162,7 +148,7 @@ func (b *Bot) startWS() error {
 		logrus.Infof("Starting subscription for team - %s\n", k)
 		for i := range v.subscriptions {
 			logrus.Infof("Starting WS for user - %s (%s)\n", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
-			info, err := v.subscriptions[i].s.RTMStart("slack.demisto.com", b.in, &context{Team: k, User: v.subscriptions[i].user.ID})
+			info, err := v.subscriptions[i].s.RTMStart("slack.demisto.com", b.in, &Context{Team: k, User: v.subscriptions[i].user.ID})
 			if err != nil {
 				return err
 			}
@@ -175,6 +161,60 @@ func (b *Bot) startWS() error {
 	return nil
 }
 
+func (b *Bot) stopWS() {
+	for k, v := range b.subscriptions {
+		logrus.Infof("Stoping subscription for team - %s\n", k)
+		for i := range v.subscriptions {
+			logrus.Infof("Stoping WS for user - %s (%s)\n", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
+			err := v.subscriptions[i].s.RTMStop()
+			if err != nil {
+				logrus.Warnf("Unable to stop subscription for user %s - %v\n", v.subscriptions[i].user.ID, err)
+			}
+		}
+	}
+}
+
+var (
+	ipReg  = regexp.MustCompile("\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b")
+	md5Reg = regexp.MustCompile("\\b[a-fA-F\\d]{32}\\b")
+)
+
+func (b *Bot) isThereInterestIn(original *slack.Message) bool {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	data := original.Context.(*Context)
+	subs := b.subscriptions[data.Team]
+	if subs == nil {
+		return false
+	}
+	if sub := subs.FirstSubForChannel(original.Channel); sub != nil {
+		return true
+	}
+	return false
+}
+
+func (b *Bot) handleMessage(msg *slack.Message) {
+	logrus.Debugf("Handling message - %+v\n", msg)
+	if !b.isThereInterestIn(msg) {
+		logrus.Debugf("No one is interested in the channel %s\n", msg.Channel)
+		return
+	}
+	switch msg.Type {
+	case "message":
+		logrus.Debugf("%s\n", msg.Text)
+		if msg.Subtype == "bot_message" {
+			return
+		}
+		// If we need to handle the message, pass it to the queue
+		if msg.Subtype == "file_share" ||
+			strings.Contains(msg.Text, "<http") ||
+			ipReg.MatchString(msg.Text) ||
+			md5Reg.MatchString(msg.Text) {
+			b.q.PushMessage(msg)
+		}
+	}
+}
+
 // Start the monitoring process - will start a separate Go routine
 func (b *Bot) Start() error {
 	err := b.loadSubscriptions()
@@ -185,59 +225,18 @@ func (b *Bot) Start() error {
 	if err != nil {
 		return err
 	}
-	ipReg := regexp.MustCompile("\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b")
-	md5Reg := regexp.MustCompile("\\b[a-fA-F\\d]{32}\\b")
 	go func() {
-		// Clean messages every 10 minutes
-		ticker := time.NewTicker(10 * time.Minute)
-		defer ticker.Stop()
 		for {
 			select {
 			case <-b.stop:
-				break
-			case <-ticker.C:
-				// Time to clean the messages
-				for _, v := range b.handledMessages {
-					for k, t := range v {
-						if time.Since(*t) > 5*time.Minute {
-							delete(v, k)
-						}
-					}
-				}
+				b.stopWS()
+				return
 			case msg := <-b.in:
-				logrus.Debugf("Handling message - %+v\n", msg)
-				if !b.isThereInterestIn(&msg) {
-					logrus.Debugf("No one is interested in the channel %s\n", msg.Channel)
-					continue
-				}
-				switch msg.Type {
-				case "message":
-					logrus.Debugf("%s\n", msg.Text)
-					if msg.Subtype == "bot_message" {
-						continue
-					}
-					if b.alreadyHandled(&msg) {
-						logrus.Debugln("Already handled")
-						continue
-					}
-					if msg.Subtype == "file_share" {
-						logrus.Debugf("File shared - %s\n", msg.File.Name)
-						go b.handleFile(msg)
-						continue
-					}
-					if strings.Contains(msg.Text, "<http") {
-						go b.handleURL(msg)
-					}
-					if ip := ipReg.FindString(msg.Text); ip != "" {
-						go b.handleIP(msg, ip)
-					}
-					if md5 := md5Reg.FindString(msg.Text); md5 != "" {
-						go b.handleMD5(msg, md5)
-					}
-				}
+				b.handleMessage(&msg)
 			}
 		}
 	}()
+	go b.monitorChanges()
 	return nil
 }
 
@@ -246,9 +245,10 @@ func (b *Bot) Stop() {
 	b.stop <- true
 }
 
-// SubscriptionChanged updates the subscriptions if a user changes them
-func (b *Bot) SubscriptionChanged(user *domain.User, configuration *domain.Configuration) {
+// subscriptionChanged updates the subscriptions if a user changes them
+func (b *Bot) subscriptionChanged(user *domain.User, configuration *domain.Configuration) {
 	b.mu.Lock()
+	defer b.mu.Unlock()
 	subs := b.subscriptions[user.Team]
 	sub := subs.SubForUser(user.ID)
 	if sub == nil {
@@ -260,7 +260,7 @@ func (b *Bot) SubscriptionChanged(user *domain.User, configuration *domain.Confi
 			logrus.WithField("error", err).Errorf("Error creating slack client for %s (%s)\n", user.ID, user.Name)
 		}
 		b.subscriptions[user.Team] = &subscriptions{subscriptions: []subscription{newSub}}
-		info, err := newSub.s.RTMStart("slack.demisto.com", b.in, &context{Team: user.Team, User: user.ID})
+		info, err := newSub.s.RTMStart("slack.demisto.com", b.in, &Context{Team: user.Team, User: user.ID})
 		if err != nil {
 			logrus.WithField("error", err).Errorf("Error starting RTM for %s (%s)\n", user.ID, user.Name)
 		} else {
@@ -277,5 +277,14 @@ func (b *Bot) SubscriptionChanged(user *domain.User, configuration *domain.Confi
 			sub.interest = configuration
 		}
 	}
-	defer b.mu.Unlock()
+}
+
+func (b *Bot) monitorChanges() {
+	for {
+		user, configuration, err := b.q.PopConf(0)
+		if err != nil {
+			break
+		}
+		b.subscriptionChanged(user, configuration)
+	}
 }

@@ -59,7 +59,8 @@ CREATE TABLE IF NOT EXISTS configurations (
 )`
 
 type repoMySQL struct {
-	db *sqlx.DB
+	db   *sqlx.DB
+	stop chan bool
 }
 
 // NewMySQL repo is returned
@@ -96,13 +97,17 @@ func NewMySQL() (Repo, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &repoMySQL{db}
+	r := &repoMySQL{
+		db:   db,
+		stop: make(chan bool),
+	}
 	go r.cleanOAuthState()
 	return r, nil
 }
 
-func (r *repoMySQL) Close() {
-	r.db.Close()
+func (r *repoMySQL) Close() error {
+	r.stop <- true
+	return r.db.Close()
 }
 
 func (r *repoMySQL) get(tableName, field, id string, data interface{}) error {
@@ -239,6 +244,8 @@ func (r *repoMySQL) cleanOAuthState() {
 
 	for {
 		select {
+		case <-r.stop:
+			break
 		case <-ticker.C:
 			res, err := r.db.Exec("DELETE FROM oauth_state WHERE ts < ?", time.Now().Add(-5*time.Minute))
 			if err != nil {
@@ -306,4 +313,35 @@ func (r *repoMySQL) SetChannelsAndGroups(user string, configuration *domain.Conf
 		}
 	}
 	return tx.Commit()
+}
+
+func (r *repoMySQL) TeamSubscriptions(team string) (map[string]*domain.Configuration, error) {
+	subscriptions := make(map[string]*domain.Configuration)
+	rows, err := r.db.Query("SELECT user, channel FROM configurations WHERE user IN (SELECT id FROM users WHERE team = ?)", team)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var user, channel string
+		if err = rows.Scan(&user, &channel); err != nil {
+			return nil, err
+		}
+		if len(channel) == 0 {
+			continue
+		}
+		if _, ok := subscriptions[user]; !ok {
+			subscriptions[user] = &domain.Configuration{}
+		}
+		switch channel[0] {
+		case 'C':
+			subscriptions[user].Channels = append(subscriptions[user].Channels, channel)
+		case 'G':
+			subscriptions[user].Groups = append(subscriptions[user].Groups, channel)
+		case 'D':
+			subscriptions[user].IM = true
+		case 'R':
+			subscriptions[user].Regexp = channel[1:]
+		}
+	}
+	return subscriptions, err
 }

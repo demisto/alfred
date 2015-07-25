@@ -3,19 +3,19 @@ package web
 import (
 	"time"
 
-	"github.com/demisto/alfred/bot"
+	"github.com/demisto/alfred/queue"
 	"github.com/demisto/alfred/repo"
 )
 
 // AppContext holds the web context for the handlers
 type AppContext struct {
 	r repo.Repo
-	b *bot.Bot
+	q queue.Queue
 }
 
 // NewContext creates a new context
-func NewContext(r repo.Repo, b *bot.Bot) *AppContext {
-	return &AppContext{r, b}
+func NewContext(r repo.Repo, q queue.Queue) *AppContext {
+	return &AppContext{r, q}
 }
 
 type session struct {

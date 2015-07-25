@@ -12,7 +12,8 @@ import (
 )
 
 type repo struct {
-	db *bolt.DB
+	db   *bolt.DB
+	stop chan bool
 }
 
 // New repo is returned
@@ -50,13 +51,17 @@ func New() (Repo, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &repo{db}
+	r := &repo{
+		db:   db,
+		stop: make(chan bool),
+	}
 	go r.cleanOAuthState()
 	return r, nil
 }
 
-func (r *repo) Close() {
-	r.db.Close()
+func (r *repo) Close() error {
+	r.stop <- true
+	return r.db.Close()
 }
 
 func (r *repo) get(bucket, key string, data interface{}) error {
@@ -112,6 +117,9 @@ func (r *repo) UserByExternalID(id string) (*domain.User, error) {
 		}
 		return nil
 	})
+	if user == nil && err == nil {
+		err = ErrNotFound
+	}
 	return user, err
 }
 
@@ -260,6 +268,8 @@ func (r *repo) cleanOAuthState() {
 
 	for {
 		select {
+		case <-r.stop:
+			break
 		case <-ticker.C:
 			err := r.db.Batch(func(tx *bolt.Tx) error {
 				c := tx.Bucket([]byte("oauth")).Cursor()
@@ -297,4 +307,34 @@ func (r *repo) ChannelsAndGroups(user string) (*domain.Configuration, error) {
 
 func (r *repo) SetChannelsAndGroups(user string, configuration *domain.Configuration) error {
 	return r.set("channels", user, configuration)
+}
+
+func (r *repo) TeamSubscriptions(team string) (map[string]*domain.Configuration, error) {
+	subscriptions := make(map[string]*domain.Configuration)
+	err := r.db.View(func(tx *bolt.Tx) error {
+		tb := tx.Bucket([]byte("teamusers"))
+		cb := tx.Bucket([]byte("channels"))
+		var ids []string
+		members := tb.Get([]byte(team))
+		if members == nil {
+			return nil
+		}
+		err := json.Unmarshal(members, &ids)
+		if err != nil {
+			return err
+		}
+		for _, id := range ids {
+			s := cb.Get([]byte(id))
+			if s != nil {
+				c := &domain.Configuration{}
+				err := json.Unmarshal(s, c)
+				if err != nil {
+					return err
+				}
+				subscriptions[id] = c
+			}
+		}
+		return nil
+	})
+	return subscriptions, err
 }

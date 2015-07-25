@@ -119,7 +119,7 @@ func (ac *AppContext) save(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	ac.b.SubscriptionChanged(u, req)
+	ac.q.PushConf(u, req)
 	w.WriteHeader(http.StatusNoContent)
 	w.Write([]byte("\n"))
 }

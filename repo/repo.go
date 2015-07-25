@@ -27,5 +27,6 @@ type Repo interface {
 	DelOAuthState(state string) error
 	ChannelsAndGroups(user string) (*domain.Configuration, error)
 	SetChannelsAndGroups(user string, configuration *domain.Configuration) error
-	Close()
+	TeamSubscriptions(team string) (map[string]*domain.Configuration, error)
+	Close() error
 }

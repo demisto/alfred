@@ -5,11 +5,16 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"os"
+	"runtime"
 	"strings"
-	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/demisto/alfred/conf"
+	"github.com/demisto/alfred/queue"
+	"github.com/demisto/alfred/repo"
 	"github.com/demisto/goxforce"
 	"github.com/demisto/slack"
 	"github.com/slavikm/govt"
@@ -19,6 +24,70 @@ const (
 	poweredBy = "\t-\tPowered by <http://slack.demisto.com|Demisto>"
 	botName   = "Alfred"
 )
+
+// Worker reads messages from the queue and does the actual work
+type Worker struct {
+	q   queue.Queue
+	c   chan *slack.Message
+	r   repo.Repo
+	xfe *goxforce.Client
+	vt  *govt.Client
+}
+
+// NewWorker that loads work messages from the queue
+func NewWorker(r repo.Repo, q queue.Queue) (*Worker, error) {
+	xfe, err := goxforce.New(goxforce.SetErrorLog(log.New(conf.LogWriter, "XFE:", log.Lshortfile)))
+	if err != nil {
+		return nil, err
+	}
+	vt, err := govt.New(govt.SetApikey(conf.Options.VT), govt.SetErrorLog(log.New(os.Stderr, "VT:", log.Lshortfile)))
+	if err != nil {
+		return nil, err
+	}
+	return &Worker{
+		r:   r,
+		q:   q,
+		c:   make(chan *slack.Message, runtime.NumCPU()),
+		xfe: xfe,
+		vt:  vt,
+	}, nil
+}
+
+func (w *Worker) handle() {
+	for msg := range w.c {
+		if msg.Subtype == "file_share" {
+			w.handleFile(msg)
+			// If it's file share - don't bother with the rest
+			continue
+		}
+		if strings.Contains(msg.Text, "<http") {
+			w.handleURL(msg)
+		}
+		if ip := ipReg.FindString(msg.Text); ip != "" {
+			w.handleIP(msg, ip)
+		}
+		if hash := md5Reg.FindString(msg.Text); hash != "" {
+			w.handleMD5(msg, hash)
+		}
+	}
+}
+
+// Start the dedup process. To stop, just close the queue.
+func (w *Worker) Start() {
+	// Right now, just use the numebr of CPUs
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go w.handle()
+	}
+	for {
+		msg, err := w.q.PopWork(0)
+		if err != nil {
+			logrus.Info("Stoping WorkManager process")
+			close(w.c)
+			return
+		}
+		w.c <- msg
+	}
+}
 
 func joinMap(m map[string]bool) string {
 	res := ""
@@ -44,76 +113,31 @@ func joinMapInt(m map[string]int) string {
 	return res
 }
 
-func (b *Bot) isThereInterestIn(original *slack.Message) bool {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	data := original.Context.(*context)
-	subs := b.subscriptions[data.Team]
-	if subs == nil {
-		return false
+// post uses the correct client to post to the channel
+// See if the original message poster is subscribed and if so use him.
+// If not, use the first user we have that is subscribed to the channel.
+func (w *Worker) post(message *slack.PostMessageRequest, original *slack.Message) error {
+	u, err := w.r.UserByExternalID(original.User)
+	if err != nil && err != repo.ErrNotFound {
+		return err
 	}
-	if sub := subs.FirstSubForChannel(original.Channel); sub != nil {
-		return true
-	}
-	return false
-}
-
-func (b *Bot) alreadyHandled(original *slack.Message) bool {
-	data := original.Context.(*context)
-	handled := b.handledMessages[data.Team]
-	if handled == nil {
-		handled = make(map[string]*time.Time)
-		b.handledMessages[data.Team] = handled
-	}
-	var field string
-	// We care only about messages
-	if original.Type == "message" {
-		switch original.Subtype {
-		case "file_shared":
-			field = original.File.Name + "|" + original.User
-		case "message_changed":
-			field = original.Message.Text + "|" + original.User
-		default:
-			field = original.Text + "|" + original.User
+	var s *slack.Slack
+	if err != nil {
+		data := original.Context.(*Context)
+		u, err = w.r.User(data.User)
+		if err != nil {
+			return err
 		}
 	}
-	if field == "" {
-		// Ignore the message
-		return true
-	}
-	if handled[field] != nil {
-		return true
-	}
-	now := time.Now()
-	handled[field] = &now
-	return false
-}
-
-// post uses the correct client to post to the channel
-// TODO - terrible hack
-func (b *Bot) post(message *slack.PostMessageRequest, original *slack.Message) error {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	// Get the correct team
-	data := original.Context.(*context)
-	subs := b.subscriptions[data.Team]
-	if subs == nil {
-		return fmt.Errorf("No team found for the Slack message - [%s, %s]", data.Team, data.User)
-	}
-	// First, let's see if the posting user is in our list
-	if sub := subs.SubForUser(data.User); sub != nil {
-		_, err := sub.s.PostMessage(message, false)
+	s, err = slack.New(slack.SetToken(u.Token))
+	if err != nil {
 		return err
 	}
-	// If not, let's find the first user with interest in the channel
-	if sub := subs.FirstSubForChannel(original.Channel); sub != nil {
-		_, err := sub.s.PostMessage(message, false)
-		return err
-	}
-	return fmt.Errorf("No interest in channel %s", message.Channel)
+	_, err = s.PostMessage(message, false)
+	return err
 }
 
-func (b *Bot) handleURL(message slack.Message) {
+func (w *Worker) handleURL(message *slack.Message) {
 	start := strings.Index(message.Text, "<http")
 	end := strings.Index(message.Text[start:], ">")
 	if end > 0 {
@@ -132,12 +156,12 @@ func (b *Bot) handleURL(message slack.Message) {
 		var resolve *goxforce.ResolveResp
 		var vtResp *govt.UrlReport
 		go func() {
-			urlResp, urlRespErr = b.xfe.URL(url)
-			resolve, resolveErr = b.xfe.Resolve(url)
+			urlResp, urlRespErr = w.xfe.URL(url)
+			resolve, resolveErr = w.xfe.Resolve(url)
 			c <- 1
 		}()
 		go func() {
-			vtResp, err = b.vt.GetUrlReport(url)
+			vtResp, err = w.vt.GetUrlReport(url)
 			c <- 1
 		}()
 		for i := 0; i < 2; i++ {
@@ -226,14 +250,14 @@ func (b *Bot) handleURL(message slack.Message) {
 		} else {
 			postMessage.Attachments[0].Text = xfeMessage
 		}
-		err = b.post(postMessage, &message)
+		err = w.post(postMessage, message)
 		if err != nil {
 			logrus.Errorf("Unable to send message to Slack - %v", err)
 		}
 	}
 }
 
-func (b *Bot) handleIP(message slack.Message, ip string) {
+func (w *Worker) handleIP(message *slack.Message, ip string) {
 	xfeMessage := ""
 	color := "good"
 	// Do the network commands in parallel
@@ -242,11 +266,11 @@ func (b *Bot) handleIP(message slack.Message, ip string) {
 	var vtResp *govt.IpReport
 	var ipRespErr, err error
 	go func() {
-		ipResp, ipRespErr = b.xfe.IPR(ip)
+		ipResp, ipRespErr = w.xfe.IPR(ip)
 		c <- 1
 	}()
 	go func() {
-		vtResp, err = b.vt.GetIpReport(ip)
+		vtResp, err = w.vt.GetIpReport(ip)
 		c <- 1
 	}()
 	for i := 0; i < 2; i++ {
@@ -319,13 +343,13 @@ func (b *Bot) handleIP(message slack.Message, ip string) {
 	} else {
 		postMessage.Attachments[0].Text = xfeMessage
 	}
-	err = b.post(postMessage, &message)
+	err = w.post(postMessage, message)
 	if err != nil {
 		logrus.Errorf("Unable to send message to Slack - %v", err)
 	}
 }
 
-func (b *Bot) handleMD5(message slack.Message, md5 string) {
+func (w *Worker) handleMD5(message *slack.Message, md5 string) {
 	xfeMessage := ""
 	color := "good"
 	// Do the network commands in parallel
@@ -334,11 +358,11 @@ func (b *Bot) handleMD5(message slack.Message, md5 string) {
 	var vtResp *govt.FileReport
 	var md5RespErr, err error
 	go func() {
-		md5Resp, md5RespErr = b.xfe.MalwareDetails(md5)
+		md5Resp, md5RespErr = w.xfe.MalwareDetails(md5)
 		c <- 1
 	}()
 	go func() {
-		vtResp, err = b.vt.GetFileReport(md5)
+		vtResp, err = w.vt.GetFileReport(md5)
 		c <- 1
 	}()
 	for i := 0; i < 2; i++ {
@@ -410,13 +434,13 @@ func (b *Bot) handleMD5(message slack.Message, md5 string) {
 	} else {
 		postMessage.Attachments[0].Text = xfeMessage
 	}
-	err = b.post(postMessage, &message)
+	err = w.post(postMessage, message)
 	if err != nil {
 		logrus.Errorf("Unable to send message to Slack - %v\n", err)
 	}
 }
 
-func (b *Bot) handleFile(message slack.Message) {
+func (w *Worker) handleFile(message *slack.Message) {
 	hash := md5.New()
 	resp, err := http.Get(message.File.URL)
 	if err != nil {
@@ -438,11 +462,11 @@ func (b *Bot) handleFile(message slack.Message) {
 	var virus string
 	var md5RespErr, vtErr error
 	go func() {
-		md5Resp, md5RespErr = b.xfe.MalwareDetails(h)
+		md5Resp, md5RespErr = w.xfe.MalwareDetails(h)
 		c <- 1
 	}()
 	go func() {
-		vtResp, vtErr = b.vt.GetFileReport(h)
+		vtResp, vtErr = w.vt.GetFileReport(h)
 		c <- 1
 	}()
 	go func() {
@@ -530,7 +554,7 @@ func (b *Bot) handleFile(message slack.Message) {
 			})
 	}
 	// }
-	err = b.post(postMessage, &message)
+	err = w.post(postMessage, message)
 	if err != nil {
 		logrus.Errorf("Unable to send message to Slack - %v\n", err)
 	}
