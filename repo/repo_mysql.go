@@ -3,6 +3,7 @@ package repo
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -56,6 +57,19 @@ CREATE TABLE IF NOT EXISTS configurations (
 	channel VARCHAR(64) NOT NULL,
 	CONSTRAINT configurations_pk PRIMARY KEY (user, channel),
 	CONSTRAINT configurations_user_fk FOREIGN KEY (user) REFERENCES users (id)
+);
+CREATE TABLE IF NOT EXISTS bots (
+	bot VARCHAR(64) NOT NULL,
+	ts TIMESTAMP NOT NULL,
+	CONSTRAINT bots_pk PRIMARY KEY (bot)
+);
+CREATE TABLE IF NOT EXISTS bot_for_user (
+	user VARCHAR(64) NOT NULL,
+	bot VARCHAR(64) NOT NULL,
+	ts TIMESTAMP NOT NULL,
+	CONSTRAINT bot_for_user_pk PRIMARY KEY (user),
+	CONSTRAINT bot_for_user_u_fk FOREIGN KEY (user) REFERENCES users(id),
+	CONSTRAINT bot_for_user_b_fk FOREIGN KEY (bot) REFERENCES bots(bot)
 )`
 
 type repoMySQL struct {
@@ -344,4 +358,46 @@ func (r *repoMySQL) TeamSubscriptions(team string) (map[string]*domain.Configura
 		}
 	}
 	return subscriptions, err
+}
+
+func (r *repoMySQL) OpenUsers() ([]domain.UserBot, error) {
+	var users []domain.UserBot
+	err := r.db.Select(&users,
+		"SELECT u.id as user, ub.bot, ub.ts FROM users u LEFT OUTER JOIN bot_for_user ub ON u.id = ub.user LEFT OUTER JOIN bots b ON ub.bot = b.bot WHERE ub.bot IS NULL OR b.ts + interval ? minute < now()", 3)
+	return users, err
+}
+
+func (r *repoMySQL) LockUser(user *domain.UserBot) (bool, error) {
+	// TODO - clean
+	name, err := os.Hostname()
+	if err != nil {
+		return false, err
+	}
+	// This line does not exist
+	if user.Bot == "" {
+		_, err := r.db.Exec("INSERT INTO bot_for_user (user, bot, ts) VALUES (?, ?, now())", user.User, name)
+		if err != nil {
+			// TODO - check if duplicate and then just return false
+			return false, err
+		}
+	}
+	if err != nil {
+		return false, err
+	}
+	result, err := r.db.Exec("UPDATE bot_for_user SET bot = ?, ts = now() WHERE user = ? AND bot = ? AND ts = ?", name, user.User, user.Bot, user.Timestamp)
+	if err != nil {
+		return false, err
+	}
+	rows, err := result.RowsAffected()
+	return rows > 0, err
+}
+
+func (r *repoMySQL) BotHeartbeat() error {
+	// TODO - clean
+	name, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Exec("INSERT INTO bots (bot, ts) VALUES (?, now()) ON DUPLICATE KEY UPDATE ts = now()", name)
+	return err
 }

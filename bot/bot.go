@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
@@ -14,11 +15,16 @@ import (
 	"github.com/demisto/slack"
 )
 
+const (
+	maxUsersPerBot = 1000
+)
+
 // subscription holds the interest we have for each team
 type subscription struct {
 	user     *domain.User // the users for the team
 	interest *domain.Configuration
 	s        *slack.Slack // the slack client
+	started  bool         // did we start subscription for this guy
 }
 
 type subscriptions struct {
@@ -84,7 +90,7 @@ func (subs subscriptions) SubForUser(user string) *subscription {
 
 // Bot iterates on all subscriptions and listens / responds to messages
 type Bot struct {
-	in            chan slack.Message
+	in            chan *slack.Message
 	stop          chan bool
 	r             repo.Repo
 	mu            sync.RWMutex // Guards the subscriptions
@@ -95,7 +101,7 @@ type Bot struct {
 // New returns a new bot
 func New(r repo.Repo, q queue.Queue) (*Bot, error) {
 	return &Bot{
-		in:            make(chan slack.Message),
+		in:            make(chan *slack.Message),
 		stop:          make(chan bool, 1),
 		r:             r,
 		subscriptions: make(map[string]*subscriptions),
@@ -105,34 +111,57 @@ func New(r repo.Repo, q queue.Queue) (*Bot, error) {
 
 // loadSubscriptions loads all subscriptions per team
 func (b *Bot) loadSubscriptions() error {
-	teams, err := b.r.Teams()
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	cnt := 0
+	for _, v := range b.subscriptions {
+		cnt += len(v.subscriptions)
+	}
+	// Fully loaded, no room for others
+	if cnt >= maxUsersPerBot {
+		return nil
+	}
+	cnt = 0
+	// Everything must run in separate transactions as it is written here
+	openUsers, err := b.r.OpenUsers()
 	if err != nil {
 		return err
 	}
-	for i := range teams {
-		teamSubs := &subscriptions{}
-		users, err := b.r.TeamMembers(teams[i].ID)
+	for i := range openUsers {
+		locked, err := b.r.LockUser(&openUsers[i])
+		if err != nil || !locked {
+			continue
+		}
+		u, err := b.r.User(openUsers[i].User)
 		if err != nil {
-			return err
+			logrus.Warnf("Error loading user %s - %v\n", openUsers[i].User, err)
+			continue
 		}
-		for j := range users {
-			subs, err := b.r.ChannelsAndGroups(users[j].ID)
-			if err != nil {
-				return err
-			}
-			if !subs.IsActive() {
-				continue
-			}
-			teamSub := subscription{user: &users[j], interest: subs}
-			s, err := slack.New(slack.SetToken(users[j].Token),
-				slack.SetErrorLog(log.New(conf.LogWriter, "SLACK:", log.Lshortfile)))
-			if err != nil {
-				return err
-			}
-			teamSub.s = s
-			teamSubs.subscriptions = append(teamSubs.subscriptions, teamSub)
+		teamSubs := b.subscriptions[u.Team]
+		if teamSubs == nil {
+			teamSubs = &subscriptions{}
+			b.subscriptions[u.Team] = teamSubs
 		}
-		b.subscriptions[teams[i].ID] = teamSubs
+		subs, err := b.r.ChannelsAndGroups(u.ID)
+		if err != nil {
+			logrus.Warnf("Error loading user configuration - %v\n", err)
+			continue
+		}
+		if !subs.IsActive() {
+			continue
+		}
+		s, err := slack.New(slack.SetToken(u.Token),
+			slack.SetErrorLog(log.New(conf.LogWriter, "SLACK:", log.Lshortfile)))
+		if err != nil {
+			logrus.Warnf("Error opening Slack for user %s (%s) - %v\n", u.ID, u.Name, err)
+			continue
+		}
+		teamSub := subscription{user: u, interest: subs, s: s}
+		teamSubs.subscriptions = append(teamSubs.subscriptions, teamSub)
+		cnt++
+		if cnt >= maxUsersPerBot {
+			break
+		}
 	}
 	return nil
 }
@@ -144,17 +173,19 @@ type Context struct {
 }
 
 func (b *Bot) startWS() error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	for k, v := range b.subscriptions {
 		logrus.Infof("Starting subscription for team - %s\n", k)
 		for i := range v.subscriptions {
-			logrus.Infof("Starting WS for user - %s (%s)\n", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
-			info, err := v.subscriptions[i].s.RTMStart("slack.demisto.com", b.in, &Context{Team: k, User: v.subscriptions[i].user.ID})
-			if err != nil {
-				return err
-			}
-			// Just save the first one
-			if i == 0 {
+			if !v.subscriptions[i].started {
+				logrus.Infof("Starting WS for user - %s (%s)\n", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
+				info, err := v.subscriptions[i].s.RTMStart("slack.demisto.com", b.in, &Context{Team: k, User: v.subscriptions[i].user.ID})
+				if err != nil {
+					return err
+				}
 				v.info = info
+				v.subscriptions[i].started = true
 			}
 		}
 	}
@@ -162,6 +193,8 @@ func (b *Bot) startWS() error {
 }
 
 func (b *Bot) stopWS() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	for k, v := range b.subscriptions {
 		logrus.Infof("Stoping subscription for team - %s\n", k)
 		for i := range v.subscriptions {
@@ -170,6 +203,7 @@ func (b *Bot) stopWS() {
 			if err != nil {
 				logrus.Warnf("Unable to stop subscription for user %s - %v\n", v.subscriptions[i].user.ID, err)
 			}
+			v.subscriptions[i].started = false
 		}
 	}
 }
@@ -195,6 +229,9 @@ func (b *Bot) isThereInterestIn(original *slack.Message) bool {
 
 func (b *Bot) handleMessage(msg *slack.Message) {
 	logrus.Debugf("Handling message - %+v\n", msg)
+	if msg == nil {
+		return
+	}
 	if !b.isThereInterestIn(msg) {
 		logrus.Debugf("No one is interested in the channel %s\n", msg.Channel)
 		return
@@ -226,13 +263,41 @@ func (b *Bot) Start() error {
 		return err
 	}
 	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-b.stop:
 				b.stopWS()
 				return
 			case msg := <-b.in:
-				b.handleMessage(&msg)
+				// TODO - error handling - something wrong with channel closing in case of error
+				if msg == nil || msg.Type == "error" {
+					if msg == nil {
+						logrus.Errorf("Message channel closed")
+					} else {
+						logrus.Errorf("Got error message from channel %+v\n", msg)
+					}
+					// Restart everything
+					b.stopWS()
+					b.in = make(chan *slack.Message)
+					b.startWS()
+					continue
+				}
+				b.handleMessage(msg)
+			case <-ticker.C:
+				err := b.r.BotHeartbeat()
+				if err != nil {
+					logrus.Errorf("Unable to update heartbeat - %v\n", err)
+				}
+				err = b.loadSubscriptions()
+				if err != nil {
+					logrus.Errorf("Unable to load subscriptions - %v\n", err)
+				}
+				err = b.startWS()
+				if err != nil {
+					logrus.Errorf("Error starting WS - %v\n", err)
+				}
 			}
 		}
 	}()

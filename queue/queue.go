@@ -2,11 +2,19 @@
 package queue
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/slack"
+)
+
+var (
+	// ErrTimeout is returned if receive encounters a timeout
+	ErrTimeout = errors.New("Timeout occured")
+	// ErrClosed is returned if you try to access a closed queue
+	ErrClosed = errors.New("Queue is already closed")
 )
 
 // ConfigurationMessage including the user and configuration

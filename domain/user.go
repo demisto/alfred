@@ -82,3 +82,10 @@ type OAuthState struct {
 	State     string    `json:"state"`
 	Timestamp time.Time `json:"ts" db:"ts"`
 }
+
+// UserBot holds allocation of bot for user
+type UserBot struct {
+	User      string    `json:"user"`
+	Bot       string    `json:"bot"`
+	Timestamp time.Time `json:"ts" db:"ts"`
+}

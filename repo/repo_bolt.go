@@ -338,3 +338,29 @@ func (r *repo) TeamSubscriptions(team string) (map[string]*domain.Configuration,
 	})
 	return subscriptions, err
 }
+
+// OpenUsers just returns all users without associating them with a bot since this is on dev system
+func (r *repo) OpenUsers() ([]domain.UserBot, error) {
+	var users []domain.UserBot
+	err := r.db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket([]byte("users")).Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var u domain.User
+			err := json.Unmarshal(v, &u)
+			if err != nil {
+				return err
+			}
+			users = append(users, domain.UserBot{User: u.ID, Timestamp: time.Now()})
+		}
+		return nil
+	})
+	return users, err
+}
+
+func (r *repo) LockUser(user *domain.UserBot) (bool, error) {
+	return true, nil
+}
+
+func (r *repo) BotHeartbeat() error {
+	return nil
+}

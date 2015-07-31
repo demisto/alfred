@@ -37,6 +37,16 @@ var Options struct {
 		// Password for DB
 		Password string
 	}
+	// AWS credentials
+	AWS struct {
+		// ID to use
+		ID string
+		// Secret access key
+		Secret           string
+		ConfQueueName    string
+		MessageQueueName string
+		WorkQueueName    string
+	}
 }
 
 // The pipe writer to wrap around standard logger. It is configured in main.
@@ -55,7 +65,8 @@ func Load(filename string, useDefault bool) error {
       "Env": "DEV",
       "DB": {"ConnectString": "alfred.db"},
 			"VT": "***REMOVED***",
-      "Slack": {"ClientID": "***REMOVED***", "ClientSecret": "***REMOVED***"}
+      "Slack": {"ClientID": "***REMOVED***", "ClientSecret": "***REMOVED***"},
+			"AWS": {"ConfQueueName": "TestConf", "MessageQueueName": "TestMessage", "WorkQueueName": "TestWork"}
     }`)
 	// Start the options with the defaults and override with the file
 	err := json.Unmarshal(defOptions, &Options)

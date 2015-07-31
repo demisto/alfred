@@ -6,7 +6,9 @@ import (
 	"runtime"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/demisto/alfred/bot"
 	"github.com/demisto/alfred/conf"
+	"github.com/demisto/alfred/queue"
 	"github.com/demisto/alfred/repo"
 )
 
@@ -50,4 +52,17 @@ func main() {
 	}
 	defer r.Close()
 
+	// Create the queue for the various message exchanges
+	q := queue.New()
+	defer q.Close()
+
+	b, err := bot.New(r, q)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	err = b.Start()
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	defer b.Stop()
 }
