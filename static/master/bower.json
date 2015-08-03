@@ -41,5 +41,8 @@
   },
   "resolutions": {
     "jquery": ">= 1.9.1"
+  },
+  "devDependencies": {
+    "toastr": "~2.1.1"
   }
 }

@@ -33,5 +33,11 @@
   "bower_components/chosen/chosen.min.css",
   "bower_components/chosen/chosen-sprite.png",
   "bower_components/chosen/chosen-sprite@2x.png",
-  "bower_components/js-cookie/src/js.cookie.js"
+  "bower_components/js-cookie/src/js.cookie.js",
+  "bower_components/toastr/toastr.min.js",
+  "bower_components/toastr/toastr.css",
+  "bower_components/toastr/toastr.js",
+  "bower_components/toastr/toastr.less",
+  "bower_components/toastr/toastr.min.css",
+  "bower_components/toastr/toastr.scss"
 ]
