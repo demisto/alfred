@@ -46,7 +46,7 @@ func main() {
 
 	// If we are on DEV, let's use embedded DB. On test and prod we will use MySQL
 	var r repo.Repo
-	if conf.IsDev() || conf.Options.DB.Username == "" {
+	if conf.Options.DB.Username == "" {
 		r, err = repo.New()
 	} else {
 		r, err = repo.NewMySQL()
@@ -60,30 +60,40 @@ func main() {
 	q := queue.New()
 	defer q.Close()
 
-	b, err := bot.New(r, q)
-	if err != nil {
-		logrus.Fatal(err)
+	if conf.Options.Bot {
+		b, err := bot.New(r, q)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		go func() {
+			err = b.Start()
+			if err != nil {
+				logrus.Fatal(err)
+			}
+		}()
+		defer b.Stop()
 	}
-	err = b.Start()
-	if err != nil {
-		logrus.Fatal(err)
-	}
-	defer b.Stop()
-	// If we are on dev environment, start the dedup and work process
-	if conf.IsDev() {
+
+	if conf.Options.Dedup {
 		dd := dedup.New(q)
 		go dd.Start()
+	}
+
+	if conf.Options.Worker {
 		worker, err := bot.NewWorker(r, q)
 		if err != nil {
 			logrus.Fatal(err)
 		}
 		go worker.Start()
 	}
-	appC := web.NewContext(r, q)
-	router := web.New(appC)
-	if conf.IsDev() {
-		logrus.Fatal(http.ListenAndServe(":7070", router))
-	} else {
-		logrus.Fatal(http.ListenAndServe(":7070", router))
+
+	if conf.Options.Web {
+		appC := web.NewContext(r, q)
+		router := web.New(appC)
+		if conf.Options.SSL.Cert != "" {
+			logrus.Fatal(http.ListenAndServeTLS(conf.Options.Address, conf.Options.SSL.Cert, conf.Options.SSL.Key, router))
+		} else {
+			logrus.Fatal(http.ListenAndServe(conf.Options.Address, router))
+		}
 	}
 }

@@ -13,12 +13,21 @@ import (
 var Options struct {
 	// The type of environment - PROD/TEST/DEV
 	Env string
+	// The address to listen on
+	Address string
 	// Security defintions
 	Security struct {
 		// The secret session key that is used to symmetrically encrypt sessions stored in cookies
 		SessionKey string
 		// Session timeout in minutes
 		Timeout int
+	}
+	// SSL configuration
+	SSL struct {
+		// The certificate file
+		Cert string
+		// The private key file
+		Key string
 	}
 	// Slack application credentials
 	Slack struct {
@@ -47,6 +56,16 @@ var Options struct {
 		MessageQueueName string
 		WorkQueueName    string
 	}
+	G struct {
+		Project     string
+		ConfName    string
+		MessageName string
+		WorkName    string
+	}
+	Web    bool
+	Bot    bool
+	Dedup  bool
+	Worker bool
 }
 
 // The pipe writer to wrap around standard logger. It is configured in main.
@@ -63,10 +82,16 @@ func Load(filename string, useDefault bool) error {
 	defOptions := []byte(`{
       "Security" : {"SessionKey": "***REMOVED***", "Timeout": 525600},
       "Env": "DEV",
+			"Address": ":7070",
       "DB": {"ConnectString": "alfred.db"},
 			"VT": "***REMOVED***",
       "Slack": {"ClientID": "***REMOVED***", "ClientSecret": "***REMOVED***"},
-			"AWS": {"ConfQueueName": "TestConf", "MessageQueueName": "TestMessage", "WorkQueueName": "TestWork"}
+			"AWS": {"ConfQueueName": "TestConf", "MessageQueueName": "TestMessage", "WorkQueueName": "TestWork"},
+			"G": {"Project": "***REMOVED***", "ConfName": "tconf", "MessageName": "tmsg", "WorkName": "twork"},
+			"Web": true,
+			"Bot": true,
+			"Dedup": true,
+			"Worker": true
     }`)
 	// Start the options with the defaults and override with the file
 	err := json.Unmarshal(defOptions, &Options)

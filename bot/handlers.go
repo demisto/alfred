@@ -3,6 +3,7 @@ package bot
 import (
 	"bytes"
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -123,7 +124,16 @@ func (w *Worker) post(message *slack.PostMessageRequest, original *slack.Message
 	}
 	var s *slack.Slack
 	if err != nil {
-		data := original.Context.(*Context)
+		var data *Context
+		switch c := original.Context.(type) {
+		case *Context:
+			data = c
+		case map[string]interface{}:
+			data = &Context{Team: c["Team"].(string), User: c["User"].(string)}
+		default:
+			logrus.Warnf("Unknown context for message %+v\n", original)
+			return errors.New("Unknow context")
+		}
 		u, err = w.r.User(data.User)
 		if err != nil {
 			return err
@@ -441,6 +451,10 @@ func (w *Worker) handleMD5(message *slack.Message, md5 string) {
 }
 
 func (w *Worker) handleFile(message *slack.Message) {
+	if message.File.Size > 30*1024*1024 {
+		logrus.Infof("File %s is bigger than 30M, skipping\n", message.File.Name)
+		return
+	}
 	hash := md5.New()
 	resp, err := http.Get(message.File.URL)
 	if err != nil {

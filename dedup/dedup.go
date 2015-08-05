@@ -55,7 +55,16 @@ func (d *Dedup) Start() {
 }
 
 func (d *Dedup) alreadyHandled(original *slack.Message) bool {
-	data := original.Context.(*bot.Context)
+	var data *bot.Context
+	switch c := original.Context.(type) {
+	case *bot.Context:
+		data = c
+	case map[string]interface{}:
+		data = &bot.Context{Team: c["Team"].(string), User: c["User"].(string)}
+	default:
+		logrus.Warnf("Unknown context for message %+v\n", original)
+		return true
+	}
 	handled := d.handledMessages[data.Team]
 	if handled == nil {
 		handled = make(map[string]*time.Time)

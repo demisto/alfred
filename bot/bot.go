@@ -262,47 +262,44 @@ func (b *Bot) Start() error {
 	if err != nil {
 		return err
 	}
-	go func() {
-		ticker := time.NewTicker(1 * time.Minute)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-b.stop:
+	go b.monitorChanges()
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-b.stop:
+			b.stopWS()
+			return nil
+		case msg := <-b.in:
+			// TODO - error handling - something wrong with channel closing in case of error
+			if msg == nil || msg.Type == "error" {
+				if msg == nil {
+					logrus.Errorf("Message channel closed")
+				} else {
+					logrus.Errorf("Got error message from channel %+v\n", msg)
+				}
+				// Restart everything
 				b.stopWS()
-				return
-			case msg := <-b.in:
-				// TODO - error handling - something wrong with channel closing in case of error
-				if msg == nil || msg.Type == "error" {
-					if msg == nil {
-						logrus.Errorf("Message channel closed")
-					} else {
-						logrus.Errorf("Got error message from channel %+v\n", msg)
-					}
-					// Restart everything
-					b.stopWS()
-					b.in = make(chan *slack.Message)
-					b.startWS()
-					continue
-				}
-				b.handleMessage(msg)
-			case <-ticker.C:
-				err := b.r.BotHeartbeat()
-				if err != nil {
-					logrus.Errorf("Unable to update heartbeat - %v\n", err)
-				}
-				err = b.loadSubscriptions()
-				if err != nil {
-					logrus.Errorf("Unable to load subscriptions - %v\n", err)
-				}
-				err = b.startWS()
-				if err != nil {
-					logrus.Errorf("Error starting WS - %v\n", err)
-				}
+				b.in = make(chan *slack.Message)
+				b.startWS()
+				continue
+			}
+			b.handleMessage(msg)
+		case <-ticker.C:
+			err := b.r.BotHeartbeat()
+			if err != nil {
+				logrus.Errorf("Unable to update heartbeat - %v\n", err)
+			}
+			err = b.loadSubscriptions()
+			if err != nil {
+				logrus.Errorf("Unable to load subscriptions - %v\n", err)
+			}
+			err = b.startWS()
+			if err != nil {
+				logrus.Errorf("Error starting WS - %v\n", err)
 			}
 		}
-	}()
-	go b.monitorChanges()
-	return nil
+	}
 }
 
 // Stop the monitoring process
