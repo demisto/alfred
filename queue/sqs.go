@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
-	"github.com/nlopes/slack"
+	"github.com/demisto/slack"
 )
 
 type logger struct {

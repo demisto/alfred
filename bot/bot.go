@@ -142,6 +142,11 @@ func (b *Bot) loadSubscriptions() error {
 			teamSubs = &subscriptions{}
 			b.subscriptions[u.Team] = teamSubs
 		}
+		// Just precaution, if we already have the user just skip this
+		// This is required for bolt repo implementation
+		if teamSubs.SubForUser(u.ID) != nil {
+			continue
+		}
 		subs, err := b.r.ChannelsAndGroups(u.ID)
 		if err != nil {
 			logrus.Warnf("Error loading user configuration - %v\n", err)
@@ -182,7 +187,8 @@ func (b *Bot) startWS() error {
 				logrus.Infof("Starting WS for user - %s (%s)\n", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
 				info, err := v.subscriptions[i].s.RTMStart("slack.demisto.com", b.in, &Context{Team: k, User: v.subscriptions[i].user.ID})
 				if err != nil {
-					return err
+					logrus.Warnf("Unable to start WS for user %s (%s) - %v\n", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name, err)
+					continue
 				}
 				v.info = info
 				v.subscriptions[i].started = true

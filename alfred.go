@@ -4,7 +4,10 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/bot"
@@ -15,10 +18,117 @@ import (
 	"github.com/demisto/alfred/web"
 )
 
+var (
+	confFile = flag.String("conf", "conf.json", "Path to configuration file in JSON format")
+	logLevel = flag.String("loglevel", "info", "Specify the log level for output (debug/info/warn/error/fatal/panic) - default is info")
+	logFile  = flag.String("logfile", "", "The log file location")
+)
+
+type closer interface {
+	Close() error
+}
+
+type botCloser struct {
+	*bot.Bot
+}
+
+func (b *botCloser) Close() error {
+	b.Stop()
+	return nil
+}
+
+func run(signalCh chan os.Signal) {
+	var closers []closer
+	// If we are on DEV, let's use embedded DB. On test and prod we will use MySQL
+	var r repo.Repo
+	var err error
+	if conf.Options.DB.Username == "" {
+		r, err = repo.New()
+	} else {
+		r, err = repo.NewMySQL()
+	}
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	defer r.Close()
+	closers = append(closers, r)
+
+	// Create the queue for the various message exchanges
+	q, err := queue.New()
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	defer q.Close()
+	closers = append(closers, q)
+
+	if conf.Options.Bot {
+		b, err := bot.New(r, q)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		go func() {
+			err = b.Start()
+			if err != nil {
+				logrus.Fatal(err)
+			}
+		}()
+		defer b.Stop()
+		closers = append(closers, &botCloser{b})
+	}
+
+	if conf.Options.Dedup {
+		dd := dedup.New(q)
+		go dd.Start()
+	}
+
+	if conf.Options.Worker {
+		worker, err := bot.NewWorker(r, q)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		go worker.Start()
+	}
+
+	if conf.Options.Web {
+		appC := web.NewContext(r, q)
+		router := web.New(appC)
+		go func() {
+			var err error
+			if conf.Options.SSL.Cert != "" {
+				err = http.ListenAndServeTLS(conf.Options.Address, conf.Options.SSL.Cert, conf.Options.SSL.Key, router)
+			} else {
+				err = http.ListenAndServe(conf.Options.Address, router)
+			}
+			if err != nil {
+				logrus.Fatal(err)
+			}
+		}()
+	}
+	// Block until one of the signals above is received
+	select {
+	case <-signalCh:
+		logrus.Infoln("Signal received, initializing clean shutdown...")
+	}
+	closeChannel := make(chan bool)
+	go func() {
+		for i := range closers {
+			closers[i].Close()
+		}
+		closeChannel <- true
+	}()
+	// Block again until another signal is received, a shutdown timeout elapses,
+	// or the Command is gracefully closed
+	logrus.Infoln("Waiting for clean shutdown...")
+	select {
+	case <-signalCh:
+		logrus.Infoln("Second signal received, initializing hard shutdown")
+	case <-time.After(time.Second * 30):
+		logrus.Infoln("Time limit reached, initializing hard shutdown")
+	case <-closeChannel:
+	}
+}
+
 func main() {
-	confFile := flag.String("conf", "conf.json", "Path to configuration file in JSON format")
-	logLevel := flag.String("loglevel", "info", "Specify the log level for output (debug/info/warn/error/fatal/panic) - default is info")
-	logFile := flag.String("logfile", "", "The log file location")
 	flag.Parse()
 	err := conf.Load(*confFile, true)
 	if err != nil {
@@ -43,57 +153,11 @@ func main() {
 
 	// Let's use all the logical CPUs
 	runtime.GOMAXPROCS(runtime.NumCPU())
+	// Handle OS signals to gracefully shutdown
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+	logrus.Infoln("Listening to OS signals")
 
-	// If we are on DEV, let's use embedded DB. On test and prod we will use MySQL
-	var r repo.Repo
-	if conf.Options.DB.Username == "" {
-		r, err = repo.New()
-	} else {
-		r, err = repo.NewMySQL()
-	}
-	if err != nil {
-		logrus.Fatal(err)
-	}
-	defer r.Close()
-
-	// Create the queue for the various message exchanges
-	q := queue.New()
-	defer q.Close()
-
-	if conf.Options.Bot {
-		b, err := bot.New(r, q)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		go func() {
-			err = b.Start()
-			if err != nil {
-				logrus.Fatal(err)
-			}
-		}()
-		defer b.Stop()
-	}
-
-	if conf.Options.Dedup {
-		dd := dedup.New(q)
-		go dd.Start()
-	}
-
-	if conf.Options.Worker {
-		worker, err := bot.NewWorker(r, q)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		go worker.Start()
-	}
-
-	if conf.Options.Web {
-		appC := web.NewContext(r, q)
-		router := web.New(appC)
-		if conf.Options.SSL.Cert != "" {
-			logrus.Fatal(http.ListenAndServeTLS(conf.Options.Address, conf.Options.SSL.Cert, conf.Options.SSL.Key, router))
-		} else {
-			logrus.Fatal(http.ListenAndServe(conf.Options.Address, router))
-		}
-	}
+	run(signalCh)
+	logrus.Infoln("Server shutdown completed")
 }

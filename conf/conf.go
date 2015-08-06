@@ -87,7 +87,7 @@ func Load(filename string, useDefault bool) error {
 			"VT": "***REMOVED***",
       "Slack": {"ClientID": "***REMOVED***", "ClientSecret": "***REMOVED***"},
 			"AWS": {"ConfQueueName": "TestConf", "MessageQueueName": "TestMessage", "WorkQueueName": "TestWork"},
-			"G": {"Project": "***REMOVED***", "ConfName": "tconf", "MessageName": "tmsg", "WorkName": "twork"},
+			"G": {"ConfName": "tconf", "MessageName": "tmsg", "WorkName": "twork"},
 			"Web": true,
 			"Bot": true,
 			"Dedup": true,

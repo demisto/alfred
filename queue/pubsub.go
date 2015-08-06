@@ -10,7 +10,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
-	"github.com/nlopes/slack"
+	"github.com/demisto/slack"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	pubsub "google.golang.org/api/pubsub/v1"

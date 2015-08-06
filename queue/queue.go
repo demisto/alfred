@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/slack"
 )
@@ -35,18 +36,29 @@ type Queue interface {
 }
 
 // New queue is returned depending on environment
-func New() Queue {
-	var q queueChannel
-	q.Conf = make(chan ConfigurationMessage, 100)
-	q.Dedup = make(chan slack.Message, 100)
-	q.Work = make(chan slack.Message, 100)
-	return &q
+func New() (Queue, error) {
+	var q Queue
+	var err error
+	switch {
+	case conf.Options.AWS.ID != "":
+		q, err = newSQS()
+	case conf.Options.G.Project != "":
+		q, err = newPubSub()
+	default:
+		q = &queueChannel{
+			Conf:  make(chan ConfigurationMessage, 100),
+			Dedup: make(chan slack.Message, 100),
+			Work:  make(chan slack.Message, 100),
+		}
+	}
+	return q, err
 }
 
 type queueChannel struct {
-	Conf  chan ConfigurationMessage
-	Dedup chan slack.Message
-	Work  chan slack.Message
+	Conf   chan ConfigurationMessage
+	Dedup  chan slack.Message
+	Work   chan slack.Message
+	closed bool
 }
 
 func (q *queueChannel) PushConf(u *domain.User, c *domain.Configuration) error {
@@ -85,7 +97,11 @@ func (q *queueChannel) PopWork(timeout time.Duration) (*slack.Message, error) {
 }
 
 func (q *queueChannel) Close() error {
-	close(q.Conf)
-	close(q.Work)
+	if !q.closed {
+		close(q.Conf)
+		close(q.Dedup)
+		close(q.Work)
+	}
+	q.closed = true
 	return nil
 }
