@@ -6,6 +6,19 @@
   'use strict';
   // Run this only on conf
   if ($('#channels').length) {
+    var disableAll = function() {
+      $("#channels").attr("disabled", true).trigger("chosen:updated");
+      $("#groups").attr("disabled", true).trigger("chosen:updated");
+      $("#im").attr("disabled", true);
+      $("#regexp").attr("disabled", true);
+    };
+    var enableAll = function() {
+      $("#channels").removeAttr("disabled").trigger("chosen:updated");
+      $("#groups").removeAttr("disabled").trigger("chosen:updated");
+      $("#im").removeAttr("disabled");
+      $("#regexp").removeAttr("disabled");
+    }
+
     // Load the channels
     // TODO - add fail handling
     $.getJSON('/info', function(data) {
@@ -20,26 +33,36 @@
       }
       $('#groups').append(groups.join(''));
       $('#im').prop('checked', data.im);
+      $('#all').prop('checked', data.all);
       $('#regexp').val(data.regexp);
-      $.ajax({
-        type: 'POST',
-        url: '/match',
-        data: JSON.stringify({regexp: data.regexp}),
-        headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
-        dataType: 'json',
-        contentType: 'application/json; charset=utf-8',
-        success: function(data){
-          $('#regexpChannels').html('Will monitor: ' + data.join(', '));
-        }
-      });
+      if (data.regexp) {
+        $.ajax({
+          type: 'POST',
+          url: '/match',
+          data: JSON.stringify({regexp: data.regexp}),
+          headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
+          dataType: 'json',
+          contentType: 'application/json; charset=utf-8',
+          success: function(data){
+            $('#regexpChannels').html('Will monitor: ' + data.join(', '));
+          }
+        });
+      }
+      // If all is enabled then disable all the others
+      if (data.all) {
+        disableAll();
+      }
 
       // Enable chosen
       $(".chosen-select").chosen({no_results_text: "Oops, No matching entry found:"});
+
+      // Function to save all properties
       var saveAll = function() {
         var save = {};
         save.channels = [];
         save.groups = [];
         save.im = $('#im').is(':checked');
+        save.all = $('#all').is(':checked');
         save.regexp = $('#regexp').val();
         $('#channels option:selected').each(function() {
           save.channels.push($(this).val());
@@ -77,6 +100,14 @@
           }
         });
       };
+      $('#all').change(function(evt) {
+        if ($('#all').is(':checked')) {
+          disableAll();
+        } else {
+          enableAll();
+        }
+        saveAll();
+      });
       $('.chosen-select,#im').change(function(evt) {
         saveAll();
       });

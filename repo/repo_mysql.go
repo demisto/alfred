@@ -326,6 +326,12 @@ func (r *repoMySQL) SetChannelsAndGroups(user string, configuration *domain.Conf
 			return err
 		}
 	}
+	if configuration.All {
+		_, err = stmt.Exec(user, "A")
+		if err != nil {
+			return err
+		}
+	}
 	return tx.Commit()
 }
 
@@ -355,6 +361,8 @@ func (r *repoMySQL) TeamSubscriptions(team string) (map[string]*domain.Configura
 			subscriptions[user].IM = true
 		case 'R':
 			subscriptions[user].Regexp = channel[1:]
+		case 'A':
+			subscriptions[user].All = true
 		}
 	}
 	return subscriptions, err

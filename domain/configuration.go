@@ -13,11 +13,12 @@ type Configuration struct {
 	Groups   []string `json:"groups"`
 	IM       bool     `json:"im"`
 	Regexp   string   `json:"regexp"`
+	All      bool     `json:"all"`
 }
 
 // IsActive returns true if there is at least one active part for the user
 func (c *Configuration) IsActive() bool {
-	return len(c.Channels) > 0 || len(c.Groups) > 0 || c.IM
+	return c.All || len(c.Channels) > 0 || len(c.Groups) > 0 || c.IM
 }
 
 // IsInterestedIn the given channel
@@ -25,6 +26,9 @@ func (c *Configuration) IsInterestedIn(channel, channelName string) bool {
 	logrus.Debugf("Checking interest in %s, %s for %+v\n", channel, channelName, c)
 	if len(channel) == 0 {
 		return false
+	}
+	if c.All {
+		return true
 	}
 	found := false
 	switch channel[0] {

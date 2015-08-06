@@ -18,6 +18,10 @@ section#conf.config-page
           .config-section
             h1 Configure Alfred
             form(class="configform")
+              .checkbox.config-entry
+                label
+                  input#all(type='checkbox')
+                  | Monitor ALL conversations
               .form-group.config-entry
                 label(for='channels') Select "Slack channels" that Alfred will monitor
                 select.form-control.chosen-select#channels(data-placeholder='Please chose channels to monitor', multiple)

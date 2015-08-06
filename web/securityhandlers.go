@@ -118,6 +118,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 		ourTeam.Name, ourTeam.EmailDomain, ourTeam.Domain, ourTeam.Plan =
 			team.Team.Name, team.Team.EmailDomain, team.Team.Domain, team.Team.Plan
 	}
+	newUser := false
 	ourUser, err := ac.r.UserByExternalID(user.User.ID)
 	if ourUser == nil {
 		userID, err := random.New()
@@ -142,6 +143,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 			Token:             token.AccessToken,
 			Created:           time.Now(),
 		}
+		newUser = true
 	} else {
 		ourUser.Name, ourUser.RealName, ourUser.Email, ourUser.Token =
 			user.User.Name, user.User.RealName, user.User.Profile.Email, token.AccessToken
@@ -151,8 +153,16 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	log.Infof("User %v logged in\n", ourUser.Name)
+	if newUser {
+		newConf := &domain.Configuration{All: true}
+		err = ac.r.SetChannelsAndGroups(ourUser.ID, newConf)
+		if err != nil {
+			// If we got here, allow empty configuration
+			log.Warnf("Unable to store initial configuration for user %s - %v\n", ourUser.ID, err)
+		}
+	}
 	sess := session{ourUser.Name, ourUser.ID, time.Now()}
-	secure := conf.Options.Env == "PROD" || conf.Options.Env == "TEST"
+	secure := conf.Options.SSL.Key != ""
 	val, _ := util.EncryptJSON(&sess, conf.Options.Security.SessionKey)
 	// Set the cookie for the user
 	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: val, Path: "/", Expires: time.Now().Add(time.Duration(conf.Options.Security.Timeout) * time.Minute), MaxAge: conf.Options.Security.Timeout * 60, Secure: secure, HttpOnly: true})
@@ -160,7 +170,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ac *AppContext) logout(w http.ResponseWriter, r *http.Request) {
-	secure := conf.Options.Env == "PROD" || conf.Options.Env == "TEST"
+	secure := conf.Options.SSL.Key != ""
 	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", Expires: time.Now(), MaxAge: -1, Secure: secure, HttpOnly: true})
 	w.WriteHeader(http.StatusNoContent)
 	w.Write([]byte("\n"))

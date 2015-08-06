@@ -23,6 +23,7 @@ type infoResponse struct {
 	Groups   []idName `json:"groups"`
 	IM       bool     `json:"im"`
 	Regexp   string   `json:"regexp"`
+	All      bool     `json:"all"`
 }
 
 func (ac *AppContext) info(w http.ResponseWriter, r *http.Request) {
@@ -57,6 +58,7 @@ func (ac *AppContext) info(w http.ResponseWriter, r *http.Request) {
 	}
 	res.IM = savedChannels.IM
 	res.Regexp = savedChannels.Regexp
+	res.All = savedChannels.All
 	json.NewEncoder(w).Encode(res)
 }
 
