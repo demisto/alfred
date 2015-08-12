@@ -6,13 +6,13 @@
   "homepage": "https://www.demisto.com",
   "licenses": {
     "type": "MIT",
-    "url": "https://raw.github.com/demisto/alfred-web/master/LICENSE"
+    "url": "https://raw.github.com/demisto/alfred/master/LICENSE"
   },
-  "bugs": "https://github.com/demisto/alfred-web/issues",
-  "readme": "https://raw.github.com/demisto/alfred-web/master/README.md",
+  "bugs": "https://github.com/demisto/alfred/issues",
+  "readme": "https://raw.github.com/demisto/alfred/master/README.md",
   "repository": {
     "type": "git",
-    "url": "git@github.com:demisto/alfred-web.git"
+    "url": "git@github.com:demisto/alfred.git"
   },
   "dependencies": {},
   "devDependencies": {
