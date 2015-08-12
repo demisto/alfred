@@ -11,12 +11,13 @@
     if (qParts['u']) {
       if (qParts['f']) {
         $('#for').text('file ' + qParts['f']);
+
       } else if (qParts['m']) {
 
         $.ajax({
           type: 'GET',
           url: '/work',
-          data: {u: qParts['u'], f: qParts['f'], m: qParts['m'], c: qParts['c']},
+          data: qParts,
           headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
           dataType: 'json',
           contentType: 'application/json; charset=utf-8',
