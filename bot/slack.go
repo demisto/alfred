@@ -116,6 +116,7 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
 }
 
 func (b *Bot) handleReply(reply *domain.WorkReply) {
+	logrus.Debugf("Handling reply - %+v\n", reply)
 	data, err := GetContext(reply.Context)
 	if err != nil {
 		logrus.Warnf("Error getting context from reply - %+v\n", reply)
@@ -159,10 +160,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 			}
 			if reply.IP.XFE.IPReputation.Score > xfeScoreToConvict || vtPositives > numOfPositivesToConvict {
 				color = "danger"
-				comment = urlCommentBad
+				comment = ipCommentBad
 			} else if !reply.IP.XFE.NotFound || reply.IP.VT.IPReport.ResponseCode == 1 {
 				color = "good"
-				comment = urlCommentGood
+				comment = ipCommentGood
 			}
 			ipMessage := fmt.Sprintf(comment, fmt.Sprintf("<%s|here>", link))
 			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
