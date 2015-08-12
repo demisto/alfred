@@ -1,0 +1,21 @@
+// START CONFIGURATION
+section#details.details-page
+  .full-screen-conf
+    // START STICKY NAVBAR
+    .navbar.navbar-default.navbar-fixed-top.navbar-fixed
+      .container
+        .navbar-header
+          a.navbar-brand(href='#')
+            img(src='img/logo.png', alt='')
+        button.pull-right.btn.btn-link(onclick='logout()', name='logout', type='button') logout
+    // END STICKY NAVBAR
+
+
+    .container
+      .row
+        .col-lg-8.col-lg-offset-2.col-md-10.col-md-offset-1
+          // INTRO MESSAGE
+          .config-section
+            h1 Details for <span id="for"></span>
+
+// END CONFIGURATION

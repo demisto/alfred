@@ -15,6 +15,8 @@ var Options struct {
 	Env string
 	// The address to listen on
 	Address string
+	// ExternalAddress to our web tier
+	ExternalAddress string
 	// Security defintions
 	Security struct {
 		// The secret session key that is used to symmetrically encrypt sessions stored in cookies
@@ -83,6 +85,7 @@ func Load(filename string, useDefault bool) error {
       "Security" : {"SessionKey": "***REMOVED***", "Timeout": 525600},
       "Env": "DEV",
 			"Address": ":7070",
+			"ExternalAddress": "http://localhost:7070",
       "DB": {"ConnectString": "alfred.db"},
 			"VT": "***REMOVED***",
       "Slack": {"ClientID": "***REMOVED***", "ClientSecret": "***REMOVED***"},

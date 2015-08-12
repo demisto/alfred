@@ -2,6 +2,7 @@ package bot
 
 import (
 	"log"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -96,16 +97,22 @@ type Bot struct {
 	mu            sync.RWMutex // Guards the subscriptions
 	subscriptions map[string]*subscriptions
 	q             queue.Queue // Message queue for configuration updates
+	replyQueue    string
 }
 
 // New returns a new bot
 func New(r repo.Repo, q queue.Queue) (*Bot, error) {
+	host, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
 	return &Bot{
 		in:            make(chan *slack.Message),
 		stop:          make(chan bool, 1),
 		r:             r,
 		subscriptions: make(map[string]*subscriptions),
 		q:             q,
+		replyQueue:    host,
 	}, nil
 }
 
@@ -171,21 +178,14 @@ func (b *Bot) loadSubscriptions() error {
 	return nil
 }
 
-// Context to push with each message to identify the relevant team and user
-type Context struct {
-	Team string
-	User string
-}
-
 func (b *Bot) startWS() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	for k, v := range b.subscriptions {
-		logrus.Infof("Starting subscription for team - %s\n", k)
 		for i := range v.subscriptions {
 			if !v.subscriptions[i].started {
-				logrus.Infof("Starting WS for user - %s (%s)\n", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
-				info, err := v.subscriptions[i].s.RTMStart("slack.demisto.com", b.in, &Context{Team: k, User: v.subscriptions[i].user.ID})
+				logrus.Infof("Starting WS for team %s, user - %s (%s)\n", k, v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
+				info, err := v.subscriptions[i].s.RTMStart("alfred.demisto.com", b.in, &domain.Context{Team: k, User: v.subscriptions[i].user.ID})
 				if err != nil {
 					logrus.Warnf("Unable to start WS for user %s (%s) - %v\n", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name, err)
 					continue
@@ -222,7 +222,7 @@ var (
 func (b *Bot) isThereInterestIn(original *slack.Message) bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	data := original.Context.(*Context)
+	data := original.Context.(*domain.Context)
 	subs := b.subscriptions[data.Team]
 	if subs == nil {
 		return false
@@ -238,23 +238,46 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 	if msg == nil {
 		return
 	}
-	if !b.isThereInterestIn(msg) {
-		logrus.Debugf("No one is interested in the channel %s\n", msg.Channel)
-		return
-	}
 	switch msg.Type {
 	case "message":
-		logrus.Debugf("%s\n", msg.Text)
 		if msg.Subtype == "bot_message" {
 			return
 		}
-		// If we need to handle the message, pass it to the queue
-		if msg.Subtype == "file_share" ||
-			strings.Contains(msg.Text, "<http") ||
-			ipReg.MatchString(msg.Text) ||
-			md5Reg.MatchString(msg.Text) {
-			b.q.PushMessage(msg)
+		if !b.isThereInterestIn(msg) {
+			logrus.Debugf("No one is interested in the channel %s\n", msg.Channel)
+			return
 		}
+		push := false
+		switch msg.Subtype {
+		case "":
+			push = strings.Contains(msg.Text, "<http") || ipReg.MatchString(msg.Text) || md5Reg.MatchString(msg.Text)
+		// case "message_changed":
+		// 	push = strings.Contains(msg.Message.Text, "<http") || ipReg.MatchString(msg.Message.Text) || md5Reg.MatchString(msg.Message.Text)
+		case "file_share":
+			push = true
+		case "file_comment":
+			push = !strings.HasPrefix(msg.Comment.Comment, botName) && (strings.Contains(msg.Comment.Comment, "<http") || ipReg.MatchString(msg.Comment.Comment) || md5Reg.MatchString(msg.Comment.Comment))
+		case "file_mention":
+			push = true
+		}
+		// If we need to handle the message, pass it to the queue
+		if push {
+			workReq := domain.WorkRequestFromMessage(msg)
+			ctx, err := GetContext(msg.Context)
+			if err != nil {
+				logrus.Warnf("Unable to get context from message - %+v\n", msg)
+				return
+			}
+			ctx.OriginalUser, ctx.Channel = msg.User, msg.Channel
+			workReq.ReplyQueue, workReq.Context = b.replyQueue, ctx
+			b.q.PushMessage(workReq)
+		}
+	// If this message is file upload and we got it (meaning the user is ours)
+	case "file_created":
+		logrus.Debugln("Handling file_created event")
+		workReq := domain.WorkRequestFromMessage(msg)
+		workReq.ReplyQueue, workReq.Context = b.replyQueue, msg.Context
+		b.q.PushWork(workReq)
 	}
 }
 
@@ -269,6 +292,7 @@ func (b *Bot) Start() error {
 		return err
 	}
 	go b.monitorChanges()
+	go b.monitorReplies()
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 	for {
@@ -319,30 +343,14 @@ func (b *Bot) subscriptionChanged(user *domain.User, configuration *domain.Confi
 	defer b.mu.Unlock()
 	subs := b.subscriptions[user.Team]
 	sub := subs.SubForUser(user.ID)
-	if sub == nil {
-		newSub := subscription{user: user, interest: configuration}
-		var err error
-		newSub.s, err = slack.New(slack.SetToken(user.Token),
-			slack.SetErrorLog(log.New(conf.LogWriter, "SLACK:", log.Lshortfile)))
-		if err != nil {
-			logrus.WithField("error", err).Errorf("Error creating slack client for %s (%s)\n", user.ID, user.Name)
-		}
-		b.subscriptions[user.Team] = &subscriptions{subscriptions: []subscription{newSub}}
-		info, err := newSub.s.RTMStart("slack.demisto.com", b.in, &Context{Team: user.Team, User: user.ID})
-		if err != nil {
-			logrus.WithField("error", err).Errorf("Error starting RTM for %s (%s)\n", user.ID, user.Name)
-		} else {
-			b.subscriptions[user.Team].info = info
-		}
-	} else {
+	if sub != nil {
 		// We already have subscription - if the new one is still active, no need to touch WS
-		if configuration.IsActive() {
-			sub.interest = configuration
-		} else {
-			// Since we are not registered to anything, need to close the WS
-			// TODO - sub.s.RTMStop()
-			// TODO - delete the user
-			sub.interest = configuration
+		sub.interest = configuration
+		if !configuration.IsActive() {
+			if sub.started {
+				sub.s.RTMStop()
+				sub.started = false
+			}
 		}
 	}
 }
@@ -351,8 +359,20 @@ func (b *Bot) monitorChanges() {
 	for {
 		user, configuration, err := b.q.PopConf(0)
 		if err != nil {
+			logrus.Infof("Quiting monitoring changes - %v\n", err)
 			break
 		}
 		b.subscriptionChanged(user, configuration)
+	}
+}
+
+func (b *Bot) monitorReplies() {
+	for {
+		reply, err := b.q.PopWorkReply(b.replyQueue, 0)
+		if err != nil || reply == nil {
+			logrus.Infof("Quiting monitoring replies - %v\n", err)
+			break
+		}
+		b.handleReply(reply)
 	}
 }

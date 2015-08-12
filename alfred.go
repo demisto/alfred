@@ -12,7 +12,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/bot"
 	"github.com/demisto/alfred/conf"
-	"github.com/demisto/alfred/dedup"
 	"github.com/demisto/alfred/queue"
 	"github.com/demisto/alfred/repo"
 	"github.com/demisto/alfred/web"
@@ -77,7 +76,7 @@ func run(signalCh chan os.Signal) {
 	}
 
 	if conf.Options.Dedup {
-		dd := dedup.New(q)
+		dd := bot.NewDedup(q)
 		go dd.Start()
 	}
 

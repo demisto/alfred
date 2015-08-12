@@ -3,8 +3,8 @@
   "bower_components/font-awesome/fonts/*",
   "bower_components/jquery/dist/jquery.min.js",
   "bower_components/jquery.easing/js/jquery.easing.js",
-  "bower_components/bootstrap/dist/js/bootstrap.js",
-  "bower_components/bootstrap/dist/css/bootstrap.css",
+  "bower_components/bootstrap/dist/js/bootstrap.min.js",
+  "bower_components/bootstrap/dist/css/bootstrap.min.css",
   "bower_components/Nivo-Lightbox/nivo-lightbox.js",
   "bower_components/Nivo-Lightbox/nivo-lightbox.css",
   "bower_components/Nivo-Lightbox/themes/default/default.css",
@@ -35,9 +35,6 @@
   "bower_components/chosen/chosen-sprite@2x.png",
   "bower_components/js-cookie/src/js.cookie.js",
   "bower_components/toastr/toastr.min.js",
-  "bower_components/toastr/toastr.css",
-  "bower_components/toastr/toastr.js",
-  "bower_components/toastr/toastr.less",
   "bower_components/toastr/toastr.min.css",
-  "bower_components/toastr/toastr.scss"
+  "bower_components/uri.js/src/URI.min.js"
 ]

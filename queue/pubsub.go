@@ -4,13 +4,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
-	"github.com/demisto/slack"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	pubsub "google.golang.org/api/pubsub/v1"
@@ -54,6 +54,14 @@ func newPubSub() (*queuePubSub, error) {
 		return nil, err
 	}
 	names := []string{conf.Options.G.ConfName, conf.Options.G.MessageName, conf.Options.G.WorkName}
+	// If we are a bot or a web tier, create a reply queue for us
+	if conf.Options.Bot || conf.Options.Web {
+		host, err := os.Hostname()
+		if err != nil {
+			return nil, err
+		}
+		names = append(names, host)
+	}
 	for _, n := range names {
 		// Register the topics while ignoring already exists errors
 		_, err := svc.Projects.Topics.Create(fullTopicName(conf.Options.G.Project, n), &pubsub.Topic{}).Do()
@@ -132,30 +140,43 @@ func (q *queuePubSub) PopConf(timeout time.Duration) (*domain.User, *domain.Conf
 	return &msg.User, &msg.Configuration, nil
 }
 
-func (q *queuePubSub) PushMessage(data *slack.Message) error {
+func (q *queuePubSub) PushMessage(data *domain.WorkRequest) error {
 	return q.push(conf.Options.G.MessageName, data)
 }
 
-func (q *queuePubSub) PopMessage(timeout time.Duration) (*slack.Message, error) {
-	msg := &slack.Message{}
-	err := q.pop(conf.Options.G.MessageName, timeout, msg)
+func (q *queuePubSub) PopMessage(timeout time.Duration) (*domain.WorkRequest, error) {
+	data := &domain.WorkRequest{}
+	err := q.pop(conf.Options.G.MessageName, timeout, data)
 	if err != nil {
 		return nil, err
 	}
-	return msg, nil
+	return data, nil
 }
 
-func (q *queuePubSub) PushWork(data *slack.Message) error {
+func (q *queuePubSub) PushWork(data *domain.WorkRequest) error {
 	return q.push(conf.Options.G.WorkName, data)
 }
 
-func (q *queuePubSub) PopWork(timeout time.Duration) (*slack.Message, error) {
-	msg := &slack.Message{}
-	err := q.pop(conf.Options.G.WorkName, timeout, msg)
+func (q *queuePubSub) PopWork(timeout time.Duration) (*domain.WorkRequest, error) {
+	data := &domain.WorkRequest{}
+	err := q.pop(conf.Options.G.WorkName, timeout, data)
 	if err != nil {
 		return nil, err
 	}
-	return msg, nil
+	return data, nil
+}
+
+func (q *queuePubSub) PushWorkReply(replyQueue string, reply *domain.WorkReply) error {
+	return q.push(replyQueue, reply)
+}
+
+func (q *queuePubSub) PopWorkReply(replyQueue string, timeout time.Duration) (*domain.WorkReply, error) {
+	workReply := &domain.WorkReply{}
+	err := q.pop(replyQueue, timeout, workReply)
+	if err != nil {
+		return nil, err
+	}
+	return workReply, nil
 }
 
 func (q *queuePubSub) Close() error {

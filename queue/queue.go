@@ -3,12 +3,10 @@ package queue
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
-	"github.com/demisto/slack"
 )
 
 var (
@@ -28,10 +26,12 @@ type ConfigurationMessage struct {
 type Queue interface {
 	PushConf(u *domain.User, c *domain.Configuration) error
 	PopConf(timeout time.Duration) (*domain.User, *domain.Configuration, error)
-	PushMessage(msg *slack.Message) error
-	PopMessage(timeout time.Duration) (*slack.Message, error)
-	PushWork(msg *slack.Message) error
-	PopWork(timeout time.Duration) (*slack.Message, error)
+	PushMessage(msg *domain.WorkRequest) error
+	PopMessage(timeout time.Duration) (*domain.WorkRequest, error)
+	PushWork(work *domain.WorkRequest) error
+	PopWork(timeout time.Duration) (*domain.WorkRequest, error)
+	PushWorkReply(replyQueue string, reply *domain.WorkReply) error
+	PopWorkReply(replyQueue string, timeout time.Duration) (*domain.WorkReply, error)
 	Close() error
 }
 
@@ -46,23 +46,25 @@ func New() (Queue, error) {
 		q, err = newPubSub()
 	default:
 		q = &queueChannel{
-			Conf:  make(chan ConfigurationMessage, 100),
-			Dedup: make(chan slack.Message, 100),
-			Work:  make(chan slack.Message, 100),
+			Conf:      make(chan *ConfigurationMessage, 100),
+			Dedup:     make(chan *domain.WorkRequest, 100),
+			Work:      make(chan *domain.WorkRequest, 100),
+			WorkReply: make(chan *domain.WorkReply, 100),
 		}
 	}
 	return q, err
 }
 
 type queueChannel struct {
-	Conf   chan ConfigurationMessage
-	Dedup  chan slack.Message
-	Work   chan slack.Message
-	closed bool
+	Conf      chan *ConfigurationMessage
+	Dedup     chan *domain.WorkRequest
+	Work      chan *domain.WorkRequest
+	WorkReply chan *domain.WorkReply
+	closed    bool
 }
 
 func (q *queueChannel) PushConf(u *domain.User, c *domain.Configuration) error {
-	q.Conf <- ConfigurationMessage{User: *u, Configuration: *c}
+	q.Conf <- &ConfigurationMessage{User: *u, Configuration: *c}
 	return nil
 }
 
@@ -70,30 +72,40 @@ func (q *queueChannel) PushConf(u *domain.User, c *domain.Configuration) error {
 func (q *queueChannel) PopConf(timeout time.Duration) (*domain.User, *domain.Configuration, error) {
 	conf := <-q.Conf
 	// If someone closed the channel
-	if conf.User.ID == "" {
-		return nil, nil, fmt.Errorf("Closed")
+	if conf == nil {
+		return nil, nil, errors.New("Closed")
 	}
 	return &conf.User, &conf.Configuration, nil
 }
 
-func (q *queueChannel) PushMessage(data *slack.Message) error {
-	q.Dedup <- *data
+func (q *queueChannel) PushMessage(data *domain.WorkRequest) error {
+	q.Dedup <- data
 	return nil
 }
 
-func (q *queueChannel) PopMessage(timeout time.Duration) (*slack.Message, error) {
+func (q *queueChannel) PopMessage(timeout time.Duration) (*domain.WorkRequest, error) {
 	msg := <-q.Dedup
-	return &msg, nil
+	return msg, nil
 }
 
-func (q *queueChannel) PushWork(data *slack.Message) error {
-	q.Work <- *data
+func (q *queueChannel) PushWork(data *domain.WorkRequest) error {
+	q.Work <- data
 	return nil
 }
 
-func (q *queueChannel) PopWork(timeout time.Duration) (*slack.Message, error) {
+func (q *queueChannel) PopWork(timeout time.Duration) (*domain.WorkRequest, error) {
 	work := <-q.Work
-	return &work, nil
+	return work, nil
+}
+
+func (q *queueChannel) PushWorkReply(replyQueue string, reply *domain.WorkReply) error {
+	q.WorkReply <- reply
+	return nil
+}
+
+func (q *queueChannel) PopWorkReply(replyQueue string, timeout time.Duration) (*domain.WorkReply, error) {
+	work := <-q.WorkReply
+	return work, nil
 }
 
 func (q *queueChannel) Close() error {
@@ -101,6 +113,7 @@ func (q *queueChannel) Close() error {
 		close(q.Conf)
 		close(q.Dedup)
 		close(q.Work)
+		close(q.WorkReply)
 	}
 	q.closed = true
 	return nil

@@ -3,6 +3,7 @@ package queue
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -11,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
-	"github.com/demisto/slack"
 )
 
 type logger struct {
@@ -22,11 +22,12 @@ func (l *logger) Log(args ...interface{}) {
 }
 
 type queueSQS struct {
-	svc        *sqs.SQS
-	confURL    *string
-	messageURL *string
-	workURL    *string
-	closed     bool
+	svc         *sqs.SQS
+	confURL     *string
+	messageURL  *string
+	workURL     *string
+	replyQueues map[string]*string
+	closed      bool
 }
 
 func newSQS() (*queueSQS, error) {
@@ -35,6 +36,14 @@ func newSQS() (*queueSQS, error) {
 		aws.LogDebug).WithLogger(&logger{}).WithMaxRetries(-1).WithRegion("us-west-2").WithHTTPClient(http.DefaultClient))
 	// Make sure that the queues we are interested in exist
 	queues := []string{conf.Options.AWS.ConfQueueName, conf.Options.AWS.MessageQueueName, conf.Options.AWS.WorkQueueName}
+	// If we are a bot or a web tier, create a reply queue for us
+	if conf.Options.Bot || conf.Options.Web {
+		host, err := os.Hostname()
+		if err != nil {
+			return nil, err
+		}
+		queues = append(queues, host)
+	}
 	names := make([]*string, len(queues))
 	for i, q := range queues {
 		r, err := svc.CreateQueue(&sqs.CreateQueueInput{
@@ -50,7 +59,7 @@ func newSQS() (*queueSQS, error) {
 		}
 		names[i] = r.QueueURL
 	}
-	return &queueSQS{svc: svc, confURL: names[0], messageURL: names[1], workURL: names[2]}, nil
+	return &queueSQS{svc: svc, confURL: names[0], messageURL: names[1], workURL: names[2], replyQueues: make(map[string]*string)}, nil
 }
 
 func (q *queueSQS) push(qname *string, body interface{}) error {
@@ -115,30 +124,59 @@ func (q *queueSQS) PopConf(timeout time.Duration) (*domain.User, *domain.Configu
 	return &msg.User, &msg.Configuration, nil
 }
 
-func (q *queueSQS) PushMessage(data *slack.Message) error {
+func (q *queueSQS) PushMessage(data *domain.WorkRequest) error {
 	return q.push(q.messageURL, data)
 }
 
-func (q *queueSQS) PopMessage(timeout time.Duration) (*slack.Message, error) {
-	msg := &slack.Message{}
-	err := q.pop(q.messageURL, timeout, msg)
+func (q *queueSQS) PopMessage(timeout time.Duration) (*domain.WorkRequest, error) {
+	data := &domain.WorkRequest{}
+	err := q.pop(q.messageURL, timeout, data)
 	if err != nil {
 		return nil, err
 	}
-	return msg, nil
+	return data, nil
 }
 
-func (q *queueSQS) PushWork(data *slack.Message) error {
+func (q *queueSQS) PushWork(data *domain.WorkRequest) error {
 	return q.push(q.workURL, data)
 }
 
-func (q *queueSQS) PopWork(timeout time.Duration) (*slack.Message, error) {
-	msg := &slack.Message{}
-	err := q.pop(q.workURL, timeout, msg)
+func (q *queueSQS) PopWork(timeout time.Duration) (*domain.WorkRequest, error) {
+	data := &domain.WorkRequest{}
+	err := q.pop(q.workURL, timeout, data)
 	if err != nil {
 		return nil, err
 	}
-	return msg, nil
+	return data, nil
+}
+
+func (q *queueSQS) resolveQueue(qname string) (*string, error) {
+	out, err := q.svc.GetQueueURL(&sqs.GetQueueURLInput{QueueName: aws.String(qname)})
+	if err != nil {
+		return nil, err
+	}
+	return out.QueueURL, nil
+}
+
+func (q *queueSQS) PushWorkReply(replyQueue string, reply *domain.WorkReply) error {
+	qURL, err := q.resolveQueue(replyQueue)
+	if err != nil {
+		return err
+	}
+	return q.push(qURL, reply)
+}
+
+func (q *queueSQS) PopWorkReply(replyQueue string, timeout time.Duration) (*domain.WorkReply, error) {
+	qURL, err := q.resolveQueue(replyQueue)
+	if err != nil {
+		return nil, err
+	}
+	workReply := &domain.WorkReply{}
+	err = q.pop(qURL, timeout, workReply)
+	if err != nil {
+		return nil, err
+	}
+	return workReply, nil
 }
 
 func (q *queueSQS) Close() error {

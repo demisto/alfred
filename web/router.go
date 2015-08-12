@@ -75,9 +75,11 @@ func New(appC *AppContext) *Router {
 	r.Get("/info", authHandlers.ThenFunc(appC.info))
 	r.Post("/match", authHandlers.Append(contentTypeHandler, bodyHandler(regexpMatch{})).ThenFunc(appC.match))
 	r.Post("/save", authHandlers.Append(contentTypeHandler, bodyHandler(domain.Configuration{})).ThenFunc(appC.save))
+	r.Get("/work", commonHandlers.ThenFunc(appC.work))
 	// Static
 	r.Get("/", staticHandlers.ThenFunc(pageHandler("/index.html")))
 	r.Get("/conf", staticHandlers.ThenFunc(pageHandler("/conf.html")))
+	r.Get("/details", staticHandlers.ThenFunc(pageHandler("/details.html")))
 	r.ServeFiles("/css/*filepath", Dir(conf.IsDev(), "/css/"))
 	r.ServeFiles("/img/*filepath", Dir(conf.IsDev(), "/img/"))
 	r.ServeFiles("/js/*filepath", Dir(conf.IsDev(), "/js/"))

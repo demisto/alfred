@@ -1,12 +1,11 @@
-package dedup
+package bot
 
 import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/demisto/alfred/bot"
+	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/queue"
-	"github.com/demisto/slack"
 )
 
 // Dedup is responsible for pulling messages from the queue and passing only relevant ones to work
@@ -16,8 +15,8 @@ type Dedup struct {
 	cleanTime       time.Time
 }
 
-// New Dedup with the queue
-func New(q queue.Queue) *Dedup {
+// NewDedup with the queue
+func NewDedup(q queue.Queue) *Dedup {
 	return &Dedup{
 		q:               q,
 		handledMessages: make(map[string]map[string]*time.Time),
@@ -30,10 +29,11 @@ func (d *Dedup) Start() {
 	counter := 0
 	for {
 		msg, err := d.q.PopMessage(0)
-		if err != nil {
-			logrus.Info("Stoping DEDUP process")
+		if err != nil || msg == nil {
+			logrus.Infoln("Stoping DEDUP process")
 			return
 		}
+		logrus.Debugf("Deduping message %s\n", msg.MessageID)
 		// Check time only every 1000 messages the messages we should clear
 		if counter >= 1000 {
 			counter = 0
@@ -48,51 +48,32 @@ func (d *Dedup) Start() {
 			}
 		}
 		if !d.alreadyHandled(msg) {
+			logrus.Debugf("Pushing message %s to work\n", msg.MessageID)
 			d.q.PushWork(msg)
 		}
 		counter++
 	}
 }
 
-func (d *Dedup) alreadyHandled(original *slack.Message) bool {
-	var data *bot.Context
-	switch c := original.Context.(type) {
-	case *bot.Context:
-		data = c
-	case map[string]interface{}:
-		data = &bot.Context{Team: c["Team"].(string), User: c["User"].(string)}
-	default:
-		logrus.Warnf("Unknown context for message %+v\n", original)
+func (d *Dedup) alreadyHandled(data *domain.WorkRequest) bool {
+	context, err := GetContext(data.Context)
+	if err != nil {
+		logrus.Warnf("Unknown context for message %+v\n", data)
 		return true
 	}
-	handled := d.handledMessages[data.Team]
+	handled := d.handledMessages[context.Team]
 	if handled == nil {
 		handled = make(map[string]*time.Time)
-		d.handledMessages[data.Team] = handled
+		d.handledMessages[context.Team] = handled
 	}
-	var field string
-	// We care only about messages
-	if original.Type == "message" {
-		switch original.Subtype {
-		case "file_share":
-			// field = original.File.Name + "|" + original.User
-			field = original.Timestamp
-		case "message_changed":
-			// field = original.Message.Text + "|" + original.User
-			field = original.Message.Timestamp
-		default:
-			// field = original.Text + "|" + original.User
-			field = original.Timestamp
-		}
-	}
-	if field == "" {
+	if data.MessageID == "" {
 		// Ignore the message
 		return true
 	}
-	if handled[field] != nil {
+	if handled[data.MessageID] != nil {
 		return true
 	}
 	now := time.Now()
-	handled[field] = &now
+	handled[data.MessageID] = &now
 	return false
 }
