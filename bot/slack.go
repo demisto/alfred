@@ -117,6 +117,7 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
 
 func (b *Bot) handleReply(reply *domain.WorkReply) {
 	logrus.Debugf("Handling reply - %+v\n", reply)
+	logrus.Debugf("Context- %v\n", reply.Context)
 	data, err := GetContext(reply.Context)
 	if err != nil {
 		logrus.Warnf("Error getting context from reply - %+v\n", reply)

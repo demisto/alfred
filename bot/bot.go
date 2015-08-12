@@ -268,7 +268,7 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 				logrus.Warnf("Unable to get context from message - %+v\n", msg)
 				return
 			}
-			ctx.OriginalUser, ctx.Channel = msg.User, msg.Channel
+			ctx.OriginalUser, ctx.Channel, ctx.Type = msg.User, msg.Channel, msg.Type
 			workReq.ReplyQueue, workReq.Context = b.replyQueue, ctx
 			b.q.PushMessage(workReq)
 		}
@@ -276,7 +276,13 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 	case "file_created":
 		logrus.Debugln("Handling file_created event")
 		workReq := domain.WorkRequestFromMessage(msg)
-		workReq.ReplyQueue, workReq.Context = b.replyQueue, msg.Context
+		ctx, err := GetContext(msg.Context)
+		if err != nil {
+			logrus.Warnf("Unable to get context from message - %+v\n", msg)
+			return
+		}
+		ctx.OriginalUser, ctx.Channel, ctx.Type = msg.User, msg.Channel, msg.Type
+		workReq.ReplyQueue, workReq.Context = b.replyQueue, ctx
 		b.q.PushWork(workReq)
 	}
 }

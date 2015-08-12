@@ -109,7 +109,9 @@ func contextFromMap(c map[string]interface{}) *domain.Context {
 func GetContext(context interface{}) (*domain.Context, error) {
 	switch c := context.(type) {
 	case *domain.Context:
-		return c, nil
+		// Hack to duplicate the context so if we are using channels not to override it
+		cx := *c
+		return &cx, nil
 	case map[string]interface{}:
 		return contextFromMap(c), nil
 	default:

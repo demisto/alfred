@@ -12,6 +12,7 @@ type Context struct {
 	User         string `json:"user"`
 	OriginalUser string `json:"original_user"`
 	Channel      string `json:"channel"`
+	Type         string `json:"type"`
 }
 
 // File details for a request
