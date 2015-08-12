@@ -19,14 +19,14 @@ func pageHandler(file string) func(w http.ResponseWriter, r *http.Request) {
 		log.Debugf("Looking for file %s\n", file)
 		f, err := FS(conf.IsDev()).Open(file)
 		if err != nil {
-			log.Warn("Could not find file %s - %v", file, err)
-			WriteError(w, ErrInternalServer)
+			log.Warnf("Could not find file %s - %v", file, err)
+			WriteError(w, ErrNotFound)
 			return
 		}
 		stat, err := f.Stat()
 		if err != nil {
 			log.Warn("Could not stat file %s - %v", file, err)
-			WriteError(w, ErrInternalServer)
+			WriteError(w, ErrNotFound)
 			return
 		}
 		http.ServeContent(w, r, file, stat.ModTime(), f)

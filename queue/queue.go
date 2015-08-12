@@ -3,6 +3,7 @@ package queue
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/demisto/alfred/conf"
@@ -46,21 +47,23 @@ func New() (Queue, error) {
 		q, err = newPubSub()
 	default:
 		q = &queueChannel{
-			Conf:      make(chan *ConfigurationMessage, 100),
-			Dedup:     make(chan *domain.WorkRequest, 100),
-			Work:      make(chan *domain.WorkRequest, 100),
-			WorkReply: make(chan *domain.WorkReply, 100),
+			Conf:         make(chan *ConfigurationMessage, 100),
+			Dedup:        make(chan *domain.WorkRequest, 100),
+			Work:         make(chan *domain.WorkRequest, 100),
+			WorkReply:    make(chan *domain.WorkReply, 100),
+			WebWorkReply: make(chan *domain.WorkReply, 100),
 		}
 	}
 	return q, err
 }
 
 type queueChannel struct {
-	Conf      chan *ConfigurationMessage
-	Dedup     chan *domain.WorkRequest
-	Work      chan *domain.WorkRequest
-	WorkReply chan *domain.WorkReply
-	closed    bool
+	Conf         chan *ConfigurationMessage
+	Dedup        chan *domain.WorkRequest
+	Work         chan *domain.WorkRequest
+	WorkReply    chan *domain.WorkReply
+	WebWorkReply chan *domain.WorkReply
+	closed       bool
 }
 
 func (q *queueChannel) PushConf(u *domain.User, c *domain.Configuration) error {
@@ -99,12 +102,21 @@ func (q *queueChannel) PopWork(timeout time.Duration) (*domain.WorkRequest, erro
 }
 
 func (q *queueChannel) PushWorkReply(replyQueue string, reply *domain.WorkReply) error {
-	q.WorkReply <- reply
+	if strings.HasSuffix(replyQueue, "-web") {
+		q.WebWorkReply <- reply
+	} else {
+		q.WorkReply <- reply
+	}
 	return nil
 }
 
 func (q *queueChannel) PopWorkReply(replyQueue string, timeout time.Duration) (*domain.WorkReply, error) {
-	work := <-q.WorkReply
+	var work *domain.WorkReply
+	if strings.HasSuffix(replyQueue, "-web") {
+		work = <-q.WebWorkReply
+	} else {
+		work = <-q.WorkReply
+	}
 	return work, nil
 }
 
@@ -114,6 +126,7 @@ func (q *queueChannel) Close() error {
 		close(q.Dedup)
 		close(q.Work)
 		close(q.WorkReply)
+		close(q.WebWorkReply)
 	}
 	q.closed = true
 	return nil

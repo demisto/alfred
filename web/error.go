@@ -38,6 +38,8 @@ var (
 	ErrAuth = &Error{"unauthorized", 401, "Unauthorized", "The request requires authorization"}
 	// ErrCredentials if there are missing / wrong credentials
 	ErrCredentials = &Error{"invalid_credentials", 401, "Invalid credentials", "Invalid username or password"}
+	// ErrNotFound if file is not found
+	ErrNotFound = &Error{"not_found", 404, "Not found", "The page you requested is not found"}
 	// ErrNotAcceptable wrong accept header
 	ErrNotAcceptable = &Error{"not_acceptable", 406, "Not Acceptable", "Accept header must be set to 'application/json'."}
 	// ErrUnsupportedMediaType wrong media type

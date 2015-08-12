@@ -22,7 +22,7 @@ func NewContext(r repo.Repo, q queue.Queue) *AppContext {
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	return &AppContext{r, q, host}
+	return &AppContext{r, q, host + "-web"}
 }
 
 type session struct {
