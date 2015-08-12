@@ -52,6 +52,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		workReq = domain.WorkRequestFromMessage(&resp.Messages[0])
+		workReq.ReplyQueue = ac.replyQueue
 	}
 	err = ac.q.PushWork(workReq)
 	if err != nil {

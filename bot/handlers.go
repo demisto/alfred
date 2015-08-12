@@ -146,7 +146,7 @@ func (w *Worker) handleURL(text string, reply *domain.WorkReply) {
 				reply.URL.XFE.URLDetails = urlResp.Result
 			}
 			resolve, err := w.xfe.Resolve(url)
-			if err != nil {
+			if err == nil {
 				reply.URL.XFE.Resolve = *resolve
 			}
 			c <- 1
