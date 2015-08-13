@@ -85,7 +85,7 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
 		comment = fileCommentGood
 		reaction = reactionGood
 	}
-	err := b.fileComment(fmt.Sprintf(comment, link), reaction, reply)
+	err := b.fileComment(fmt.Sprintf(comment, reply.File.Details.Name, link), reaction, reply)
 	if err != nil {
 		logrus.Errorf("Unable to send comment to Slack - %v\n", err)
 	}
@@ -112,6 +112,54 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
 	}
 }
 
+func (b *Bot) handleReplyStats(reply *domain.WorkReply, ctx *domain.Context) {
+	b.smu.Lock()
+	defer b.smu.Unlock()
+	stats := b.stats[ctx.Team]
+	if stats == nil {
+		stats = &domain.Statistics{Team: ctx.Team}
+		b.stats[ctx.Team] = stats
+	}
+	stats.Messages++
+	if reply.Type&domain.ReplyTypeFile > 0 {
+		if reply.File.Result == domain.ResultClean {
+			stats.FilesClean++
+		} else if reply.File.Result == domain.ResultDirty {
+			stats.FilesDirty++
+		} else {
+			stats.FilesUnknown++
+		}
+	} else {
+		if reply.Type&domain.ReplyTypeMD5 > 0 {
+			if reply.MD5.Result == domain.ResultClean {
+				stats.HashesClean++
+			} else if reply.MD5.Result == domain.ResultDirty {
+				stats.HashesDirty++
+			} else {
+				stats.HashesUnknown++
+			}
+		}
+		if reply.Type&domain.ReplyTypeURL > 0 {
+			if reply.URL.Result == domain.ResultClean {
+				stats.URLsClean++
+			} else if reply.URL.Result == domain.ResultDirty {
+				stats.URLsDirty++
+			} else {
+				stats.URLsUnknown++
+			}
+		}
+		if reply.Type&domain.ReplyTypeIP > 0 {
+			if reply.IP.Result == domain.ResultClean {
+				stats.IPsClean++
+			} else if reply.IP.Result == domain.ResultDirty {
+				stats.IPsDirty++
+			} else {
+				stats.IPsUnknown++
+			}
+		}
+	}
+}
+
 func (b *Bot) handleReply(reply *domain.WorkReply) {
 	logrus.Debugf("Handling reply - %+v\n", reply)
 	logrus.Debugf("Context- %v\n", reply.Context)
@@ -120,6 +168,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 		logrus.Warnf("Error getting context from reply - %+v\n", reply)
 		return
 	}
+	b.handleReplyStats(reply, data)
 	if reply.Type&domain.ReplyTypeFile > 0 {
 		b.handleFileReply(reply, data)
 	} else {

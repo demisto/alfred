@@ -98,6 +98,8 @@ type Bot struct {
 	subscriptions map[string]*subscriptions
 	q             queue.Queue // Message queue for configuration updates
 	replyQueue    string
+	smu           sync.Mutex // Guards the statistics
+	stats         map[string]*domain.Statistics
 }
 
 // New returns a new bot
@@ -113,6 +115,7 @@ func New(r repo.Repo, q queue.Queue) (*Bot, error) {
 		subscriptions: make(map[string]*subscriptions),
 		q:             q,
 		replyQueue:    host,
+		stats:         make(map[string]*domain.Statistics),
 	}, nil
 }
 
@@ -136,7 +139,9 @@ func (b *Bot) loadSubscriptions() error {
 	}
 	for i := range openUsers {
 		locked, err := b.r.LockUser(&openUsers[i])
+		logrus.Debugf("Trying to lock user %s\n", openUsers[i].User)
 		if err != nil || !locked {
+			logrus.Debugf("Unable to lock user %v\n", err)
 			continue
 		}
 		u, err := b.r.User(openUsers[i].User)
@@ -260,17 +265,26 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 		case "file_mention":
 			push = true
 		}
+		ctx, err := GetContext(msg.Context)
+		if err != nil {
+			logrus.Warnf("Unable to get context from message - %+v\n", msg)
+			return
+		}
 		// If we need to handle the message, pass it to the queue
 		if push {
 			workReq := domain.WorkRequestFromMessage(msg)
-			ctx, err := GetContext(msg.Context)
-			if err != nil {
-				logrus.Warnf("Unable to get context from message - %+v\n", msg)
-				return
-			}
 			ctx.OriginalUser, ctx.Channel, ctx.Type = msg.User, msg.Channel, msg.Type
 			workReq.ReplyQueue, workReq.Context = b.replyQueue, ctx
 			b.q.PushMessage(workReq)
+		} else {
+			b.smu.Lock()
+			defer b.smu.Unlock()
+			stats := b.stats[ctx.Team]
+			if stats == nil {
+				stats = &domain.Statistics{Team: ctx.Team}
+				b.stats[ctx.Team] = stats
+			}
+			stats.Messages++
 		}
 	// If this message is file upload and we got it (meaning the user is ours)
 	case "file_created":
@@ -284,6 +298,20 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 		ctx.OriginalUser, ctx.Channel, ctx.Type = msg.User, msg.Channel, msg.Type
 		workReq.ReplyQueue, workReq.Context = b.replyQueue, ctx
 		b.q.PushWork(workReq)
+	}
+}
+
+func (b *Bot) storeStatistics() {
+	b.smu.Lock()
+	defer b.smu.Unlock()
+	for _, v := range b.stats {
+		err := b.r.UpdateStatistics(v)
+		if err == nil {
+			v.Reset()
+		} else {
+			logrus.Warnf("Unable to store statistics - %v\n", err)
+			return
+		}
 	}
 }
 
@@ -334,6 +362,7 @@ func (b *Bot) Start() error {
 			if err != nil {
 				logrus.Errorf("Error starting WS - %v\n", err)
 			}
+			b.storeStatistics()
 		}
 	}
 }

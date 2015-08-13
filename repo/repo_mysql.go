@@ -72,6 +72,25 @@ CREATE TABLE IF NOT EXISTS bot_for_user (
 	CONSTRAINT bot_for_user_pk PRIMARY KEY (user),
 	CONSTRAINT bot_for_user_u_fk FOREIGN KEY (user) REFERENCES users(id),
 	CONSTRAINT bot_for_user_b_fk FOREIGN KEY (bot) REFERENCES bots(bot)
+);
+CREATE TABLE IF NOT EXISTS team_statistics (
+	team VARCHAR(64) NOT NULL,
+	ts TIMESTAMP NOT NULL,
+	messages BIGINT NOT NULL,
+	files_clean BIGINT NOT NULL,
+	files_dirty BIGINT NOT NULL,
+	files_unknown BIGINT NOT NULL,
+	urls_clean BIGINT NOT NULL,
+	urls_dirty BIGINT NOT NULL,
+	urls_unknown BIGINT NOT NULL,
+	hashes_clean BIGINT NOT NULL,
+	hashes_dirty BIGINT NOT NULL,
+	hashes_unknown BIGINT NOT NULL,
+	ips_clean BIGINT NOT NULL,
+	ips_dirty BIGINT NOT NULL,
+	ips_unknown BIGINT NOT NULL,
+	CONSTRAINT team_statistics_pk PRIMARY KEY (team),
+	CONSTRAINT team_statistics_team_fk FOREIGN KEY (team) REFERENCES teams (id)
 )`
 
 type repoMySQL struct {
@@ -425,7 +444,13 @@ func (r *repoMySQL) LockUser(user *domain.UserBot) (bool, error) {
 	if user.Bot == "" {
 		_, err := r.db.Exec("INSERT INTO bot_for_user (user, bot, ts) VALUES (?, ?, now())", user.User, r.hostname)
 		if err != nil {
-			// TODO - check if duplicate and then just return false
+			switch err := err.(type) {
+			case *mysql.MySQLError:
+				// Duplicate key is expected so just return false
+				if err.Number == 1062 {
+					return false, nil
+				}
+			}
 			return false, err
 		}
 	}
@@ -438,11 +463,96 @@ func (r *repoMySQL) LockUser(user *domain.UserBot) (bool, error) {
 }
 
 func (r *repoMySQL) BotHeartbeat() error {
-	// TODO - clean
-	name, err := os.Hostname()
-	if err != nil {
-		return err
-	}
-	_, err = r.db.Exec("INSERT INTO bots (bot, ts) VALUES (?, now()) ON DUPLICATE KEY UPDATE ts = now()", name)
+	_, err := r.db.Exec("INSERT INTO bots (bot, ts) VALUES (?, now()) ON DUPLICATE KEY UPDATE ts = now()", r.hostname)
 	return err
+}
+
+func (r *repoMySQL) updateStats(stats *domain.Statistics, oldTimestamp time.Time) error {
+	var rows int64
+	for count := 5; rows == 0 && count > 0; count-- {
+		res, err := r.db.Exec(`UPDATE team_statistics SET
+ts = now(),
+messages = messages + ?,
+files_clean = files_clean + ?,
+files_dirty = files_dirty + ?,
+files_unknown = files_unknown + ?,
+urls_clean = urls_clean + ?,
+urls_dirty = urls_dirty + ?,
+urls_unknown = urls_unknown + ?,
+hashes_clean = hashes_clean + ?,
+hashes_dirty = hashes_dirty + ?,
+hashes_unknown = hashes_unknown + ?,
+ips_clean = ips_clean + ?,
+ips_dirty = ips_dirty + ?,
+ips_unknown = ips_unknown + ?
+WHERE team = ? AND ts = ?`,
+			stats.Messages, stats.FilesClean, stats.FilesDirty, stats.FilesUnknown, stats.URLsClean, stats.URLsDirty, stats.URLsUnknown,
+			stats.HashesClean, stats.HashesDirty, stats.HashesUnknown, stats.IPsClean, stats.IPsDirty, stats.IPsUnknown, stats.Team, oldTimestamp)
+		if err != nil {
+			return err
+		}
+		rows, err = res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if rows == 0 {
+			err = r.db.Get(&oldTimestamp, "SELECT ts FROM team_statistics WHERE team = ?", stats.Team)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (r *repoMySQL) UpdateStatistics(stats *domain.Statistics) error {
+	// Can be probably done via UPSERT
+	// The code selects current timestamp. If there is no row for the team, we try to insert. If insert fails (because someone already inserted this team) then move to updates.
+	// The updates try to update the row while making sure that the timestamp is the same as we selected. If someone changed data, we will need to re-select timestmap to prevent lost updates.
+	var oldTimestamp time.Time
+	err := r.db.Get(&oldTimestamp, "SELECT ts FROM team_statistics WHERE team = ?", stats.Team)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return err
+		}
+		_, err := r.db.Exec(`INSERT INTO team_statistics
+(team, ts, messages, files_clean, files_dirty, files_unknown, urls_clean, urls_dirty, urls_unknown, hashes_clean, hashes_dirty, hashes_unknown, ips_clean, ips_dirty, ips_unknown)
+VALUES (?, now(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			stats.Team, stats.Messages, stats.FilesClean, stats.FilesDirty, stats.FilesUnknown, stats.URLsClean, stats.URLsDirty, stats.URLsUnknown,
+			stats.HashesClean, stats.HashesDirty, stats.HashesUnknown, stats.IPsClean, stats.IPsDirty, stats.IPsUnknown)
+		if err != nil {
+			switch mysqlErr := err.(type) {
+			case *mysql.MySQLError:
+				// Duplicate key because someone already inserted stats for team
+				if mysqlErr.Number == 1062 {
+					// Do select again and then update
+					err = r.db.Get(&oldTimestamp, "SELECT ts FROM team_statistics WHERE team = ?", stats.Team)
+					if err != nil {
+						return err
+					}
+					return r.updateStats(stats, oldTimestamp)
+				}
+			}
+			return err
+		}
+		return nil
+	}
+	return r.updateStats(stats, oldTimestamp)
+}
+
+func (r *repoMySQL) Statistics(team string) (*domain.Statistics, error) {
+	stats := &domain.Statistics{}
+	err := r.db.Get(stats, "SELECT * FROM team_statistics WHERE team = ?", team)
+	return stats, err
+}
+
+func (r *repoMySQL) GlobalStatistics() (*domain.Statistics, error) {
+	// Notice - this will not work if there are no statistics at all in the DB
+	stats := &domain.Statistics{}
+	err := r.db.Get(stats, `SELECT 'Global' as team, sum(messages) as messages,
+sum(files_clean) as clean_files, sum(files_dirty) as files_dirty, sum(files_unknown) as files_unknown,
+sum(urls_clean) as urls_clean, sum(urls_dirty) as urls_dirty, sum(urls_unknown) as urls_unknown,
+sum(hashes_clean) as hashes_clean, sum(hashes_dirty) as hashes_dirty, sum(hashes_unknown) as hashes_unknown,
+sum(ips_clean) as ips_clean, sum(ips_dirty) as ips_dirty, sum(ips_unknown) as ips_unknown FROM team_statistics`)
+	return stats, err
 }

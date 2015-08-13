@@ -364,3 +364,16 @@ func (r *repo) LockUser(user *domain.UserBot) (bool, error) {
 func (r *repo) BotHeartbeat() error {
 	return nil
 }
+
+func (r *repo) UpdateStatistics(stats *domain.Statistics) error {
+	// Ignore because we do not collect statistics for dev
+	return nil
+}
+
+func (r *repo) Statistics(team string) (*domain.Statistics, error) {
+	return &domain.Statistics{Team: team}, nil
+}
+
+func (r *repo) GlobalStatistics() (*domain.Statistics, error) {
+	return &domain.Statistics{Team: "Global"}, nil
+}

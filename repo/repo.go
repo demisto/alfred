@@ -34,5 +34,8 @@ type Repo interface {
 	LockUser(user *domain.UserBot) (bool, error)
 	// BotHeartbeat updates the bot keep-alive timestamp
 	BotHeartbeat() error
+	UpdateStatistics(stats *domain.Statistics) error
+	Statistics(team string) (*domain.Statistics, error)
+	GlobalStatistics() (*domain.Statistics, error)
 	Close() error
 }
