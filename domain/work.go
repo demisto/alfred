@@ -66,12 +66,22 @@ const (
 	ReplyTypeFile
 )
 
+const (
+	// ResultClean from the scan if it is not known bad and at least one service found it to be clean
+	ResultClean int = iota
+	// ResultDirty if at least one service convicted it
+	ResultDirty
+	// ResultUnknown if none of the services knowns about the request
+	ResultUnknown
+)
+
 // WorkReply to a work request being done
 type WorkReply struct {
 	Type      int    `json:"type"`
 	MessageID string `json:"message_id"`
 	MD5       struct {
 		Details string `json:"details"`
+		Result  int
 		XFE     struct {
 			NotFound bool             `json:"not_found"`
 			Error    string           `json:"error"`
@@ -84,6 +94,7 @@ type WorkReply struct {
 	} `json:"md5"`
 	URL struct {
 		Details string `json:"details"`
+		Result  int
 		XFE     struct {
 			NotFound   bool                 `json:"not_found"`
 			Error      string               `json:"error"`
@@ -97,6 +108,7 @@ type WorkReply struct {
 	} `json:"url"`
 	IP struct {
 		Details string `json:"details"`
+		Result  int
 		XFE     struct {
 			NotFound     bool                  `json:"not_found"`
 			Error        string                `json:"error"`
@@ -108,6 +120,7 @@ type WorkReply struct {
 		}
 	} `json:"ip"`
 	File struct {
+		Result       int
 		FileTooLarge bool   `json:"file_too_large"`
 		Virus        string `json:"virus"`
 		Error        string `json:"error"`

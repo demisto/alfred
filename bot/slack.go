@@ -13,27 +13,25 @@ import (
 
 // Take care not to change the file comments because this is how we detect if we already commented on the file
 const (
-	poweredBy               = "\t-\tPowered by <http://slack.demisto.com|Demisto>"
-	botName                 = "Alfred"
-	reactionTooBig          = "warning"
-	reactionGood            = "+1"
-	reactionBad             = "imp"
-	fileCommentGood         = "Alfred says this file (%s) is clean. Click %s for more details."
-	fileCommentBig          = "Alfred says this file (%s) is too large to scan. Click %s for more details."
-	fileCommentBad          = "Alfred says this file (%s) is malicious. Click %s for more details."
-	fileCommentWarning      = "Alfred does not have details regarding this file (%s). Click %s for more details."
-	urlCommentGood          = "Alfred says this URL (%s) is clean. Click %s for more details."
-	urlCommentBad           = "Alfred says this URL (%s) is malicious. Click %s for more details."
-	urlCommentWarning       = "Alfred does not have details regarding this URL (%s). Click %s for more details."
-	ipCommentGood           = "Alfred says this IP (%s) is clean. Click %s for more details."
-	ipCommentBad            = "Alfred says this IP (%s) is malicious. Click %s for more details."
-	ipCommentWarning        = "Alfred does not have details regarding this IP (%s). Click %s for more details."
-	md5CommentGood          = "Alfred says this MD5 hash (%s) is clean. Click %s for more details."
-	md5CommentBad           = "Alfred says this MD5 hash (%s) is malicious. Click %s for more details."
-	md5CommentWarning       = "Alfred does not have details regarding this MD5 hash (%s). Click %s for more details."
-	mainMessage             = "Security check by Alfred - your Demisto butler. Click <%s|here> for configuration and details."
-	numOfPositivesToConvict = 3
-	xfeScoreToConvict       = 3
+	poweredBy          = "\t-\tPowered by <http://slack.demisto.com|Demisto>"
+	botName            = "Alfred"
+	reactionTooBig     = "warning"
+	reactionGood       = "+1"
+	reactionBad        = "imp"
+	fileCommentGood    = "Alfred says this file (%s) is clean. Click %s for more details."
+	fileCommentBig     = "Alfred says this file (%s) is too large to scan. Click %s for more details."
+	fileCommentBad     = "Alfred says this file (%s) is malicious. Click %s for more details."
+	fileCommentWarning = "Alfred does not have details regarding this file (%s). Click %s for more details."
+	urlCommentGood     = "Alfred says this URL (%s) is clean. Click %s for more details."
+	urlCommentBad      = "Alfred says this URL (%s) is malicious. Click %s for more details."
+	urlCommentWarning  = "Alfred does not have details regarding this URL (%s). Click %s for more details."
+	ipCommentGood      = "Alfred says this IP (%s) is clean. Click %s for more details."
+	ipCommentBad       = "Alfred says this IP (%s) is malicious. Click %s for more details."
+	ipCommentWarning   = "Alfred does not have details regarding this IP (%s). Click %s for more details."
+	md5CommentGood     = "Alfred says this MD5 hash (%s) is clean. Click %s for more details."
+	md5CommentBad      = "Alfred says this MD5 hash (%s) is malicious. Click %s for more details."
+	md5CommentWarning  = "Alfred does not have details regarding this MD5 hash (%s). Click %s for more details."
+	mainMessage        = "Security check by Alfred - your Demisto butler. Click <%s|here> for configuration and details."
 )
 
 func joinMap(m map[string]bool) string {
@@ -76,12 +74,11 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
 	color := "warning"
 	comment := fileCommentWarning
 	reaction := reactionTooBig
-	if reply.File.Virus != "" || len(reply.MD5.XFE.Malware.Family) > 0 || reply.MD5.VT.FileReport.Positives > numOfPositivesToConvict {
-		// This is known bad scenario
+	if reply.File.Result == domain.ResultDirty {
 		color = "danger"
 		comment = fileCommentBad
 		reaction = reactionBad
-	} else if reply.File.Virus == "" && (!reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1) {
+	} else if reply.File.Result == domain.ResultClean {
 		// At least one of reputation services found this to be known good
 		// Keep the default
 		color = "good"
@@ -135,10 +132,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 		if reply.Type&domain.ReplyTypeURL > 0 {
 			color := "warning"
 			comment := urlCommentWarning
-			if reply.URL.XFE.URLDetails.Score > xfeScoreToConvict || reply.URL.VT.URLReport.Positives > numOfPositivesToConvict {
+			if reply.URL.Result == domain.ResultDirty {
 				color = "danger"
 				comment = urlCommentBad
-			} else if !reply.URL.XFE.NotFound || reply.URL.VT.URLReport.ResponseCode == 1 {
+			} else if reply.URL.Result == domain.ResultClean {
 				color = "good"
 				comment = urlCommentGood
 			}
@@ -153,16 +150,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 		if reply.Type&domain.ReplyTypeIP > 0 {
 			color := "warning"
 			comment := ipCommentWarning
-			var vtPositives uint16
-			for i := range reply.IP.VT.IPReport.DetectedUrls {
-				if reply.IP.VT.IPReport.DetectedUrls[i].Positives > vtPositives {
-					vtPositives = reply.IP.VT.IPReport.DetectedUrls[i].Positives
-				}
-			}
-			if reply.IP.XFE.IPReputation.Score > xfeScoreToConvict || vtPositives > numOfPositivesToConvict {
+			if reply.IP.Result == domain.ResultDirty {
 				color = "danger"
 				comment = ipCommentBad
-			} else if !reply.IP.XFE.NotFound || reply.IP.VT.IPReport.ResponseCode == 1 {
+			} else if reply.IP.Result == domain.ResultClean {
 				color = "good"
 				comment = ipCommentGood
 			}
@@ -177,10 +168,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 		if reply.Type&domain.ReplyTypeMD5 > 0 {
 			color := "warning"
 			comment := md5CommentWarning
-			if len(reply.MD5.XFE.Malware.Family) > 0 || reply.MD5.VT.FileReport.Positives > numOfPositivesToConvict {
+			if reply.MD5.Result == domain.ResultDirty {
 				color = "danger"
 				comment = md5CommentBad
-			} else if !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
+			} else if reply.MD5.Result == domain.ResultClean {
 				color = "good"
 				comment = md5CommentGood
 			}

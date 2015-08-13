@@ -21,6 +21,11 @@ import (
 	"github.com/slavikm/govt"
 )
 
+const (
+	numOfPositivesToConvict = 3
+	xfeScoreToConvict       = 3
+)
+
 // Worker reads messages from the queue and does the actual work
 type Worker struct {
 	q   queue.Queue
@@ -131,6 +136,7 @@ func (w *Worker) handleURL(text string, reply *domain.WorkReply) {
 		url := text[start+1 : end]
 		logrus.Debugf("URL found - %s\n", url)
 		reply.URL.Details = url
+		reply.Type |= domain.ReplyTypeURL
 		// Do the network commands in parallel
 		c := make(chan int, 2)
 		go func() {
@@ -163,12 +169,20 @@ func (w *Worker) handleURL(text string, reply *domain.WorkReply) {
 		for i := 0; i < 2; i++ {
 			<-c
 		}
-		reply.Type |= domain.ReplyTypeURL
+		if reply.URL.XFE.URLDetails.Score > xfeScoreToConvict || reply.URL.VT.URLReport.Positives > numOfPositivesToConvict {
+			// This is known bad scenario
+			reply.URL.Result = domain.ResultDirty
+		} else if !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
+			// At least one of reputation services found this to be known good
+			// Keep the default
+			reply.URL.Result = domain.ResultClean
+		}
 	}
 }
 
 func (w *Worker) handleIP(ip string, reply *domain.WorkReply) {
 	reply.IP.Details = ip
+	reply.Type |= domain.ReplyTypeIP
 	c := make(chan int, 2)
 	go func() {
 		ipResp, err := w.xfe.IPR(ip)
@@ -196,10 +210,25 @@ func (w *Worker) handleIP(ip string, reply *domain.WorkReply) {
 	for i := 0; i < 2; i++ {
 		<-c
 	}
-	reply.Type |= domain.ReplyTypeIP
+	var vtPositives uint16
+	for i := range reply.IP.VT.IPReport.DetectedUrls {
+		if reply.IP.VT.IPReport.DetectedUrls[i].Positives > vtPositives {
+			vtPositives = reply.IP.VT.IPReport.DetectedUrls[i].Positives
+		}
+	}
+	reply.IP.Result = domain.ResultUnknown
+	if reply.IP.XFE.IPReputation.Score > xfeScoreToConvict || vtPositives > numOfPositivesToConvict {
+		// This is known bad scenario
+		reply.IP.Result = domain.ResultDirty
+	} else if !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
+		// At least one of reputation services found this to be known good
+		// Keep the default
+		reply.IP.Result = domain.ResultClean
+	}
 }
 
 func (w *Worker) handleMD5(md5 string, reply *domain.WorkReply) {
+	reply.Type |= domain.ReplyTypeMD5
 	reply.MD5.Details = md5
 	c := make(chan int, 2)
 	go func() {
@@ -228,7 +257,15 @@ func (w *Worker) handleMD5(md5 string, reply *domain.WorkReply) {
 	for i := 0; i < 2; i++ {
 		<-c
 	}
-	reply.Type |= domain.ReplyTypeMD5
+	reply.MD5.Result = domain.ResultUnknown
+	if len(reply.MD5.XFE.Malware.Family) > 0 || reply.MD5.VT.FileReport.Positives > numOfPositivesToConvict {
+		// This is known bad scenario
+		reply.MD5.Result = domain.ResultDirty
+	} else if !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
+		// At least one of reputation services found this to be known good
+		// Keep the default
+		reply.MD5.Result = domain.ResultClean
+	}
 }
 
 func (w *Worker) handleFile(request *domain.WorkRequest, reply *domain.WorkReply) {
@@ -264,4 +301,13 @@ func (w *Worker) handleFile(request *domain.WorkRequest, reply *domain.WorkReply
 	}()
 	w.handleMD5(h, reply)
 	<-c
+	reply.File.Result = domain.ResultUnknown
+	if reply.File.Virus != "" || len(reply.MD5.XFE.Malware.Family) > 0 || reply.MD5.VT.FileReport.Positives > numOfPositivesToConvict {
+		// This is known bad scenario
+		reply.File.Result = domain.ResultDirty
+	} else if reply.File.Virus == "" && (!reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1) {
+		// At least one of reputation services found this to be known good
+		// Keep the default
+		reply.File.Result = domain.ResultClean
+	}
 }
