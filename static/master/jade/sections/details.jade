@@ -39,8 +39,16 @@ section#details.details-page
                 span#forip
               h2
                 span#ipresult
+              h2#riskscore Risk Score:
               h2#subnetsection Subnet:
-                span#subnetdata
+                table.table
+                  thead
+                    tr
+                      th Subnet
+                      th Category
+                      th Location
+                  tbody#subnettable
+
               h2#geosection Geographical Information:
                 span#geodata
               #detected_urls_section
@@ -55,19 +63,19 @@ section#details.details-page
                   tbody#detected_urls_table
 
               h2#ressection Resolution History:
-              table.table
-                thead
-                  tr
-                    th hostname
-                    th last_resolved
-                tbody#resolvetable
+                table.table
+                  thead
+                    tr
+                      th hostname
+                      th last_resolved
+                  tbody#resolvetable
             #file
               h1 Details for
                 span#forfile
               h2
                 span#fileresult
               h2#malwarefamily Malware Family
-              h2 Detected engines
+              h2#scans_table_section Detected engines
                 span#numDetections Number of engines that detected malware :
 
               table.table

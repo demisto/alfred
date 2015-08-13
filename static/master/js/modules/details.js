@@ -103,11 +103,11 @@
       $('#forip').text(jsonResult.ip.details);
 
       var resultMessage;
-      if (jsonResult.url.Result == 0)
+      if (jsonResult.ip.Result == 0)
       {
         resultMessage = "IP address is found to be clean.";
       }
-      else if (jsonResult.url.Result == 1)
+      else if (jsonResult.ip.Result == 1)
       {
         resultMessage = "IP address is found to be malicious.";
       }
@@ -116,10 +116,34 @@
         resultMessage = "Could not determine the IP address reputation.";
       }
       $('#ipresult').text(resultMessage);
+      $('#riskscore').append(jsonResult.ip.xfe.ip_reputation.score);
 
-      // TODO: why is subnets an array?
+
       //      $('#subnetdata').text(jsonResult.ip.xfe.ip_reputation.subnets.subnet);
-
+      var subnetArr = jsonResult.ip.xfe.ip_reputation.subnets;
+      if (subnetArr != null && (subnetArr.length > 0)) {
+        for (var i = 0; i < subnetArr.length; i++) {
+          var rowstring = ' ';
+          rowstring = rowstring + '<tr><td>'+ subnetArr[i].subnet + '</td>';
+          var catsMap = subnetArr[i].cats;
+          if (catsMap != null) {
+            rowstring += '<td>';
+            for (var k in catsMap) {
+              rowstring = rowstring + k + ', ';
+            }
+            rowstring += '</td>';
+          }
+          rowstring += '<td>';
+          if (subnetArr[i].geo != null) {
+            rowstring += subnetArr[i].geo['country'];
+          }
+          rowstring += '</td></tr>';
+          $('#subnettable').append(rowstring);
+        }
+      }
+      else {
+        $('#subnetsection').hide();
+      }
       // Geo Data
       if (jsonResult.ip.xfe.ip_reputation.geo != null) {
         $('#geodata').text(jsonResult.ip.xfe.ip_reputation.geo['country']);
@@ -173,15 +197,6 @@
           if (jsonResult.file.details.file_too_large)
             resultMessage += "File too large to be scanned by Antivirus engine.";
         }
-        $('#numDetections').append(jsonResult.md5.vt.file_report.positives);
-        var fileScanMap = jsonResult.md5.vt.file_report.scans;
-        if (fileScanMap != null) {
-          for (k in fileScanMap) {
-            $('#scans_table').append('<tr><td>'+ k + '</td><td>' + fileScanMap[k].version +
-              '</td><td>' + fileScanMap[k].detected + '</td><td>' + fileScanMap[k].result +
-              '</td><td>' + fileScanMap[k].update +   '</td></tr>');
-          }
-        }
 
       }
       else {
@@ -196,7 +211,26 @@
         }
       }
       $('#fileresult').text(resultMessage);
+      $('#numDetections').append(jsonResult.md5.vt.file_report.positives);
+      var fileScanMap = jsonResult.md5.vt.file_report.scans;
+      if (fileScanMap != null) {
+        for (k in fileScanMap) {
+          $('#scans_table').append('<tr><td>'+ k + '</td><td>' + fileScanMap[k].version +
+            '</td><td>' + fileScanMap[k].detected + '</td><td>' + fileScanMap[k].result +
+            '</td><td>' + fileScanMap[k].update +   '</td></tr>');
+        }
+      }
+      else {
+        $('#scans_table_section').hide();
+      }
 
+
+      if (jsonResult.md5.xfe.malware.family != null) {
+        $('#malwarefamily').append(jsonResult.md5.xfe.malware.family);
+      }
+      else {
+        $('#malwarefamily').hide();
+      }
 
     }
 //    $('#forip').text(jsonResult.ip.);
