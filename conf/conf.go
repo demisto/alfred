@@ -47,6 +47,12 @@ var Options struct {
 		Username string
 		// Password for DB
 		Password string
+		// ServerCA for TLS
+		ServerCA string
+		// ClientCert for TLS
+		ClientCert string
+		// ClientKey for TLS
+		ClientKey string
 	}
 	// AWS credentials
 	AWS struct {

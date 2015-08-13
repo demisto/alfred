@@ -1,7 +1,10 @@
 package repo
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -10,9 +13,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
+	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-	// Load the mysql driver
-	_ "github.com/go-sql-driver/mysql"
 )
 
 const schema = `
@@ -73,8 +75,9 @@ CREATE TABLE IF NOT EXISTS bot_for_user (
 )`
 
 type repoMySQL struct {
-	db   *sqlx.DB
-	stop chan bool
+	db       *sqlx.DB
+	hostname string
+	stop     chan bool
 }
 
 // NewMySQL repo is returned
@@ -88,9 +91,29 @@ type repoMySQL struct {
 //   mysql> drop user ''@'localhost';
 // The last command drops the anonymous user
 func NewMySQL() (Repo, error) {
-	// Open the my.db data file in your current directory.
-	// It will be created if it doesn't exist.
 	logrus.Infof("Using MySQL at %s with user %s\n", conf.Options.DB.ConnectString, conf.Options.DB.Username)
+	name, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+	// If we specified TLS connection, we need the certificate files
+	if conf.Options.DB.ServerCA != "" {
+		rootCertPool := x509.NewCertPool()
+		if ok := rootCertPool.AppendCertsFromPEM([]byte(conf.Options.DB.ServerCA)); !ok {
+			return nil, errors.New("Unable to add ServerCA PEM")
+		}
+		clientCert := make([]tls.Certificate, 0, 1)
+		certs, err := tls.X509KeyPair([]byte(conf.Options.DB.ClientCert), []byte(conf.Options.DB.ClientKey))
+		if err != nil {
+			return nil, err
+		}
+		clientCert = append(clientCert, certs)
+		mysql.RegisterTLSConfig("dbot", &tls.Config{
+			RootCAs:            rootCertPool,
+			Certificates:       clientCert,
+			InsecureSkipVerify: true,
+		})
+	}
 	db, err := sqlx.Connect("mysql", fmt.Sprintf("%s:%s@%s", conf.Options.DB.Username, conf.Options.DB.Password, conf.Options.DB.ConnectString))
 	if err != nil {
 		return nil, err
@@ -112,8 +135,9 @@ func NewMySQL() (Repo, error) {
 		return nil, err
 	}
 	r := &repoMySQL{
-		db:   db,
-		stop: make(chan bool),
+		db:       db,
+		hostname: name,
+		stop:     make(chan bool),
 	}
 	go r.cleanOAuthState()
 	return r, nil
@@ -289,6 +313,8 @@ func (r *repoMySQL) ChannelsAndGroups(user string) (*domain.Configuration, error
 			res.IM = true
 		case 'R':
 			res.Regexp = s[1:]
+		case 'A':
+			res.All = true
 		}
 	}
 	return res, err
@@ -370,29 +396,40 @@ func (r *repoMySQL) TeamSubscriptions(team string) (map[string]*domain.Configura
 
 func (r *repoMySQL) OpenUsers() ([]domain.UserBot, error) {
 	var users []domain.UserBot
-	err := r.db.Select(&users,
-		"SELECT u.id as user, ub.bot, ub.ts FROM users u LEFT OUTER JOIN bot_for_user ub ON u.id = ub.user LEFT OUTER JOIN bots b ON ub.bot = b.bot WHERE ub.bot IS NULL OR b.ts + interval ? minute < now()", 3)
+	rows, err := r.db.Query(
+		"SELECT u.id as user, ub.bot, ub.ts FROM users u LEFT OUTER JOIN bot_for_user ub ON u.id = ub.user LEFT OUTER JOIN bots b ON ub.bot = b.bot WHERE ub.bot IS NULL OR b.ts + interval ? minute < now() LIMIT 1000", 3)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var user string
+		var bot sql.NullString
+		var ts mysql.NullTime
+		if err = rows.Scan(&user, &bot, &ts); err != nil {
+			return nil, err
+		}
+		u := domain.UserBot{User: user}
+		if bot.Valid {
+			u.Bot = bot.String
+		}
+		if ts.Valid {
+			u.Timestamp = ts.Time
+		}
+		users = append(users, u)
+	}
 	return users, err
 }
 
 func (r *repoMySQL) LockUser(user *domain.UserBot) (bool, error) {
-	// TODO - clean
-	name, err := os.Hostname()
-	if err != nil {
-		return false, err
-	}
 	// This line does not exist
 	if user.Bot == "" {
-		_, err := r.db.Exec("INSERT INTO bot_for_user (user, bot, ts) VALUES (?, ?, now())", user.User, name)
+		_, err := r.db.Exec("INSERT INTO bot_for_user (user, bot, ts) VALUES (?, ?, now())", user.User, r.hostname)
 		if err != nil {
 			// TODO - check if duplicate and then just return false
 			return false, err
 		}
 	}
-	if err != nil {
-		return false, err
-	}
-	result, err := r.db.Exec("UPDATE bot_for_user SET bot = ?, ts = now() WHERE user = ? AND bot = ? AND ts = ?", name, user.User, user.Bot, user.Timestamp)
+	result, err := r.db.Exec("UPDATE bot_for_user SET bot = ?, ts = now() WHERE user = ? AND bot = ? AND ts = ?", r.hostname, user.User, user.Bot, user.Timestamp)
 	if err != nil {
 		return false, err
 	}

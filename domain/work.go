@@ -71,7 +71,8 @@ type WorkReply struct {
 	Type      int    `json:"type"`
 	MessageID string `json:"message_id"`
 	MD5       struct {
-		XFE struct {
+		Details string `json:"details"`
+		XFE     struct {
 			NotFound bool             `json:"not_found"`
 			Error    string           `json:"error"`
 			Malware  goxforce.Malware `json:"malware"`
@@ -82,7 +83,8 @@ type WorkReply struct {
 		} `json:"vt"`
 	} `json:"md5"`
 	URL struct {
-		XFE struct {
+		Details string `json:"details"`
+		XFE     struct {
 			NotFound   bool                 `json:"not_found"`
 			Error      string               `json:"error"`
 			Resolve    goxforce.ResolveResp `json:"resolve"`
@@ -94,7 +96,8 @@ type WorkReply struct {
 		} `json:"vt"`
 	} `json:"url"`
 	IP struct {
-		XFE struct {
+		Details string `json:"details"`
+		XFE     struct {
 			NotFound     bool                  `json:"not_found"`
 			Error        string                `json:"error"`
 			IPReputation goxforce.IPReputation `json:"ip_reputation"`

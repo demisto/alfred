@@ -130,7 +130,7 @@ func (w *Worker) handleURL(text string, reply *domain.WorkReply) {
 		}
 		url := text[start+1 : end]
 		logrus.Debugf("URL found - %s\n", url)
-
+		reply.URL.Details = url
 		// Do the network commands in parallel
 		c := make(chan int, 2)
 		go func() {
@@ -168,6 +168,7 @@ func (w *Worker) handleURL(text string, reply *domain.WorkReply) {
 }
 
 func (w *Worker) handleIP(ip string, reply *domain.WorkReply) {
+	reply.IP.Details = ip
 	c := make(chan int, 2)
 	go func() {
 		ipResp, err := w.xfe.IPR(ip)
@@ -199,6 +200,7 @@ func (w *Worker) handleIP(ip string, reply *domain.WorkReply) {
 }
 
 func (w *Worker) handleMD5(md5 string, reply *domain.WorkReply) {
+	reply.MD5.Details = md5
 	c := make(chan int, 2)
 	go func() {
 		md5Resp, err := w.xfe.MalwareDetails(md5)

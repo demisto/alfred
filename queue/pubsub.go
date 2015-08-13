@@ -60,7 +60,12 @@ func newPubSub() (*queuePubSub, error) {
 		if err != nil {
 			return nil, err
 		}
-		names = append(names, host)
+		if conf.Options.Bot {
+			names = append(names, host)
+		}
+		if conf.Options.Web {
+			names = append(names, host+"-web")
+		}
 	}
 	for _, n := range names {
 		// Register the topics while ignoring already exists errors
@@ -105,9 +110,23 @@ func (q *queuePubSub) pop(qname string, timeout time.Duration, body interface{})
 		MaxMessages:       1,
 	}
 	subName := fullSubName(conf.Options.G.Project, qname)
-	pullResponse, err := q.svc.Projects.Subscriptions.Pull(subName, pullRequest).Do()
-	if err != nil {
-		return err
+	var pullResponse *pubsub.PullResponse
+	var err error
+	started := time.Now()
+	for {
+		pullResponse, err = q.svc.Projects.Subscriptions.Pull(subName, pullRequest).Do()
+		if err != nil {
+			return err
+		}
+		if len(pullResponse.ReceivedMessages) > 0 {
+			break
+		}
+		if q.closed {
+			return ErrClosed
+		}
+		if started.Add(timeout).After(time.Now()) {
+			return ErrTimeout
+		}
 	}
 	for _, receivedMessage := range pullResponse.ReceivedMessages {
 		data, err := base64.StdEncoding.DecodeString(receivedMessage.Message.Data)

@@ -348,6 +348,10 @@ func (b *Bot) subscriptionChanged(user *domain.User, configuration *domain.Confi
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	subs := b.subscriptions[user.Team]
+	if subs == nil {
+		logrus.Debugf("Subscription for team not found: %+v\n", user)
+		return
+	}
 	sub := subs.SubForUser(user.ID)
 	if sub != nil {
 		// We already have subscription - if the new one is still active, no need to touch WS
@@ -364,10 +368,11 @@ func (b *Bot) subscriptionChanged(user *domain.User, configuration *domain.Confi
 func (b *Bot) monitorChanges() {
 	for {
 		user, configuration, err := b.q.PopConf(0)
-		if err != nil {
+		if err != nil || user == nil || configuration == nil {
 			logrus.Infof("Quiting monitoring changes - %v\n", err)
 			break
 		}
+		logrus.Debugf("Configuration change received: %+v, %+v\n", user, configuration)
 		b.subscriptionChanged(user, configuration)
 	}
 }

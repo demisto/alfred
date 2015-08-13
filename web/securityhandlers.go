@@ -100,7 +100,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Debugln("Got all details about myself from Slack")
 	ourTeam, err := ac.r.TeamByExternalID(team.Team.ID)
-	if ourTeam == nil {
+	if err != nil {
 		teamID, err := random.New()
 		if err != nil {
 			panic(err)
@@ -120,7 +120,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	newUser := false
 	ourUser, err := ac.r.UserByExternalID(user.User.ID)
-	if ourUser == nil {
+	if err != nil {
 		userID, err := random.New()
 		if err != nil {
 			panic(err)
