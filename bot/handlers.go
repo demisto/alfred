@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"runtime"
@@ -183,6 +184,21 @@ func (w *Worker) handleURL(text string, reply *domain.WorkReply) {
 func (w *Worker) handleIP(ip string, reply *domain.WorkReply) {
 	reply.IP.Details = ip
 	reply.Type |= domain.ReplyTypeIP
+	// First, let's check if IP is globally unicast addressable and is public
+	ipData := net.ParseIP(ip)
+	ipv4 := ipData.To4()
+	if ipv4 == nil {
+		// If not IPv4 then return - by default it will be marked clean
+		return
+	}
+	if !ipv4.IsGlobalUnicast() {
+		// If not global unicast ignore
+		return
+	}
+	// Private networks
+	if ipv4[0] == 10 || ipv4[0] == 172 && ipv4[1] >= 16 && ipv4[1] <= 31 || ipv4[0] == 192 && ipv4[1] == 168 {
+		return
+	}
 	c := make(chan int, 2)
 	go func() {
 		ipResp, err := w.xfe.IPR(ip)
