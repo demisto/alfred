@@ -23,7 +23,33 @@
     }
     else {
       // fill in the details for the url
-      $('#forurl').text(jsonResult.url.xfe.url_details.url);
+      $('#forurl').text(jsonResult.url.details);
+      var resultMessage;
+      if (jsonResult.url.Result == 0)
+      {
+        resultMessage = "URL is found to be clean.";
+        $('#detectedEnginesSections').hide();
+      }
+      else if (jsonResult.url.Result == 1)
+      {
+        resultMessage = "URL is found to be malicious.";
+        // display the engines that convicted this URL
+        if (jsonResult.url.vt.url_report.positives > 0) {
+          var numEngines = jsonResult.url.vt.url_report.scans.length;
+          var scanMap = jsonResult.url.vt.url_report.scans;
+          for (var k in scanMap) {
+            if (scanMap[k].detected) {
+              $('#detectedEngines').append(k);
+            }
+          }
+        }
+      }
+      else
+      {
+        resultMessage = "Could not determine the URL reputation.";
+        $('#detectedEnginesSections').hide();
+      }
+      $('#urlresult').text(resultMessage);
 
       if (jsonResult.url.xfe.resolve.A != null && jsonResult.url.xfe.resolve.A.length > 0) {
         $('#arecords').text(jsonResult.url.xfe.resolve.A);
@@ -67,16 +93,6 @@
         $('#catsection').hide();
       }
 
-      // display the engines that convicted this URL
-      if (jsonResult.url.vt.url_report.positives > 0) {
-        var numEngines = jsonResult.url.vt.url_report.scans.length;
-        var scanMap = jsonResult.url.vt.url_report.scans;
-        for (var k in scanMap) {
-          if (scanMap[k].detected) {
-            $('#detectedEngines').append(k);
-          }
-        }
-      }
 
     }
     if (!isip) {
@@ -84,7 +100,22 @@
     }
     else {
       // fill in the details for IP section
-      $('#forip').text(jsonResult.ip.xfe.ip_reputation.ip);
+      $('#forip').text(jsonResult.ip.details);
+
+      var resultMessage;
+      if (jsonResult.url.Result == 0)
+      {
+        resultMessage = "IP address is found to be clean.";
+      }
+      else if (jsonResult.url.Result == 1)
+      {
+        resultMessage = "IP address is found to be malicious.";
+      }
+      else
+      {
+        resultMessage = "Could not determine the IP address reputation.";
+      }
+      $('#ipresult').text(resultMessage);
 
       // TODO: why is subnets an array?
       //      $('#subnetdata').text(jsonResult.ip.xfe.ip_reputation.subnets.subnet);
@@ -123,12 +154,17 @@
       }
 
     }
+
     if (!isfile && !ismd5) {
       $('#file').hide();
-    } else {
+    } else if (isfile) {
       // either the md5 or file is present.
       // when file is present then we will show the AV result and the md5 from VT and XFE.
       //if only md5 present then we do not show AV
+
+    }
+    else {
+      //md5 is present
 
     }
 
