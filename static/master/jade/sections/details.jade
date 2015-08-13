@@ -62,7 +62,22 @@ section#details.details-page
                     th last_resolved
                 tbody#resolvetable
             #file
-              h1 Details for <span id="forfile"></span>
-              h2 Malware Family
+              h1 Details for
+                span#forfile
+              h2
+                span#fileresult
+              h2#malwarefamily Malware Family
+              h2 Detected engines
+                span#numDetections Number of engines that detected malware :
+
+              table.table
+                thead
+                  tr
+                    th Engine Name
+                    th Version
+                    th Detected
+                    th Result
+                    th Update
+                tbody#scans_table
 
 // END CONFIGURATION

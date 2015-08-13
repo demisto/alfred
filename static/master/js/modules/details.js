@@ -157,17 +157,48 @@
 
     if (!isfile && !ismd5) {
       $('#file').hide();
-    } else if (isfile) {
-      // either the md5 or file is present.
-      // when file is present then we will show the AV result and the md5 from VT and XFE.
-      //if only md5 present then we do not show AV
+    } else {
+      var resultMessage;
+      if (isfile) {
+        // either the md5 or file is present.
+        // when file is present then we will show the AV result and the md5 from VT and XFE.
+        //if only md5 present then we do not show AV
+        $('#forfile').text(jsonResult.file.details.name);
+        if (jsonResult.file.Result == 0) {
+          resultMessage = "File found to be clean.";
+        } else if (jsonResult.file.Result == 1) {
+          resultMessage = "File found to be malicious.";
+        } else {
+          resultMessage = "File reputation cannot be determined.";
+          if (jsonResult.file.details.file_too_large)
+            resultMessage += "File too large to be scanned by Antivirus engine.";
+        }
+        $('#numDetections').append(jsonResult.md5.vt.file_report.positives);
+        var fileScanMap = jsonResult.md5.vt.file_report.scans;
+        if (fileScanMap != null) {
+          for (k in fileScanMap) {
+            $('#scans_table').append('<tr><td>'+ k + '</td><td>' + fileScanMap[k].version +
+              '</td><td>' + fileScanMap[k].detected + '</td><td>' + fileScanMap[k].result +
+              '</td><td>' + fileScanMap[k].update +   '</td></tr>');
+          }
+        }
+
+      }
+      else {
+        //only md5 is present
+        $('#forfile').text(jsonResult.md5.details);
+        if (jsonResult.md5.Result == 0) {
+          resultMessage = "File found to be clean.";
+        } else if (jsonResult.md5.Result == 1) {
+          resultMessage = "File found to be malicious.";
+        } else {
+          resultMessage = "File reputation cannot be determined";
+        }
+      }
+      $('#fileresult').text(resultMessage);
+
 
     }
-    else {
-      //md5 is present
-
-    }
-
 //    $('#forip').text(jsonResult.ip.);
 
 
