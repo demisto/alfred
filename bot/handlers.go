@@ -232,6 +232,8 @@ func (w *Worker) handleMD5(md5 string, reply *domain.WorkReply) {
 }
 
 func (w *Worker) handleFile(request *domain.WorkRequest, reply *domain.WorkReply) {
+	reply.Type |= domain.ReplyTypeFile
+	reply.File.Details = request.File
 	if request.File.Size > 30*1024*1024 {
 		logrus.Infof("File %s is bigger than 30M, skipping\n", request.File.Name)
 		reply.File.FileTooLarge = true
@@ -262,6 +264,4 @@ func (w *Worker) handleFile(request *domain.WorkRequest, reply *domain.WorkReply
 	}()
 	w.handleMD5(h, reply)
 	<-c
-	reply.Type |= domain.ReplyTypeFile
-	reply.File.Details = request.File
 }
