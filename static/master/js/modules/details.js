@@ -43,10 +43,11 @@
         var ipdata = this.props.data.ip;
         return (
           <div>
-            <h1>Details Page for {ipdata.details}</h1>
-            <h2> {this.resultmessage()} </h2>
-            <h2> Risk Score: {ipdata.xfe.ip_reputation.score} </h2>
-            <h2> Country: {ipdata.xfe.ip_reputation.geo['country']} </h2>
+            DBot IP Report for:
+            <h2>{ipdata.details}</h2>
+            <h3> {this.resultmessage()} </h3>
+            <h3> Risk Score: {ipdata.xfe.ip_reputation.score} </h3>
+            <h3> Country: {ipdata.xfe.ip_reputation.geo['country']} </h3>
 
             <div className="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
               <div className="panel panel-default">
@@ -125,9 +126,9 @@
           <div>
           <table className="table">
           <thead>
-          <th>URL</th>
-          <th>Positives</th>
-          <th>Scan Date</th>
+          <th className="col-lg-8">URL</th>
+          <th className="col-lg-1">Positives</th>
+          <th className="col-lg-3">Scan Date</th>
           </thead>
           <tbody>
           {rows}
@@ -258,9 +259,10 @@
         var urldata = this.props.data.url;
         return (
           <div>
-          <h2>Details Page for {urldata.details}</h2>
-          <h3> {this.resultmessage()}
-           Risk Score: {urldata.xfe.url_details.score} </h3>
+          DBot URL Report for:
+          <h2>{urldata.details}</h2>
+          <h3> {this.resultmessage()} </h3>
+          <h3> Risk Score: {urldata.xfe.url_details.score} </h3>
           <DetectedEngines urldata={urldata} />
           <ARecord urldata={urldata} />
           <AAAARecord urldata={urldata} />
@@ -343,15 +345,24 @@
       render: function() {
         var urldata = this.props.urldata;
         var mxrecord = "";
+        var rows =[];
         if (urldata.xfe.resolve.MX != null && urldata.xfe.resolve.MX.length > 0) {
           for (var i=0; i < urldata.xfe.resolve.MX.length; i++) {
-            mxrecord = mxrecord + urldata.xfe.resolve.MX[i] + " ";
+            rows.push(<MXRecordRow mxdata={urldata.xfe.resolve.MX[i]} />);
           }
-          //TODO : MXrecord is an object
+
           return(
             <div>
               <h3>MX Record </h3>
-              {mxrecord}
+              <table className="table">
+                <thead>
+                  <th>Exchange</th>
+                  <th>Priority</th>
+                </thead>
+                <tbody>
+                  {rows}
+                </tbody>
+              </table>
             </div>
           );
         } else {
@@ -360,6 +371,18 @@
           );
         }
       }
+    });
+
+    var MXRecordRow = React.createClass({
+        render: function() {
+          var mxdata = this.props.mxdata;
+          return (
+            <tr>
+            <td>{mxdata.exchange}</td>
+            <td>{mxdata.priority}</td>
+            </tr>
+          );
+        }
     });
 
     var URLCategory = React.createClass({
@@ -374,7 +397,7 @@
             // TODO what about multiple categories?
             category = k;
             return (
-              <div><h3>{category}</h3></div>
+              <div><h3>Category: {category}</h3></div>
             );
           }
         }
@@ -581,24 +604,21 @@
       render: function() {
         if (isip) {
           return (
-          <div>
-          <h1>Details Page</h1>
             <IpDiv data={this.state.data} />
-          </div>
         );
       }
       else if (isurl) {
         return (
-          <div>
+
           <UrlDiv data={this.state.data} />
-          </div>
+
         );
       }
       else if (isfile || ismd5) {
         return (
-          <div>
+
           <FileDiv data={this.state.data} />
-          </div>);
+          );
       }
       else return(<div></div>);
       }
