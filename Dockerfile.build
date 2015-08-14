@@ -1,0 +1,7 @@
+FROM golang:1.4.2
+
+COPY Makefile /
+RUN mkdir ~/.ssh
+COPY ~/.ssh/demisto_git_rsa_clear ~/.ssh/id_rsa
+WORKDIR /
+RUN make setup

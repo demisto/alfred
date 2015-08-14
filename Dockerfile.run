@@ -1,0 +1,2 @@
+FROM busybox:ubuntu-14.04
+EXPOSE 7070
