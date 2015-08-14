@@ -17,6 +17,7 @@ var gulp        = require('gulp'),
     expect      = require('gulp-expect-file'),
     gulpsync    = require('gulp-sync')(gulp),
     sourcemaps  = require('gulp-sourcemaps'),
+    react       = require('gulp-react'),
     PluginError = gutil.PluginError;
 
 // production mode (see build task)
@@ -90,15 +91,18 @@ var build = {
 
 
 
+
 //---------------
 // TASKS
 //---------------
+
 
 
 // JS SITE
 gulp.task('scripts:site', function() {
     // Minify and copy all JavaScript (except vendor scripts)
     return gulp.src(source.scripts.site)
+        .pipe(react())
         .pipe( useSourceMaps ? sourcemaps.init() : gutil.noop())
         .pipe(concat(build.scripts.site.main))
         .on("error", handleError)

@@ -36,5 +36,8 @@
   "bower_components/js-cookie/src/js.cookie.js",
   "bower_components/toastr/toastr.min.js",
   "bower_components/toastr/toastr.min.css",
-  "bower_components/uri.js/src/URI.min.js"
+  "bower_components/uri.js/src/URI.min.js",
+  "bower_components/react/react-with-addons.min.js",
+  "bower_components/react/react-with-addons.js",
+  "bower_components/react/JSXTransformer.js"
 ]
