@@ -41,60 +41,23 @@
       },
       render: function() {
         var ipdata = this.props.data.ip;
-        return (
-          <div>
+        if (!isip) {
+          return (<div></div>);
+        }
+        else return (
+          <div className="main-section-divider">
             DBot IP Report for:
             <h2>{ipdata.details}</h2>
             <h3> {this.resultmessage()} </h3>
             <h3> Risk Score: {ipdata.xfe.ip_reputation.score} </h3>
-            <h3> Country: {ipdata.xfe.ip_reputation.geo['country']} </h3>
+            <h3> Country: {ipdata.xfe.ip_reputation.geo? ipdata.xfe.ip_reputation.geo['country']:'Unknown'} </h3>
 
             <div className="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
-              <div className="panel panel-default">
-                <div className="panel-heading" role="tab" id="headingOne">
-                  <h4 className="panel-title">
-                    <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                      Subnets
-                    </a>
-                  </h4>
-                </div>
-                <div id="collapseOne" className="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
-                  <div className="panel-body">
-                  <SubnetSection data={ipdata.xfe.ip_reputation.subnets} />
-                  </div>
-                </div>
-              </div>
-            <div className="panel panel-default">
-              <div className="panel-heading" role="tab" id="headingTwo">
-                <h4 className="panel-title">
-                  <a className="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                    Historical Resolutions
-                  </a>
-                </h4>
-              </div>
-              <div id="collapseTwo" className="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
-                <div className="panel-body">
-                  <ResolutionSection data={ipdata.VT.ip_report.Resolutions}/>
-                </div>
-              </div>
-            </div>
-            <div className="panel panel-default">
-              <div className="panel-heading" role="tab" id="headingThree">
-                <h4 className="panel-title">
-                  <a className="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                    Detected URLs
-                  </a>
-                </h4>
-              </div>
-              <div id="collapseThree" className="panel-collapse collapse" role="tabpanel" aria-labelledby="headingThree">
-                <div className="panel-body">
-                  <DetectedURLSection data={ipdata.VT.ip_report.detected_urls}/>
-                </div>
-              </div>
+              <SubnetSection data={ipdata.xfe.ip_reputation.subnets} />
+              <ResolutionSection data={ipdata.VT.ip_report.Resolutions}/>
+              <DetectedURLSection data={ipdata.VT.ip_report.detected_urls}/>
             </div>
           </div>
-
-        </div>
         );
       }
     });
@@ -121,21 +84,39 @@
           for (var i=0; i < detected_url_arr.length; i++) {
             rows.push(<DetectedURLRow urldata={detected_url_arr[i]} />)
           }
+          return (
+
+            <div className="panel panel-default">
+              <div className="panel-heading" role="tab" id="headingThree">
+                <h4 className="panel-title">
+                  <a className="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                    Detected URLs
+                  </a>
+                </h4>
+              </div>
+              <div id="collapseThree" className="panel-collapse collapse" role="tabpanel" aria-labelledby="headingThree">
+                <div className="panel-body">
+                  <div>
+                  <table className="table">
+                  <thead>
+                  <th className="col-lg-8">URL</th>
+                  <th className="col-lg-1">Positives</th>
+                  <th className="col-lg-3">Scan Date</th>
+                  </thead>
+                  <tbody>
+                  {rows}
+                  </tbody>
+                  </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            );
         }
-        return (
-          <div>
-          <table className="table">
-          <thead>
-          <th className="col-lg-8">URL</th>
-          <th className="col-lg-1">Positives</th>
-          <th className="col-lg-3">Scan Date</th>
-          </thead>
-          <tbody>
-          {rows}
-          </tbody>
-          </table>
-          </div>
-          );
+        else
+        {
+          return (<div></div>);
+        }
 
       }
     });
@@ -160,20 +141,35 @@
           for (var i=0; i < resArr.length; i++) {
             rows.push(<ResolutionRow resdata={resArr[i]} />)
           }
+          return (
+            <div className="panel panel-default">
+              <div className="panel-heading" role="tab" id="headingTwo">
+                <h4 className="panel-title">
+                  <a className="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                    Historical Resolutions
+                  </a>
+                </h4>
+              </div>
+              <div id="collapseTwo" className="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
+                <div className="panel-body">
+                  <div>
+                    <table className="table">
+                      <thead>
+                        <th>Hostname</th>
+                        <th>Last Resolved</th>
+                      </thead>
+                      <tbody>
+                        {rows}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            );
         }
-        return (
-          <div>
-          <table className="table">
-          <thead>
-          <th>Hostname</th>
-          <th>Last Resolved</th>
-          </thead>
-          <tbody>
-          {rows}
-          </tbody>
-          </table>
-          </div>
-          );
+        else
+          return (<div></div>);
 
       }
     });
@@ -186,22 +182,40 @@
           for (var i=0; i < subnets.length; i++) {
             rows.push(<SubnetSectionRow subnetdata={subnets[i]} />)
           }
+          return (
+
+            <div className="panel panel-default">
+              <div className="panel-heading" role="tab" id="headingOne">
+                <h4 className="panel-title">
+                  <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                    Subnets
+                  </a>
+                </h4>
+              </div>
+              <div id="collapseOne" className="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
+                <div className="panel-body">
+                  <div>
+                  <table className="table">
+                  <thead>
+                  <th>Subnet</th>
+                  <th>IP</th>
+                  <th>Category</th>
+                  <th>Location</th>
+                  </thead>
+                  <tbody>
+                  {rows}
+                  </tbody>
+                  </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        } else {
+          return (
+            <div></div>
+          );
         }
-        return (
-          <div>
-          <table className="table">
-          <thead>
-          <th>Subnet</th>
-          <th>IP</th>
-          <th>Category</th>
-          <th>Location</th>
-          </thead>
-          <tbody>
-          {rows}
-          </tbody>
-          </table>
-          </div>
-        );
       }
     });
 
@@ -257,8 +271,10 @@
 
       render: function() {
         var urldata = this.props.data.url;
-        return (
-          <div>
+        if (!isurl) {
+          return (<div></div>);
+        } else return (
+          <div className="main-section-divider">
           DBot URL Report for:
           <h2>{urldata.details}</h2>
           <h3> {this.resultmessage()} </h3>
@@ -438,7 +454,6 @@
 
 
     var FileDiv = React.createClass({
-//    var filemalicious = false;
       resultmessage: function() {
         var resultMessage;
         var filedata = null;
@@ -453,7 +468,6 @@
           else if (filedata.Result == 1)
           {
             resultMessage = "File is found to be malicious.";
-  //          filemalicious = true;
           }
           else
           {
@@ -469,7 +483,6 @@
           else if (md5data.Result == 1)
           {
             resultMessage = "File is found to be malicious.";
-            filemalicious = true;
           }
           else
           {
@@ -481,14 +494,39 @@
 
       render: function() {
         var data = this.props.data;
-        return (
-          <div>
-          <h2>Details Page for {data.file.details.name}</h2>
+        if (!isfile && !ismd5) {
+          return (<div></div>);
+        } else return (
+          <div className="main-section-divider">
+          <FileNameHeader data={this.props.data} />
           <h3> {this.resultmessage()} </h3>
           <FileResult filedata={this.props.data.file} />
           <MD5Result md5data={this.props.data.md5} />
           </div>
         );
+      }
+    });
+
+    var FileNameHeader = React.createClass({
+      render: function() {
+        var data = this.props.data;
+        if (isfile)
+        {
+          return (
+            <div>
+              DBot File Report for:
+              <h2>{data.file.details.name}</h2>
+            </div>
+          );
+        }
+        else if (ismd5) {
+          return (
+            <div>
+              DBot File Report for:
+              <h2>{data.md5.details}</h2>
+            </div>
+          );
+        }
       }
     });
 
@@ -602,25 +640,17 @@
         this.loadDataFromServer();
       },
       render: function() {
-        if (isip) {
           return (
-            <IpDiv data={this.state.data} />
-        );
-      }
-      else if (isurl) {
-        return (
-
-          <UrlDiv data={this.state.data} />
-
-        );
-      }
-      else if (isfile || ismd5) {
-        return (
-
-          <FileDiv data={this.state.data} />
+            <div>
+              <center><h1>DBot Analysis Report</h1></center>
+              <IpDiv data={this.state.data} />
+              <br/>
+              <UrlDiv data={this.state.data} />
+              <br/>
+              <FileDiv data={this.state.data} />
+              <br/>
+            </div>
           );
-      }
-      else return(<div></div>);
       }
   });
 
