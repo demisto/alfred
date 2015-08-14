@@ -258,9 +258,9 @@
         var urldata = this.props.data.url;
         return (
           <div>
-          <h1>Details Page for {urldata.details}</h1>
-          <h2> {this.resultmessage()}
-           Risk Score: {urldata.xfe.url_details.score} </h2>
+          <h2>Details Page for {urldata.details}</h2>
+          <h3> {this.resultmessage()}
+           Risk Score: {urldata.xfe.url_details.score} </h3>
           <DetectedEngines urldata={urldata} />
           <ARecord urldata={urldata} />
           <AAAARecord urldata={urldata} />
@@ -415,7 +415,7 @@
 
 
     var FileDiv = React.createClass({
-//      var filemalicious = false;
+//    var filemalicious = false;
       resultmessage: function() {
         var resultMessage;
         var filedata = null;
@@ -453,29 +453,106 @@
             resultMessage = "Could not determine the File reputation.";
           }
         }
-
-
         return resultMessage;
       },
 
-    render: function() {
-//        if (isfile) {
-          // this is indeed a file case
-
-//        } else {
-          // has to be md5 and not a file.
-
-//        }
+      render: function() {
         var data = this.props.data;
         return (
           <div>
-          <h1>Details Page for {data.file.details.name}</h1>
+          <h2>Details Page for {data.file.details.name}</h2>
+          <h3> {this.resultmessage()} </h3>
+          <FileResult filedata={this.props.data.file} />
+          <MD5Result md5data={this.props.data.md5} />
           </div>
         );
       }
     });
 
+    var FileResult = React.createClass({
+      render: function() {
+        var filedata = this.props.filedata;
+        var outstring = "";
+        if (filedata.virus) {
+          outstring = "<h2>Malware Name: </h2>" + filedata.virus;
+        }
+        return (
+          <div>
+            {outstring}
+          </div>
+        );
+      }
+    });
 
+    var MD5Result = React.createClass ({
+      render: function() {
+        var md5data = this.props.md5data;
+        var numVTDetections = md5data.vt.file_report.positives;
+        var scan_row;
+        var malware_family_string = "";
+        if (md5data.xfe.malware.family) {
+          malware_family_string = "Malware Family: " + md5data.xfe.malware.family;
+        }
+        var detection_string = "";
+        if (numVTDetections > 0) {
+          detection_string = "Positive Detections: " + numVTDetections;
+
+        }
+
+        return (
+          <div>
+          {malware_family_string}
+          {detection_string}
+          <ScanResult data={md5data.vt.file_report} />
+          </div>
+        );
+      }
+    });
+
+    var ScanResult = React.createClass ({
+      render: function() {
+        var file_reports_map = this.props.data.scans;
+        var rows = [];
+        for (var k in file_reports_map) {
+          rows.push(<ScanResultRow enginename={k} scandata={file_reports_map[k]} />);
+        }
+
+        return (
+          <div>
+          <table className="table">
+          <thead>
+          <th>Engine Name</th>
+          <th>Version</th>
+          <th>Detected</th>
+          <th>Result</th>
+          <th>Update</th>
+          </thead>
+          <tbody>
+          {rows}
+          </tbody>
+          </table>
+          </div>
+          );
+
+      }
+
+    });
+
+    var ScanResultRow = React.createClass ({
+      render: function() {
+        var enginename = this.props.enginename;
+        var scandata = this.props.scandata;
+        return (
+          <tr>
+          <td>{enginename}</td>
+          <td>{scandata.version}</td>
+          <td>{scandata.detected?"True":"False"}</td>
+          <td>{scandata.result}</td>
+          <td>{scandata.update}</td>
+          </tr>
+        );
+      }
+    });
 
     var DetailsDiv = React.createClass({
       loadDataFromServer: function() {
