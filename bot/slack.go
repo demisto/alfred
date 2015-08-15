@@ -14,24 +14,24 @@ import (
 // Take care not to change the file comments because this is how we detect if we already commented on the file
 const (
 	poweredBy          = "\t-\tPowered by <http://slack.demisto.com|Demisto>"
-	botName            = "Alfred"
+	botName            = "DBot"
 	reactionTooBig     = "warning"
 	reactionGood       = "+1"
 	reactionBad        = "imp"
-	fileCommentGood    = "Alfred says this file (%s) is clean. Click %s for more details."
-	fileCommentBig     = "Alfred says this file (%s) is too large to scan. Click %s for more details."
-	fileCommentBad     = "Alfred says this file (%s) is malicious. Click %s for more details."
-	fileCommentWarning = "Alfred does not have details regarding this file (%s). Click %s for more details."
-	urlCommentGood     = "Alfred says this URL (%s) is clean. Click %s for more details."
-	urlCommentBad      = "Alfred says this URL (%s) is malicious. Click %s for more details."
-	urlCommentWarning  = "Alfred does not have details regarding this URL (%s). Click %s for more details."
-	ipCommentGood      = "Alfred says this IP (%s) is clean. Click %s for more details."
-	ipCommentBad       = "Alfred says this IP (%s) is malicious. Click %s for more details."
-	ipCommentWarning   = "Alfred does not have details regarding this IP (%s). Click %s for more details."
-	md5CommentGood     = "Alfred says this MD5 hash (%s) is clean. Click %s for more details."
-	md5CommentBad      = "Alfred says this MD5 hash (%s) is malicious. Click %s for more details."
-	md5CommentWarning  = "Alfred does not have details regarding this MD5 hash (%s). Click %s for more details."
-	mainMessage        = "Security check by Alfred - your Demisto butler. Click <%s|here> for configuration and details."
+	fileCommentGood    = "File (%s) is safe: %s."
+	fileCommentBig     = "File (%s) is too large to scan: %s."
+	fileCommentBad     = "File (%s) is malicious. Details: %s."
+	fileCommentWarning = "Unable to find details regarding this file (%s): %s."
+	urlCommentGood     = "URL (%s) is clean: %s."
+	urlCommentBad      = "URL (%s) is malicious: %s."
+	urlCommentWarning  = "Unable to find details regarding this URL (%s): %s."
+	ipCommentGood      = "IP (%s) is clean: %s."
+	ipCommentBad       = "IP (%s) is malicious: %s."
+	ipCommentWarning   = "Unable to find details regarding this IP (%s): %s."
+	md5CommentGood     = "MD5 hash (%s) is clean: %s."
+	md5CommentBad      = "MD5 hash (%s) is malicious: %s."
+	md5CommentWarning  = "Unable to find details regarding this MD5 hash (%s): %s."
+	mainMessage        = "Security check by DBot - Demisto Bot. Click <%s|here> for configuration and details."
 )
 
 func joinMap(m map[string]bool) string {
@@ -90,7 +90,7 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
 		logrus.Errorf("Unable to send comment to Slack - %v\n", err)
 	}
 	if data.Channel != "" {
-		fileMessage := fmt.Sprintf(comment, reply.File.Details.Name, fmt.Sprintf("<%s|here>", link))
+		fileMessage := fmt.Sprintf(comment, reply.File.Details.Name, fmt.Sprintf("<%s|Details>", link))
 		postMessage := &slack.PostMessageRequest{
 			Channel:  data.Channel,
 			Text:     mainMessageFormatted(),
@@ -99,7 +99,6 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
 				{
 					Fallback:   fileMessage,
 					Text:       fileMessage,
-					AuthorName: botName,
 					Color:      color,
 				},
 			},
@@ -188,11 +187,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				color = "good"
 				comment = urlCommentGood
 			}
-			urlMessage := fmt.Sprintf(comment, reply.URL.Details, fmt.Sprintf("<%s|here>", link))
+			urlMessage := fmt.Sprintf(comment, reply.URL.Details, fmt.Sprintf("<%s|Details>", link))
 			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
 				Fallback:   urlMessage,
 				Text:       urlMessage,
-				AuthorName: botName,
 				Color:      color,
 			})
 		}
@@ -206,11 +204,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				color = "good"
 				comment = ipCommentGood
 			}
-			ipMessage := fmt.Sprintf(comment, reply.IP.Details, fmt.Sprintf("<%s|here>", link))
+			ipMessage := fmt.Sprintf(comment, reply.IP.Details, fmt.Sprintf("<%s|Details>", link))
 			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
 				Fallback:   ipMessage,
 				Text:       ipMessage,
-				AuthorName: botName,
 				Color:      color,
 			})
 		}
@@ -224,11 +221,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				color = "good"
 				comment = md5CommentGood
 			}
-			md5Message := fmt.Sprintf(comment, reply.MD5.Details, fmt.Sprintf("<%s|here>", link))
+			md5Message := fmt.Sprintf(comment, reply.MD5.Details, fmt.Sprintf("<%s|Details>", link))
 			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
 				Fallback:   md5Message,
 				Text:       md5Message,
-				AuthorName: botName,
 				Color:      color,
 			})
 		}
