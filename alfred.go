@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -91,17 +90,7 @@ func run(signalCh chan os.Signal) {
 	if conf.Options.Web {
 		appC := web.NewContext(r, q)
 		router := web.New(appC)
-		go func() {
-			var err error
-			if conf.Options.SSL.Cert != "" {
-				err = http.ListenAndServeTLS(conf.Options.Address, conf.Options.SSL.Cert, conf.Options.SSL.Key, router)
-			} else {
-				err = http.ListenAndServe(conf.Options.Address, router)
-			}
-			if err != nil {
-				logrus.Fatal(err)
-			}
-		}()
+		go router.Serve()
 	}
 	// Block until one of the signals above is received
 	select {

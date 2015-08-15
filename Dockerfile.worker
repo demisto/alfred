@@ -1,0 +1,8 @@
+FROM busybox:ubuntu-14.04
+
+COPY worker /bin/worker
+COPY libclamav.so /lib/libclamav.so
+COPY ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY g-worker.conf /etc/g-worker.conf
+
+CMD worker -conf /etc/g-worker.conf

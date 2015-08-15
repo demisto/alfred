@@ -119,7 +119,7 @@ func csrfHandler(next http.Handler) http.Handler {
 		csrf, err := r.Cookie(xsrfCookie)
 		csrfHeader := r.Header.Get(xsrfHeader)
 		ok := false
-		secure := conf.Options.Env == "PROD" || conf.Options.Env == "TEST"
+		secure := conf.Options.SSL.Key != ""
 		pass := conf.Options.Security.SessionKey
 		// If it is an idempotent method, set the cookie
 		if r.Method == "GET" || r.Method == "HEAD" {
@@ -183,7 +183,7 @@ func (ac *AppContext) authHandler(next http.Handler) http.Handler {
 		context.Set(r, "user", u)
 		// Set the new cookie for the user with the new timeout
 		sess.When = time.Now()
-		secure := conf.Options.Env == "PROD" || conf.Options.Env == "TEST"
+		secure := conf.Options.SSL.Key != ""
 		val, _ := util.EncryptJSON(&sess, conf.Options.Security.SessionKey)
 		http.SetCookie(w, &http.Cookie{
 			Name:     sessionCookie,

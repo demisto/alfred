@@ -1,8 +1,7 @@
 FROM busybox:ubuntu-14.04
-EXPOSE 443
 
 COPY alfred /bin/alfred
 COPY ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY g-web.conf /etc/g-web.conf
+COPY g-dedup.conf /etc/g-dedup.conf
 
-CMD alfred -conf=/etc/g-web.conf
+CMD alfred -conf=/etc/g-dedup.conf

@@ -19,7 +19,7 @@ package bot
 // Now, you are ready to build alfred with the clamav tag and run it with the DB directory location pointing to ~/demisto/clamav-0.98.7
 // DYLD_LIBRARY_PATH=/Users/YOURUSERNAME/demisto/clamav-0.98.7/libclamav/.libs ./alfred --loglevel=debug --clamdb=/Users/YOURUSERNAME/demisto/clamav-0.98.7
 
-// On Ubuntu, it's all very simple. Just sudo apt-get install clamav livclamav6 libclamav-dev and no need for flags, etc.
+// On Ubuntu, it's all very simple. Just sudo apt-get install clamav libclamav6 libclamav-dev and no need for flags, etc.
 
 import (
 	"flag"

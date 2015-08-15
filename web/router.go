@@ -1,7 +1,10 @@
 package web
 
 import (
+	"crypto/tls"
+	"net"
 	"net/http"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
@@ -86,6 +89,53 @@ func New(appC *AppContext) *Router {
 	r.ServeFiles("/vendor/*filepath", Dir(conf.IsDev(), "/vendor/"))
 	r.ServeFiles("/video/*filepath", Dir(conf.IsDev(), "/video/"))
 	return r
+}
+
+// tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
+// connections. It's used by ListenAndServe and ListenAndServeTLS so
+// dead TCP connections (e.g. closing laptop mid-download) eventually
+// go away.
+type tcpKeepAliveListener struct {
+	*net.TCPListener
+}
+
+func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+	tc, err := ln.AcceptTCP()
+	if err != nil {
+		return
+	}
+	tc.SetKeepAlive(true)
+	tc.SetKeepAlivePeriod(3 * time.Minute)
+	return tc, nil
+}
+
+// Serve the routes based on configuration
+func (r *Router) Serve() {
+	var err error
+	if conf.Options.SSL.Cert != "" {
+		addr := conf.Options.Address
+		if addr == "" {
+			addr = ":https"
+		}
+		server := &http.Server{Addr: conf.Options.Address, Handler: r}
+		config := &tls.Config{NextProtos: []string{"http/1.1"}}
+		config.Certificates = make([]tls.Certificate, 1)
+		config.Certificates[0], err = tls.X509KeyPair([]byte(conf.Options.SSL.Cert), []byte(conf.Options.SSL.Key))
+		if err != nil {
+			log.Fatal(err)
+		}
+		ln, err := net.Listen("tcp", addr)
+		if err != nil {
+			log.Fatal(err)
+		}
+		tlsListener := tls.NewListener(tcpKeepAliveListener{ln.(*net.TCPListener)}, config)
+		err = server.Serve(tlsListener)
+	} else {
+		err = http.ListenAndServe(conf.Options.Address, r)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func wrapHandler(h http.Handler) httprouter.Handle {
