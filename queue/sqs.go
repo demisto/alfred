@@ -3,7 +3,6 @@ package queue
 import (
 	"encoding/json"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -38,7 +37,7 @@ func newSQS() (*queueSQS, error) {
 	queues := []string{conf.Options.AWS.ConfQueueName, conf.Options.AWS.MessageQueueName, conf.Options.AWS.WorkQueueName}
 	// If we are a bot or a web tier, create a reply queue for us
 	if conf.Options.Bot || conf.Options.Web {
-		host, err := os.Hostname()
+		host, err := ReplyQueueName()
 		if err != nil {
 			return nil, err
 		}

@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -56,7 +55,7 @@ func newPubSub() (*queuePubSub, error) {
 	names := []string{conf.Options.G.ConfName, conf.Options.G.MessageName, conf.Options.G.WorkName}
 	// If we are a bot or a web tier, create a reply queue for us
 	if conf.Options.Bot || conf.Options.Web {
-		host, err := os.Hostname()
+		host, err := ReplyQueueName()
 		if err != nil {
 			return nil, err
 		}

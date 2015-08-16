@@ -3,6 +3,7 @@ package queue
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"time"
 
@@ -118,6 +119,15 @@ func (q *queueChannel) PopWorkReply(replyQueue string, timeout time.Duration) (*
 		work = <-q.WorkReply
 	}
 	return work, nil
+}
+
+// ReplyQueueName returns the default name
+func ReplyQueueName() (string, error) {
+	host, err := os.Hostname()
+	if err != nil {
+		return "", err
+	}
+	return "Q" + host, nil
 }
 
 func (q *queueChannel) Close() error {

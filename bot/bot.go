@@ -2,7 +2,6 @@ package bot
 
 import (
 	"log"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -104,7 +103,7 @@ type Bot struct {
 
 // New returns a new bot
 func New(r repo.Repo, q queue.Queue) (*Bot, error) {
-	host, err := os.Hostname()
+	host, err := queue.ReplyQueueName()
 	if err != nil {
 		return nil, err
 	}

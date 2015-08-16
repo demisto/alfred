@@ -1,7 +1,6 @@
 package web
 
 import (
-	"os"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -18,7 +17,7 @@ type AppContext struct {
 
 // NewContext creates a new context
 func NewContext(r repo.Repo, q queue.Queue) *AppContext {
-	host, err := os.Hostname()
+	host, err := queue.ReplyQueueName()
 	if err != nil {
 		logrus.Fatal(err)
 	}

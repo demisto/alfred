@@ -30,9 +30,10 @@ RUN apt-get update && apt-get install -y libclamav-dev --no-install-recommends
 
 COPY Makefile /
 COPY demisto_git_rsa_clear /root/.ssh/id_rsa
+RUN chmod 400 /root/.ssh/id_rsa
 WORKDIR /
 RUN make setup
 RUN make buildgo
 RUN make buildgoav
 
-CMD tar -chf - -C /go/src/github.com/demisto/alfred alfred -C /etc/ssl/certs ca-certificates.crt -C /usr/lib libclamav.so -C /go/src/github.com/demisto/alfred worker
+CMD tar -chf - -C /go/src/github.com/demisto/alfred alfred -C /etc/ssl/certs ca-certificates.crt -C /go/src/github.com/demisto/alfred worker
