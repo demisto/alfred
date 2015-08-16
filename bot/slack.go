@@ -97,9 +97,9 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
 			Username: botName,
 			Attachments: []slack.Attachment{
 				{
-					Fallback:   fileMessage,
-					Text:       fileMessage,
-					Color:      color,
+					Fallback: fileMessage,
+					Text:     fileMessage,
+					Color:    color,
 				},
 			},
 		}
@@ -189,9 +189,9 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 			}
 			urlMessage := fmt.Sprintf(comment, reply.URL.Details, fmt.Sprintf("<%s|Details>", link))
 			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-				Fallback:   urlMessage,
-				Text:       urlMessage,
-				Color:      color,
+				Fallback: urlMessage,
+				Text:     urlMessage,
+				Color:    color,
 			})
 		}
 		if reply.Type&domain.ReplyTypeIP > 0 {
@@ -206,9 +206,9 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 			}
 			ipMessage := fmt.Sprintf(comment, reply.IP.Details, fmt.Sprintf("<%s|Details>", link))
 			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-				Fallback:   ipMessage,
-				Text:       ipMessage,
-				Color:      color,
+				Fallback: ipMessage,
+				Text:     ipMessage,
+				Color:    color,
 			})
 		}
 		if reply.Type&domain.ReplyTypeMD5 > 0 {
@@ -223,9 +223,9 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 			}
 			md5Message := fmt.Sprintf(comment, reply.MD5.Details, fmt.Sprintf("<%s|Details>", link))
 			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-				Fallback:   md5Message,
-				Text:       md5Message,
-				Color:      color,
+				Fallback: md5Message,
+				Text:     md5Message,
+				Color:    color,
 			})
 		}
 		err = b.post(postMessage, reply, data)
