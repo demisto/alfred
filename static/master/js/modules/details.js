@@ -20,8 +20,6 @@
     var uri = new URI();
     var qParts = uri.search(true);
 
-    $('#detailsdiv').hide();
-    $('#errordiv').hide();
     // Details for the ip address query
     var IpDiv = React.createClass({
       resultmessage: function() {
@@ -48,8 +46,9 @@
         }
         else return (
           <div className="main-section-divider">
-            DBot IP Report for:
+            <div>DBot IP Report for:
             <h2>{ipdata.details}</h2>
+            </div>
             <h3> {this.resultmessage()} </h3>
             <h3> Risk Score: {ipdata.xfe.ip_reputation.score} </h3>
             <h3> Country: {ipdata.xfe.ip_reputation.geo? ipdata.xfe.ip_reputation.geo['country']:'Unknown'} </h3>
@@ -627,43 +626,60 @@
           dataType: 'json',
           contentType: 'application/json; charset=utf-8',
           success: function(data) {
-            $('#loadingmessage').hide();
-            $('#detailsdiv').show();
             isfile = (data.type & FILEMask)  > 0;
             ismd5 = (data.type & MD5Mask)  > 0;
             isurl = (data.type & URLMask)  > 0;
             isip = (data.type & IPMask)  > 0;
-            var issuccess = true;
             this.setState({data: data});
-            this.setProps({success: issuccess});
+            this.setState({status: 1});
           }.bind(this),
-          error: function(xhr, status, err) {
+          error: function(xhr, status, error) {
             // display the error on the UI
-            $('#loadingmessage').hide();
-            $('#errordiv').show();
-            $('#errordiv').append(xhr.status + ": " + err );
+            this.setState({status: 2});
+            var err = error;
+            if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
+              err += " - " + xhr.responseJSON.errors[0].detail;
+              this.setState({errmsg: err});
+            }
           }.bind(this)
         });
       },
       getInitialState: function() {
-        return {data: []};
+        return {data: [], status: 0};
       },
       componentDidMount: function() {
         this.loadDataFromServer();
       },
       render: function() {
-      //    if (this.props.success) {
-            return (
-              <div>
-                <center><h1>DBot Analysis Report</h1></center>
-                <IpDiv data={this.state.data} />
-                <br/>
-                <UrlDiv data={this.state.data} />
-                <br/>
-                <FileDiv data={this.state.data} />
-                <br/>
+            if (this.state.status == 0) {
+              return(
+                <div>
+                  DBot is collecting security details for your query... it will not be long!
                 </div>
-            );
+              );
+            } else if (this.state.status == 1) {
+              return (
+                <div>
+                  <center><h1>DBot Analysis Report</h1></center>
+                  <IpDiv data={this.state.data} />
+                  <hr></hr>
+                  <UrlDiv data={this.state.data} />
+                  <hr></hr>
+                  <FileDiv data={this.state.data} />
+                  <hr></hr>
+                </div>
+              );
+            }
+            else {
+              return(
+                <div>
+                DBot encountered an error while trying to serve your request. The issues has been reported and will be analyze.
+                Please try to click the link again from Slack interface.
+                <hr></hr>
+                {this.state.errmsg}
+                </div>
+              );
+            }
         }
   });
 
@@ -675,7 +691,7 @@
     document.getElementById('detailsdiv')
   );
 
-}
+  }
 
     })(window.jQuery);
 
