@@ -1,0 +1,196 @@
+/* ========================================================================
+   Component: spinner.less
+ ========================================================================== */
+
+// whirl base variables
+@height: 40px;
+@width: 40px;
+@overlay-color: #f0f0f0;
+
+body {
+
+  // whirl loaders can be used in panels to show a preloader
+  .whirl {
+    position: relative;
+    &:before {
+      content: attr(data-spinner-text);
+      display: block; // Added to force display
+      background-color: @overlay-color;
+      opacity: 0.7;
+    }
+    &.solid {
+      opacity: 1;
+    }
+    &:after {
+      border-top-color: @brand-primary;
+    }
+  }
+
+  // Note: Some other Whirl CSS requires to customize
+  //       the animation @keyframes
+
+  .whirl.blade:after {
+    border-bottom-color: @brand-primary;
+  }
+  .whirl.double-up:after {
+    border-right-color: @brand-primary;
+    border-top-color: @brand-primary;
+    border-left-color: @brand-primary;
+    border-bottom-color: @brand-primary;
+  }
+  .whirl.duo:after {
+    border-right-color: @brand-primary;
+    border-left-color: @brand-primary;
+    border-top-color: @brand-purple;
+    border-bottom-color: @brand-purple;
+  }
+  .whirl.helicopter:after {
+    background-color: @brand-primary;
+  }
+  .whirl.ringed:after {
+    border-right-color: @brand-info;
+    border-top-color: @brand-purple;
+    border-left-color: @brand-purple;
+    border-bottom-color: @brand-purple;
+  }
+  .whirl.traditional:after {
+    border-right-color: @brand-info;
+    border-top-color: @brand-info;
+    border-left-color: @brand-purple;
+    border-bottom-color: @brand-yellow;
+  }
+  .whirl.line:after {
+    box-shadow: inset -10px 0px 0px fade(@brand-primary, 50%);
+  }
+
+  // IE9 and below doesn't support animations
+  .no-cssanimations & {
+    .whirl:before {
+      opacity: .9;
+    }
+    .whirl:after {
+      content: "Loading...";
+      // absolute positioned
+      width: @width;
+      height: @height;
+      margin: -(@height/2) 0 0 -(@width/2);
+      // center text
+      line-height: @height;
+      // reset styles
+      color: #000;
+      opacity: 1;
+      border: 0;
+      box-shadow: 0 0 0 #000;
+      background-color: transparent;
+      text-align: center;
+    }
+  }
+
+
+  // Loader.CSS
+  // -----------------------------------
+
+  // Global background override
+  .ball-pulse > div,
+  .ball-grid-pulse > div,
+  .square-spin > div,
+  .ball-pulse-rise > div,
+  .ball-rotate > div,
+  .ball-rotate > div:before, .ball-rotate > div:after,
+  .cube-transition > div,
+  .ball-zig-zag > div,
+  .ball-zig-zag-deflect > div,
+  .ball-triangle-path > div,
+  .ball-scale > div,
+  .line-scale > div,
+  .line-scale-party > div,
+  .ball-scale-multiple > div,
+  .ball-pulse-sync > div,
+  .ball-beat > div,
+  .line-scale-pulse-out > div,
+  .line-scale-pulse-out-rapid > div,
+  .ball-spin-fade-loader > div,
+  .line-spin-fade-loader > div,
+  .triangle-skew-spin > div,
+  .ball-grid-beat > div,
+  .semi-circle-spin > div {
+    background-color: @brand-primary;
+  }
+
+  // custom override
+  .ball-clip-rotate-multiple {
+    width: 1px;
+    > div {
+      border-color: @brand-primary transparent @brand-primary transparent;
+      &:last-child {
+        border-color: transparent  @brand-primary transparent @brand-primary;
+      }
+    }
+  }
+  .ball-clip-rotate > div {
+    border-color: @brand-primary;
+    border-bottom-color: transparent;
+  }
+  .ball-clip-rotate-pulse > div {
+    &:first-child {
+      background-color: @brand-primary;
+      top: 5px;
+      left: -8px;
+    }
+    &:last-child {
+      border-color: @brand-primary transparent @brand-primary transparent;
+    }
+  }
+  .square-spin > div,
+  .ball-scale-ripple > div,
+  .ball-scale-ripple-multiple > div {
+    border-color: @brand-primary;
+  }
+  .pacman > div:first-of-type {
+    border-top-color: @brand-primary;
+    border-left-color: @brand-primary;
+    border-bottom-color: @brand-primary;
+  }
+  .pacman > div:nth-child(2) {
+    border-top-color: @brand-primary;
+    border-left-color: @brand-primary;
+    border-bottom-color: @brand-primary;
+  }
+  .pacman > div:nth-child(3), .pacman > div:nth-child(4), .pacman > div:nth-child(5), .pacman > div:nth-child(6) {
+    background-color: @brand-primary;
+  }
+
+
+  // Spin Kit
+  // -----------------------------------
+
+  .sk-spinner-rotating-plane.sk-spinner,
+  .sk-spinner-double-bounce .sk-double-bounce1, .sk-spinner-double-bounce .sk-double-bounce2,
+  .sk-spinner-wave div,
+  .sk-spinner-wandering-cubes .sk-cube1, .sk-spinner-wandering-cubes .sk-cube2,
+  .sk-spinner-chasing-dots .sk-dot1, .sk-spinner-chasing-dots .sk-dot2,
+  .sk-spinner-three-bounce div,
+  .sk-spinner-circle .sk-circle:before,
+  .sk-spinner-cube-grid .sk-cube,
+  .sk-spinner-fading-circle .sk-circle:before,
+  .sk-spinner-pulse.sk-spinner,
+  .sk-spinner-wordpress.sk-spinner {
+    background-color: @brand-primary;
+  }
+
+  .sk-spinner-wordpress .sk-inner-circle {
+    background-color: #fff;
+  }
+
+
+}
+
+/* just for loaders.css demo */
+.loader-demo {
+  height: 150px;
+  padding-top: 50px;
+  text-align: center;
+  > div {
+    display: inline-block;
+  }
+}

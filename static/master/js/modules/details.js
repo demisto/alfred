@@ -20,6 +20,8 @@
     var uri = new URI();
     var qParts = uri.search(true);
 
+    $('#detailsdiv').hide();
+    $('#errordiv').hide();
     // Details for the ip address query
     var IpDiv = React.createClass({
       resultmessage: function() {
@@ -625,11 +627,21 @@
           dataType: 'json',
           contentType: 'application/json; charset=utf-8',
           success: function(data) {
+            $('#loadingmessage').hide();
+            $('#detailsdiv').show();
             isfile = (data.type & FILEMask)  > 0;
             ismd5 = (data.type & MD5Mask)  > 0;
             isurl = (data.type & URLMask)  > 0;
             isip = (data.type & IPMask)  > 0;
+            var issuccess = true;
             this.setState({data: data});
+            this.setProps({success: issuccess});
+          }.bind(this),
+          error: function(xhr, status, err) {
+            // display the error on the UI
+            $('#loadingmessage').hide();
+            $('#errordiv').show();
+            $('#errordiv').append(xhr.status + ": " + err );
           }.bind(this)
         });
       },
@@ -640,18 +652,19 @@
         this.loadDataFromServer();
       },
       render: function() {
-          return (
-            <div>
-              <center><h1>DBot Analysis Report</h1></center>
-              <IpDiv data={this.state.data} />
-              <br/>
-              <UrlDiv data={this.state.data} />
-              <br/>
-              <FileDiv data={this.state.data} />
-              <br/>
-            </div>
-          );
-      }
+      //    if (this.props.success) {
+            return (
+              <div>
+                <center><h1>DBot Analysis Report</h1></center>
+                <IpDiv data={this.state.data} />
+                <br/>
+                <UrlDiv data={this.state.data} />
+                <br/>
+                <FileDiv data={this.state.data} />
+                <br/>
+                </div>
+            );
+        }
   });
 
   //
