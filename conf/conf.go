@@ -72,10 +72,11 @@ var Options struct {
 		MessageName string
 		WorkName    string
 	}
-	Web    bool
-	Bot    bool
-	Dedup  bool
-	Worker bool
+	Web     bool
+	Bot     bool
+	Dedup   bool
+	Worker  bool
+	ClamCtl string
 }
 
 // The pipe writer to wrap around standard logger. It is configured in main.
@@ -103,7 +104,8 @@ func Load(filename string, useDefault bool) error {
 			"Web": true,
 			"Bot": true,
 			"Dedup": true,
-			"Worker": true
+			"Worker": true,
+			"ClamCtl": "/var/run/clamav/clamd.ctl"
     }`)
 	// Start the options with the defaults and override with the file
 	err := json.Unmarshal(defOptions, &Options)

@@ -29,11 +29,12 @@ const (
 
 // Worker reads messages from the queue and does the actual work
 type Worker struct {
-	q   queue.Queue
-	c   chan *domain.WorkRequest
-	r   repo.Repo
-	xfe *goxforce.Client
-	vt  *govt.Client
+	q    queue.Queue
+	c    chan *domain.WorkRequest
+	r    repo.Repo
+	xfe  *goxforce.Client
+	vt   *govt.Client
+	clam *clamEngine
 }
 
 // NewWorker that loads work messages from the queue
@@ -46,18 +47,24 @@ func NewWorker(r repo.Repo, q queue.Queue) (*Worker, error) {
 	if err != nil {
 		return nil, err
 	}
+	clam, err := newClamEngine()
+	if err != nil {
+		return nil, err
+	}
 	return &Worker{
-		r:   r,
-		q:   q,
-		c:   make(chan *domain.WorkRequest, runtime.NumCPU()),
-		xfe: xfe,
-		vt:  vt,
+		r:    r,
+		q:    q,
+		c:    make(chan *domain.WorkRequest, runtime.NumCPU()),
+		xfe:  xfe,
+		vt:   vt,
+		clam: clam,
 	}, nil
 }
 
 func (w *Worker) handle() {
 	for msg := range w.c {
 		if msg == nil {
+			w.clam.close()
 			return
 		}
 		if msg.ReplyQueue == "" {
@@ -307,7 +314,7 @@ func (w *Worker) handleFile(request *domain.WorkRequest, reply *domain.WorkReply
 	// Do the network commands in parallel
 	c := make(chan int, 1)
 	go func() {
-		virus, err := scan(request.File.Name, buf.Bytes())
+		virus, err := w.clam.scan(request.File.Name, buf.Bytes())
 		if (err == nil || err.Error() == "Virus(es) detected") && virus != "" {
 			reply.File.Virus = virus
 		} else if err != nil {
