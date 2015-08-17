@@ -109,10 +109,21 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	return tc, nil
 }
 
+func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, conf.Options.ExternalAddress+r.RequestURI, http.StatusMovedPermanently)
+}
+
 // Serve the routes based on configuration
 func (r *Router) Serve() {
 	var err error
 	if conf.Options.SSL.Cert != "" {
+		// First, listen on the HTTP address with redirect
+		go func() {
+			err := http.ListenAndServe(conf.Options.HTTPAddress, http.HandlerFunc(redirectToHTTPS))
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
 		addr := conf.Options.Address
 		if addr == "" {
 			addr = ":https"

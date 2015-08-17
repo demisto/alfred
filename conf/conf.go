@@ -15,6 +15,8 @@ var Options struct {
 	Env string
 	// The address to listen on
 	Address string
+	// The HTTP address to listen on if the main address is HTTPS
+	HTTPAddress string
 	// ExternalAddress to our web tier
 	ExternalAddress string
 	// Security defintions
@@ -91,6 +93,7 @@ func Load(filename string, useDefault bool) error {
       "Security" : {"SessionKey": "***REMOVED***", "Timeout": 525600},
       "Env": "DEV",
 			"Address": ":7070",
+			"HTTPAddress": ":80",
 			"ExternalAddress": "http://localhost:7070",
       "DB": {"ConnectString": "alfred.db"},
 			"VT": "***REMOVED***",
