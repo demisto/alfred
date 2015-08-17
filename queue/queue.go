@@ -43,7 +43,8 @@ func New() (Queue, error) {
 	var err error
 	switch {
 	case conf.Options.AWS.ID != "":
-		q, err = newSQS()
+		// q, err = newSQS()
+		return nil, errors.New("AWS SQS not fully functional right now")
 	case conf.Options.G.Project != "":
 		q, err = newPubSub()
 	default:
