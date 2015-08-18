@@ -654,7 +654,7 @@
             if (this.state.status == 0) {
               return(
                 <div>
-                  DBot is collecting security details for your query... it will not be long!
+                  DBot is collecting security details for your query... it might take upto a minute!
                 </div>
               );
             } else if (this.state.status == 1) {

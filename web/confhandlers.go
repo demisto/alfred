@@ -71,6 +71,7 @@ func (ac *AppContext) match(w http.ResponseWriter, r *http.Request) {
 	req := context.Get(r, "body").(*regexpMatch)
 	u := context.Get(r, "user").(*domain.User)
 	var res []string
+	res = make([]string, 0)
 	if req.Regexp != "" {
 		// First, let's compile the regexp
 		re, err := regexp.Compile(req.Regexp)

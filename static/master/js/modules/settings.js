@@ -6,6 +6,8 @@
   'use strict';
   // Run this only on conf
   if ($('#channels').length) {
+    var timerExists = false;
+
     var disableAll = function() {
       $("#channels").attr("disabled", true).trigger("chosen:updated");
       $("#groups").attr("disabled", true).trigger("chosen:updated");
@@ -70,7 +72,7 @@
         $('#groups option:selected').each(function() {
           save.groups.push($(this).val());
         });
-        // TODO - handle error
+
         $.ajax({
           type: 'POST',
           url: '/save',
@@ -97,6 +99,13 @@
               "hideMethod": "fadeOut"
             };
             toastr["success"]("Configuration Saved");
+          },
+          error: function(xhr, status, error) {
+            var err = error;
+            if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
+              err += " - " + xhr.responseJSON.errors[0].detail;
+            }
+            $('#regexpChannels').html(err);
           }
         });
       };
@@ -111,30 +120,75 @@
       $('.chosen-select,#im').change(function(evt) {
         saveAll();
       });
-      $('#regexp').change(function(evt) {
-        // First, validate and load the affected channels
-        if (evt && evt.target && evt.target.value) {
-          $.ajax({
-            type: 'POST',
-            url: '/match',
-            data: JSON.stringify({regexp: evt.target.value}),
-            headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
-            dataType: 'json',
-            contentType: 'application/json; charset=utf-8',
-            success: function(data){
-              $('#regexpChannels').html('Will monitor: ' + data.join(', '));
-              saveAll();
-            },
-            error: function(xhr, status, error) {
-              var err = error;
-              if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
-                err += " - " + xhr.responseJSON.errors[0].detail;
+
+      var saveRegex = function(evt)
+      {
+        var timer;
+        if (evt.type == "keypress") {
+          if (!timerExists)
+          {
+            timerExists = true;
+            var timer = setTimeout(function(){
+              timerExists = false;
+              if (evt && evt.target && evt.target.value) {
+                $.ajax({
+                  type: 'POST',
+                  url: '/match',
+                  data: JSON.stringify({regexp: evt.target.value}),
+                  headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
+                  dataType: 'json',
+                  contentType: 'application/json; charset=utf-8',
+                  success: function(data){
+
+                    $('#regexpChannels').html('Matched Channels: ' + data.join(', '));
+                    saveAll();
+                  },
+                  error: function(xhr, status, error) {
+                    var err = error;
+                    if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
+                      err += " - " + xhr.responseJSON.errors[0].detail;
+                    }
+                    $('#regexpChannels').html(err);
+                  }
+                });
               }
-              $('#regexpChannels').html(err);
-            }
-          });
+            }, 5000);
+          }
         }
-      });
+        else if (evt.type == "change") {
+          if (timerExists) {
+            clearTimeout(timer);
+            timerExists = false;
+          }
+          if (evt && evt.target && evt.target.value) {
+            $.ajax({
+              type: 'POST',
+              url: '/match',
+              data: JSON.stringify({regexp: evt.target.value}),
+              headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
+              dataType: 'json',
+              contentType: 'application/json; charset=utf-8',
+              success: function(data){
+
+                $('#regexpChannels').html('Matched Channels: ' + data.join(', '));
+                saveAll();
+              },
+              error: function(xhr, status, error) {
+                var err = error;
+                if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
+                  err += " - " + xhr.responseJSON.errors[0].detail;
+                }
+                $('#regexpChannels').html(err);
+              }
+            });
+          }
+        }
+      }
+      
+
+      $('#regexp').keypress(saveRegex);
+      $('#regexp').change(saveRegex);
+
     });
   }
 
