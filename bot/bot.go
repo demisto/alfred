@@ -285,18 +285,6 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 			}
 			stats.Messages++
 		}
-	// If this message is file upload and we got it (meaning the user is ours)
-	case "file_created":
-		logrus.Debugln("Handling file_created event")
-		workReq := domain.WorkRequestFromMessage(msg)
-		ctx, err := GetContext(msg.Context)
-		if err != nil {
-			logrus.Warnf("Unable to get context from message - %+v\n", msg)
-			return
-		}
-		ctx.OriginalUser, ctx.Channel, ctx.Type = msg.User, msg.Channel, msg.Type
-		workReq.ReplyQueue, workReq.Context = b.replyQueue, ctx
-		b.q.PushWork(workReq)
 	}
 }
 

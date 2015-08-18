@@ -72,21 +72,14 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
 	}
 	color := "warning"
 	comment := fileCommentWarning
-	reaction := reactionTooBig
 	if reply.File.Result == domain.ResultDirty {
 		color = "danger"
 		comment = fileCommentBad
-		reaction = reactionBad
 	} else if reply.File.Result == domain.ResultClean {
 		// At least one of reputation services found this to be known good
 		// Keep the default
 		color = "good"
 		comment = fileCommentGood
-		reaction = reactionGood
-	}
-	err := b.fileComment(fmt.Sprintf(comment, reply.File.Details.Name, link), reaction, reply)
-	if err != nil {
-		logrus.Errorf("Unable to send comment to Slack - %v\n", err)
 	}
 	if data.Channel != "" {
 		fileMessage := fmt.Sprintf(comment, reply.File.Details.Name, fmt.Sprintf("<%s|Details>", link))
@@ -102,7 +95,7 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
 				},
 			},
 		}
-		err = b.post(postMessage, reply, data)
+		err := b.post(postMessage, reply, data)
 		if err != nil {
 			logrus.Errorf("Unable to send message to Slack - %v\n", err)
 			return
