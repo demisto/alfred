@@ -51,6 +51,7 @@ func newClamEngine() (*clamEngine, error) {
 	if err != nil {
 		return nil, err
 	}
+	os.Chmod(conf.Options.ClamCtl, 0666)
 	ce := &clamEngine{engine: clamav.New()}
 	err = ce.loadSigs()
 	if err != nil {
