@@ -536,13 +536,13 @@
         var filedata = this.props.filedata;
         var outstring = "";
         if (filedata.virus) {
-          outstring = "<h2>Malware Name: </h2>" + filedata.virus;
+          return (
+            <div>
+              <h2> Malware Name: </h2> {filedata.virus}
+            </div>
+          );
         }
-        return (
-          <div>
-            {outstring}
-          </div>
-        );
+        else return null;
       }
     });
 
