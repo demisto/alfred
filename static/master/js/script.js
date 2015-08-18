@@ -19,14 +19,9 @@
   var $body = $('body');
 
 
-  // Site Preloader
-  // -----------------------------------
-
-  NProgress.start();
 
   $win.load(function() {
     $body.addClass('site-loaded');
-    NProgress.done();
   });
 
   // Show sticky topbar on scroll
@@ -202,7 +197,7 @@
       $.getJSON('/user', function(data) {
         $('#slack-message').text('Configure Alfred');
         $('#action').attr('href', '/conf')
-      });      
+      });
     }
   });
 

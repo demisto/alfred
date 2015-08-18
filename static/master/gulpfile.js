@@ -119,19 +119,30 @@ gulp.task('scripts:site', function() {
 gulp.task('scripts:vendor', function() {
 
   var jsFilter = gulpFilter('**/*.js');
-  var cssFilter = gulpFilter('**/*.css');
 
   return gulp.src(vendor.site.source, {base: 'bower_components'})
       .pipe(expect(vendor.site.source))
       .pipe(jsFilter)
-      .pipe(uglify())
-      .pipe(jsFilter.restore())
+      .pipe(concat(build.scripts.vendor.main))
+      .on("error", handleError)
+      .pipe( isProduction ? uglify({preserveComments:'some'}) : gutil.noop() )
+      .on("error", handleError)
+      .pipe(gulp.dest(build.scripts.site.dir));
+
+});
+
+// copy file from bower folder into the site vendor folder
+gulp.task('styles:vendor', function() {
+  var cssFilter = gulpFilter('**/*.css');
+
+  return gulp.src(vendor.site.source.concat(["!bower_components/**/*.js"]), {base: 'bower_components'})
       .pipe(cssFilter)
-      .pipe(minifyCSS())
+      .pipe( isProduction ? minifyCSS() : gutil.noop() )
       .pipe(cssFilter.restore())
       .pipe( gulp.dest(vendor.site.dest) );
 
 });
+
 
 // SITE LESS
 gulp.task('styles:site', function() {
@@ -224,6 +235,7 @@ gulp.task('usesources', function(){ useSourceMaps = true; });
 gulp.task('start',[
           'styles:site',
           'styles:themes',
+          'styles:vendor',
           'templates:pages',
           'watch'
         ]);
@@ -231,6 +243,7 @@ gulp.task('start',[
 gulp.task('finish',[
           'styles:site',
           'styles:themes',
+          'styles:vendor',
           'templates:pages'
         ]);
 
