@@ -71,6 +71,13 @@ var Options struct {
 		ConfName    string
 		MessageName string
 		WorkName    string
+		Credentials struct {
+			PrivateKeyID string `json:"private_key_id"`
+			PrivateKey   string `json:"private_key"`
+			ClientEmail  string `json:"client_email"`
+			ClientID     string `json:"client_id"`
+			Type         string `json:"type"`
+		}
 	}
 	Web     bool
 	Bot     bool

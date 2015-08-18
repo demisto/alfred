@@ -15,14 +15,6 @@ import (
 	pubsub "google.golang.org/api/pubsub/v1"
 )
 
-const serviceCredentials = `{
-  "private_key_id": "439de39dce3c772880dc3080049ee044343ff13b",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDM/JCMTRP0Hfx1\njKnS1lBpgkET9Z8KGvdtLGq9EN9DdjjYA5nj8eAq+aHO7Pv3sYUgz1LK8I34U/as\nSl6k+HttHMaCHYBrER4L3OjTW5dCWV8/ZsWT6ynWy1tNYkU2y5Ruxj1CAUsbpb+s\nZZoQglAywncQC5KGiINX29lkMhCX09KI1VLkwGxtLhdAYazZ/wSLfIAlROaeWjwf\nhQaE8xqc5MXC+F3j1U1cDYZuxvD4b9LW9pR9XSFgDKR+fWdWJcC6augUcszBeMiV\neG+Sv6CW89MYpNOpKP47it1Sox3wpSgbjZMWbqcEWJCeizi8EPMiAnKzjE2CEWzo\n8PqLtnTJAgMBAAECggEAdZbw6LsSljhZaalehicRC+V/pY6CRE7B3yvas0ipes6n\nvysZrYxENwLq0oRZ6nY4U2D7MpWaK3knCSDEeEherXITYfLAhyrTnKSGHzDsbVBN\ndlZjQv5lCuWvI44a/Fr+dCleXK3XQy3q7V9/aLcIgIXTvS2WSXyoM89XPsYFhMIk\nrQAEqxNTln0/793sJ5XuAyHCtUWOhaKqUkgdsRnJHMqFXnePXho0/gXcG/61zec0\nExPOLCRwawQ+cCapAsux1ZkY69th3Z5Tt5CtptIozkVEJuTlxcJHCiK647YvjFJU\nIKoD3oaYxVriCvCAEq0maXmq7TiTt/Ca/9rd/h1VsQKBgQDn/wfhOIZiHXnlPGZj\nYtB38iYbWvLxb2/3iygc7EoTs/ET8YnfPftu6SFQhhz9MK9DTcBUfCMJSxYPV27Y\nm7EZpHM+OseYAxdR+N1qegwmu1dnlrrJ+SGzuv4e+Nhj1KF+wlfrCGjsjeZXXimg\nf6sxStnc9H2C1zHIw7b6lYd3rQKBgQDiMh6nx509/T/xLqu4A1Gsx6SfEmcfcPHa\nl2Iir1wPB5jH72Z866oBQdBvH184ZQP+lr43/01xTzMbwid+FUEimY2VNhPJdFqv\niEpVar4BgxoLQxjVnI2fKujJSJ44CFKC8YPMNYcGBvAC4uXal60bC96jhcRIkDEt\ndEOtVFsFDQKBgQDFoIcB4Lj5U8rG8JD4EPEtfGXh37Qc36Ut5qkhGlhwOFUhfBzK\nw24wqP/sLJL9TD/AwbcZQTZHcGM2ZnDSrK5M/b3+QOxOHjP7bFiRn65CQEzQvaIY\n89U12hEoKSuMv1FjPgLPALcA7FBQFLK5OoiG0RCOHOfeUZrjP3XcOQzRcQKBgQDM\nGYtduxlgOOZ8eq9Jr/z/mXkqa9GPJjulERnk0DSR/znVlmf06jSRQ9COpFEoMsYC\n8AQdxQkc5+jm8C7wbr9COCnv7Ea4bXvyjVj9b/6YoLJcXSPIg6WqbG52SUcyqhfB\nvak+F0KJprLk99WNg3UYRYKULHxrOWiWaiUy/j3O9QKBgCoLX7E346IFbu0cTWUb\nfnhdTp6CcdgNIZGo1qluYif+XDte6J9/jsRbMq1zFx739APNWS+pR0f9dtkXx4iX\nH7ldp2sUFd09hEzGpX4zhuCv/xqZRRktirFHN7HxJaYpXWa140HMs7tlml6Oem7M\n7/jnzceX+qb6JyoDW9GcYNj5\n-----END PRIVATE KEY-----\n",
-  "client_email": "977639562052-npb9jlbgvt7fbbbar1akla1tie65ti08@developer.gserviceaccount.com",
-  "client_id": "977639562052-npb9jlbgvt7fbbbar1akla1tie65ti08.apps.googleusercontent.com",
-  "type": "service_account"
-}`
-
 type queuePubSub struct {
 	svc    *pubsub.Service
 	closed bool
@@ -43,7 +35,11 @@ func fullSubName(proj, topic string) string {
 
 func newPubSub() (*queuePubSub, error) {
 	// Start with an OAuth http client wrapper
-	config, err := google.JWTConfigFromJSON([]byte(serviceCredentials), pubsub.PubsubScope)
+	jsonCreds, err := json.Marshal(conf.Options.G.Credentials)
+	if err != nil {
+		return nil, err
+	}
+	config, err := google.JWTConfigFromJSON(jsonCreds, pubsub.PubsubScope)
 	if err != nil {
 		return nil, err
 	}
