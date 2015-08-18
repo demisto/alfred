@@ -328,7 +328,7 @@ func (w *Worker) handleFile(request *domain.WorkRequest, reply *domain.WorkReply
 	if reply.File.Virus != "" || len(reply.MD5.XFE.Malware.Family) > 0 || reply.MD5.VT.FileReport.Positives > numOfPositivesToConvict {
 		// This is known bad scenario
 		reply.File.Result = domain.ResultDirty
-	} else if reply.File.Virus == "" && (!reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1) {
+	} else if reply.File.Virus == "" || !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
 		// At least one of reputation services found this to be known good
 		// Keep the default
 		reply.File.Result = domain.ResultClean
