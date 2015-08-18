@@ -11,25 +11,24 @@ import (
 	"github.com/demisto/slack"
 )
 
-// Take care not to change the file comments because this is how we detect if we already commented on the file
 const (
 	poweredBy          = "\t-\tPowered by <http://slack.demisto.com|Demisto>"
 	botName            = "DBot"
 	reactionTooBig     = "warning"
 	reactionGood       = "+1"
 	reactionBad        = "imp"
-	fileCommentGood    = "DBot says this file (%s) is clean. Click %s for more details."
-	fileCommentBig     = "DBot says this file (%s) is too large to scan. Click %s for more details."
-	fileCommentBad     = "DBot says this file (%s) is malicious. Click %s for more details."
-	fileCommentWarning = "DBot does not have details regarding this file (%s). Click %s for more details."
+	fileCommentGood    = "File (%s) is clean. Click %s for more details."
+	fileCommentBig     = "File (%s) is too large to scan. Click %s for more details."
+	fileCommentBad     = "Warning: File (%s) is malicious. Click %s for more details."
+	fileCommentWarning = "Unable to find details regarding this file (%s). Click %s for more details."
 	urlCommentGood     = "URL (%s) is clean: %s."
-	urlCommentBad      = "URL (%s) is malicious: %s."
+	urlCommentBad      = "Warning: URL (%s) is malicious: %s."
 	urlCommentWarning  = "Unable to find details regarding this URL (%s): %s."
 	ipCommentGood      = "IP (%s) is clean: %s."
-	ipCommentBad       = "IP (%s) is malicious: %s."
+	ipCommentBad       = "Warning: IP (%s) is malicious: %s."
 	ipCommentWarning   = "Unable to find details regarding this IP (%s): %s."
 	md5CommentGood     = "MD5 hash (%s) is clean: %s."
-	md5CommentBad      = "MD5 hash (%s) is malicious: %s."
+	md5CommentBad      = "Warning: MD5 hash (%s) is malicious: %s."
 	md5CommentWarning  = "Unable to find details regarding this MD5 hash (%s): %s."
 	mainMessage        = "Security check by DBot - Demisto Bot. Click <%s|here> for configuration and details."
 )

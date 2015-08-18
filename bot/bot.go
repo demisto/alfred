@@ -260,7 +260,7 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 		case "file_share":
 			push = true
 		case "file_comment":
-			push = !strings.HasPrefix(msg.Comment.Comment, botName) && (strings.Contains(msg.Comment.Comment, "<http") || ipReg.MatchString(msg.Comment.Comment) || md5Reg.MatchString(msg.Comment.Comment))
+			push = !strings.Contains(msg.Comment.Comment, conf.Options.ExternalAddress) && (strings.Contains(msg.Comment.Comment, "<http") || ipReg.MatchString(msg.Comment.Comment) || md5Reg.MatchString(msg.Comment.Comment))
 		case "file_mention":
 			push = true
 		}
