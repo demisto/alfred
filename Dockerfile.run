@@ -3,8 +3,8 @@ MAINTAINER Slavik Markovich <slavik@demisto.com>
 
 EXPOSE 443 80
 
-COPY alfred /bin/alfred
 COPY ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY g-web.conf /etc/g-web.conf
+COPY alfred /bin/alfred
 
 CMD alfred -conf=/etc/g-web.conf

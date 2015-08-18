@@ -29,8 +29,8 @@ RUN sed -i 's/^Foreground .*$/Foreground true/g' /etc/clamav/freshclam.conf
 VOLUME ["/var/lib/clamav"]
 
 COPY run.sh /
-COPY worker /
 COPY g-worker.conf /etc/g-worker.conf
 COPY ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY worker /
 
 CMD ["/run.sh"]

@@ -1,8 +1,8 @@
 FROM busybox:ubuntu-14.04
 MAINTAINER Slavik Markovich <slavik@demisto.com>
 
-COPY alfred /bin/alfred
 COPY ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY g-dedup.conf /etc/g-dedup.conf
+COPY alfred /bin/alfred
 
 CMD alfred -conf=/etc/g-dedup.conf
