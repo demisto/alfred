@@ -16,25 +16,44 @@ section#conf.config-page
         .col-lg-8.col-lg-offset-1
           // INTRO MESSAGE
           .config-section
-            h1 Configure Alfred
-            form(class="configform")
-              .checkbox.config-entry
-                label
-                  input#all(type='checkbox')
-                  | Monitor ALL conversations
-              .form-group.config-entry
-                label(for='channels') Select "Slack channels" that Alfred will monitor
-                select.form-control.chosen-select#channels(data-placeholder='Please chose channels to monitor', multiple)
-              .form-group.config-entry
-                label(for='groups') Select "Private groups" that Alfred will monitor
-                select.form-control.chosen-select#groups(data-placeholder='Please chose groups to monitor', multiple)
-              .form-group.config-entry
-                label(for='regexp') Regular expression to select both groups and channels that Alfred will monitor (you can just ignore if you don't know what this means)
-                input.form-control#regexp(placeholder='Please enter regular expression')
-                #regexpChannels
-              .checkbox.config-entry
-                label
-                  input#im(type='checkbox')
-                  | Monitor IM conversations
+            h1 DBot Configuration
+            #configdiv
+              h3 What communication do you want monitor?
+              form(class="configform")
+                .checkbox.config-entry
+                  label
+                    input#all(type='checkbox')
+                    | Monitor ALL conversations
+                br
+                #accordion.panel-group(role="tablist", aria-multiselectable="true")
+                  .panel.panel-default
+                    #headingConf.panel-heading(role="tab")
+                      h4.panel-title
+                        a(role="button", data-toggle="collapse", data-parent="#accordion", href="#configpanel", aria-expanded="false", aria-controls="configpanel")
+                          | Select Channels and Groups
+                    #configpanel.panel-collapse.in.collapse(role="tabpanel", aria-labelledby="headingConf")
+                      .panel-body
+                        .form-group.config-entry
+                          label(for='channels') Select "Slack channels" that Alfred will monitor
+                          select.form-control.chosen-select#channels(data-placeholder='Please chose channels to monitor', multiple)
+                        .form-group.config-entry
+                          label(for='groups') Select "Private groups" that Alfred will monitor
+                          select.form-control.chosen-select#groups(data-placeholder='Please chose groups to monitor', multiple)
+                        .checkbox.config-entry
+                          label
+                            input#im(type='checkbox')
+                            | Monitor IM conversations
+                #accordion.panel-group(role="tablist", aria-multiselectable="true")
+                  .panel.panel-default
+                    #headingAdvConf.panel-heading(role="tab")
+                      h4.panel-title
+                        a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#advconfig", aria-expanded="false", aria-controls="advconfig")
+                          | Advanced Configuration
+                    #advconfig.panel-collapse.collapse(role="tabpanel", aria-labelledby="headingAdvConf")
+                      .panel-body
+                        .form-group.config-entry
+                          label(for='regexp') Regular expression to select both groups and channels that Alfred will monitor (you can just ignore if you don't know what this means)
+                          input.form-control#regexp(placeholder='Please enter regular expression')
+                          #regexpChannels
 
 // END CONFIGURATION

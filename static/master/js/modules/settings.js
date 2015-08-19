@@ -9,16 +9,31 @@
     var timerExists = false;
 
     var disableAll = function() {
+
       $("#channels").attr("disabled", true).trigger("chosen:updated");
       $("#groups").attr("disabled", true).trigger("chosen:updated");
       $("#im").attr("disabled", true);
       $("#regexp").attr("disabled", true);
+      $('#headingConf').addClass('grayout');
+      $('#configpanel').addClass('grayout');
+      $('#headingConf a').removeAttr("href");
+      $('#headingAdvConf').addClass('grayout');
+      $('#advconfig').addClass('grayout');
+      $('#headingAdvConf .collapsed').removeAttr("href");
+
+
     };
     var enableAll = function() {
       $("#channels").removeAttr("disabled").trigger("chosen:updated");
       $("#groups").removeAttr("disabled").trigger("chosen:updated");
       $("#im").removeAttr("disabled");
       $("#regexp").removeAttr("disabled");
+      $('#headingConf').removeClass('grayout');
+      $('#configpanel').removeClass('grayout');
+      $('#headingConf a').attr("href", "#configpanel");
+      $('#headingAdvConf').removeClass('grayout');
+      $('#advconfig').removeClass('grayout');
+      $('#headingAdvConf .collapsed').attr("href", "#advconfig");
     }
 
 
@@ -47,7 +62,7 @@
           dataType: 'json',
           contentType: 'application/json; charset=utf-8',
           success: function(data){
-            $('#regexpChannels').html('Will monitor: ' + data.join(', '));
+            $('#regexpChannels').html('Channels Monitored: ' + data.join(', '));
           }
         });
       }
@@ -198,7 +213,7 @@
     if ($('#channels').length) {
       // get the user information
       $.getJSON('/user', function(data) {
-        FreshWidget.init("", {"queryString": "&widgetType=popup&helpdesk_ticket[subject]=Configuration:&helpdesk_ticket[requester]="+data.email, "utf8": "✓",
+        FreshWidget.init("", {"queryString": "&widgetType=popup&searchArea=no&helpdesk_ticket[subject]=Configuration:&helpdesk_ticket[requester]="+data.email, "utf8": "✓",
           "widgetType": "popup", "buttonType": "text", "buttonText": "Feedback", "buttonColor": "white", "buttonBg": "#006063",
           "alignment": "2", "offset": "500px", "formHeight": "500px", "url": "https://demisto.freshdesk.com"} );
 
