@@ -1,0 +1,30 @@
+doctype html
+html(lang="en")
+
+  head
+
+    include _head
+
+  body
+    #accordion.panel-group(role="tablist", aria-multiselectable="true")
+      .panel.panel-default
+        #headingThree.panel-heading(role="tab")
+          h4.panel-title
+            a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#collapseThree", aria-expanded="false", aria-controls="collapseThree")
+              Detected URLs
+        #collapseThree.panel-collapse.collapse(role="tabpanel", aria-labelledby="headingThree")
+          .panel-body
+            this is the body of the faq....
+      .panel.panel-default
+        #headingThree.panel-heading(role="tab")
+          h4.panel-title
+            a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#collapseOne", aria-expanded="false", aria-controls="collapseOne")
+              Detected URLs
+        #collapseOne.panel-collapse.collapse(role="tabpanel", aria-labelledby="headingThree")
+          .panel-body
+            this is the body of the faq....
+
+
+
+
+    include _scripts
