@@ -1,0 +1,14 @@
+
+section#social.socialwidget
+  a.twitter-share-button(href="https://twitter.com/share", data-text="Demisto Website Blurb", data-via="demistoinc") Tweet
+  #fb-root
+  #fb-share-button.fb-share-button(data-href="https://www.demisto.com", data-layout="button_count")
+  #linkedin(style="padding-top: 10px")
+    <script type="IN/Share" data-counter="right"></script>
+    <script src="//platform.linkedin.com/in.js" type="text/javascript"> lang: en_US</script>
+
+  script.
+    !function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');
+
+  script.
+    (function(d, s, id) {var js, fjs = d.getElementsByTagName(s)[0];if (d.getElementById(id)) return;js = d.createElement(s); js.id = id;js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.4&appId=226917990728689";fjs.parentNode.insertBefore(js, fjs);}(document, 'script', 'facebook-jssdk'));

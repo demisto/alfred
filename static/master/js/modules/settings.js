@@ -21,6 +21,7 @@
       $("#regexp").removeAttr("disabled");
     }
 
+
     // Load the channels
     // TODO - add fail handling
     $.getJSON('/info', function(data) {
@@ -184,7 +185,7 @@
           }
         }
       }
-      
+
 
       $('#regexp').keypress(saveRegex);
       $('#regexp').change(saveRegex);
@@ -195,9 +196,14 @@
   // load the feedback widget only on conf page
   $(function (){
     if ($('#channels').length) {
-      FreshWidget.init("", {"queryString": "&widgetType=popup", "utf8": "✓",
-        "widgetType": "popup", "buttonType": "text", "buttonText": "Feedback", "buttonColor": "white", "buttonBg": "#006063",
-        "alignment": "2", "offset": "500px", "formHeight": "500px", "url": "https://demisto.freshdesk.com"} );
+      // get the user information
+      $.getJSON('/user', function(data) {
+        FreshWidget.init("", {"queryString": "&widgetType=popup&helpdesk_ticket[subject]=Configuration:&helpdesk_ticket[requester]="+data.email, "utf8": "✓",
+          "widgetType": "popup", "buttonType": "text", "buttonText": "Feedback", "buttonColor": "white", "buttonBg": "#006063",
+          "alignment": "2", "offset": "500px", "formHeight": "500px", "url": "https://demisto.freshdesk.com"} );
+
+      });
+
     }
   });
 })(window.jQuery);

@@ -20,6 +20,27 @@
     var uri = new URI();
     var qParts = uri.search(true);
 
+    // freshdesk widget
+    $.ajax({
+      type: 'GET',
+      url: '/user',
+      data: "",
+      dataType: 'json',
+      contentType: 'application/json; charset=utf-8',
+      success: function(data) {
+        FreshWidget.init("", {"queryString": "&widgetType=popup&helpdesk_ticket[subject]=Details:&helpdesk_ticket[requester]="+data.email, "utf8": "✓",
+          "widgetType": "popup", "buttonType": "text", "buttonText": "Feedback", "buttonColor": "white", "buttonBg": "#006063",
+          "alignment": "2", "offset": "500px", "formHeight": "500px", "url": "https://demisto.freshdesk.com"} );
+      },
+      error: function(xhr, status, error) {
+        FreshWidget.init("", {"queryString": "&widgetType=popup&helpdesk_ticket[subject]=Details:", "utf8": "✓",
+          "widgetType": "popup", "buttonType": "text", "buttonText": "Feedback", "buttonColor": "white", "buttonBg": "#006063",
+          "alignment": "2", "offset": "500px", "formHeight": "500px", "url": "https://demisto.freshdesk.com"} );
+      }
+    });
+
+
+
     // Details for the ip address query
     var IpDiv = React.createClass({
       resultmessage: function() {
