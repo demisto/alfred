@@ -342,13 +342,14 @@ func (r *repoMySQL) ChannelsAndGroups(user string) (*domain.Configuration, error
 }
 
 func (r *repoMySQL) SetChannelsAndGroups(user string, configuration *domain.Configuration) error {
+	logrus.Debugf("Saving configuration for user %s - %+v\n", user, configuration)
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 	var all []string
-	copy(all, configuration.Channels)
+	all = append(all, configuration.Channels...)
 	all = append(all, configuration.Groups...)
 	// First, delete the configuration for the user
 	_, err = tx.Exec("DELETE FROM configurations WHERE user = ?", user)
