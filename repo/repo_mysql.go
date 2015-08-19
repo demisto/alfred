@@ -463,6 +463,7 @@ func (r *repoMySQL) LockUser(user *domain.UserBot) (bool, error) {
 			}
 			return false, err
 		}
+		return true, nil
 	}
 	result, err := r.db.Exec("UPDATE bot_for_user SET bot = ?, ts = now() WHERE user = ? AND bot = ? AND ts = ?", r.hostname, user.User, user.Bot, user.Timestamp)
 	if err != nil {

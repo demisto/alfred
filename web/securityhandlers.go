@@ -19,6 +19,7 @@ type simpleUser struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
 	RealName string `json:"real_name"`
+	TeamName string `json:"team_name"`
 }
 
 type credentials struct {
@@ -178,6 +179,10 @@ func (ac *AppContext) logout(w http.ResponseWriter, r *http.Request) {
 
 func (ac *AppContext) currUser(w http.ResponseWriter, r *http.Request) {
 	u := context.Get(r, "user").(*domain.User)
-	externalUser := simpleUser{u.Name, u.Email, u.RealName}
+	t, err := ac.r.Team(u.Team)
+	if err != nil {
+		panic(err)
+	}
+	externalUser := simpleUser{u.Name, u.Email, u.RealName, t.Name}
 	json.NewEncoder(w).Encode(externalUser)
 }
