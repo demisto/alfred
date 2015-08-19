@@ -7,6 +7,33 @@
   // Run this only on conf
   if ($('#channels').length) {
     var timerExists = false;
+    var regexChannelsMatched = [];
+    var channelsMatched = [];
+    var groupsMatched = [];
+
+    var updateChannelList = function() {
+      // update the channels Monitored
+      var mergedList = new Object();
+      var mergedArr = [];
+
+      for (var i = 0; channelsMatched && i<channelsMatched.length; i++) {
+        mergedList[channelsMatched[i]] = true;
+      }
+      for (var i = 0; groupsMatched && i<groupsMatched.length; i++) {
+        mergedList[groupsMatched[i]] = true;
+      }
+      for (var i = 0; regexChannelsMatched && i<regexChannelsMatched.length; i++) {
+        mergedList[regexChannelsMatched[i]] = true;
+      }
+
+      for (var k in mergedList) {
+        mergedArr.push(k);
+      }
+
+      $('#channellist').html(mergedArr.sort().join(", "));
+
+    }
+
 
     var disableAll = function() {
 
@@ -20,6 +47,7 @@
       $('#headingAdvConf').addClass('grayout');
       $('#advconfig').addClass('grayout');
       $('#headingAdvConf .collapsed').removeAttr("href");
+      $('#channelsmonitored').hide();
 
 
     };
@@ -34,20 +62,26 @@
       $('#headingAdvConf').removeClass('grayout');
       $('#advconfig').removeClass('grayout');
       $('#headingAdvConf .collapsed').attr("href", "#advconfig");
+      $('#channelsmonitored').show();
     }
 
 
     // Load the channels
     // TODO - add fail handling
     $.getJSON('/info', function(data) {
+
       var channels = [];
       var groups = [];
       for (var i=0; data.channels && i<data.channels.length; i++) {
         channels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].selected ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
+        if (data.channels[i].selected)
+          channelsMatched.push(data.channels[i].name)
       }
       $('#channels').append(channels.join(''));
       for (var i=0; data.groups && i<data.groups.length; i++) {
         groups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].selected ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
+        if (data.groups[i].selected)
+          groupsMatched.push(data.groups[i].name)
       }
       $('#groups').append(groups.join(''));
       $('#im').prop('checked', data.im);
@@ -62,10 +96,15 @@
           dataType: 'json',
           contentType: 'application/json; charset=utf-8',
           success: function(data){
-            $('#regexpChannels').html('Channels Monitored: ' + data.join(', '));
+            // $('#regexpChannels').html('Channels Monitored: ' + data.join(', '));
+            regexChannelsMatched = data;
+            updateChannelList();
           }
         });
       }
+
+      updateChannelList();
+
       // If all is enabled then disable all the others
       if (data.all) {
         disableAll();
@@ -82,12 +121,18 @@
         save.im = $('#im').is(':checked');
         save.all = $('#all').is(':checked');
         save.regexp = $('#regexp').val();
+        channelsMatched = [];
+        groupsMatched = [];
         $('#channels option:selected').each(function() {
           save.channels.push($(this).val());
+          channelsMatched.push($(this).text());
         });
         $('#groups option:selected').each(function() {
           save.groups.push($(this).val());
+          groupsMatched.push($(this).text());
         });
+
+        updateChannelList();
 
         $.ajax({
           type: 'POST',
@@ -140,7 +185,7 @@
       var saveRegex = function(evt)
       {
         var timer;
-        if (evt.type == "keypress") {
+        if (evt.type == "keyup") {
           if (!timerExists)
           {
             timerExists = true;
@@ -155,8 +200,8 @@
                   dataType: 'json',
                   contentType: 'application/json; charset=utf-8',
                   success: function(data){
-
-                    $('#regexpChannels').html('Matched Channels: ' + data.join(', '));
+                    regexChannelsMatched = data;
+                    // $('#regexpChannels').html('Matched Channels: ' + data.join(', '));
                     saveAll();
                   },
                   error: function(xhr, status, error) {
@@ -167,6 +212,10 @@
                     $('#regexpChannels').html(err);
                   }
                 });
+              }
+              else if (evt && evt.target) {
+                regexChannelsMatched = [];
+                saveAll();
               }
             }, 5000);
           }
@@ -185,8 +234,7 @@
               dataType: 'json',
               contentType: 'application/json; charset=utf-8',
               success: function(data){
-
-                $('#regexpChannels').html('Matched Channels: ' + data.join(', '));
+                regexChannelsMatched = data;
                 saveAll();
               },
               error: function(xhr, status, error) {
@@ -202,7 +250,7 @@
       }
 
 
-      $('#regexp').keypress(saveRegex);
+      $('#regexp').keyup(saveRegex);
       $('#regexp').change(saveRegex);
 
     });

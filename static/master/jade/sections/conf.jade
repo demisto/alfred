@@ -25,6 +25,10 @@ section#conf.config-page
                     input#all(type='checkbox')
                     | Monitor ALL conversations
                 br
+                #channelsmonitored
+                  h3 Channels Monitored
+                  p#channellist
+                hr
                 #accordion.panel-group(role="tablist", aria-multiselectable="true")
                   .panel.panel-default
                     #headingConf.panel-heading(role="tab")
@@ -34,10 +38,10 @@ section#conf.config-page
                     #configpanel.panel-collapse.in.collapse(role="tabpanel", aria-labelledby="headingConf")
                       .panel-body
                         .form-group.config-entry
-                          label(for='channels') Select "Slack channels" that Alfred will monitor
+                          label(for='channels') Select "Slack channels" that DBot will monitor
                           select.form-control.chosen-select#channels(data-placeholder='Please chose channels to monitor', multiple)
                         .form-group.config-entry
-                          label(for='groups') Select "Private groups" that Alfred will monitor
+                          label(for='groups') Select "Private groups" that DBot will monitor
                           select.form-control.chosen-select#groups(data-placeholder='Please chose groups to monitor', multiple)
                         .checkbox.config-entry
                           label
@@ -52,7 +56,7 @@ section#conf.config-page
                     #advconfig.panel-collapse.collapse(role="tabpanel", aria-labelledby="headingAdvConf")
                       .panel-body
                         .form-group.config-entry
-                          label(for='regexp') Regular expression to select both groups and channels that Alfred will monitor (you can just ignore if you don't know what this means)
+                          label(for='regexp') Regular expression to select both groups and channels that DBot will monitor (you can just ignore if you don't know what this means)
                           input.form-control#regexp(placeholder='Please enter regular expression')
                           #regexpChannels
 
