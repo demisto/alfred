@@ -322,14 +322,11 @@ func (b *Bot) Start() error {
 			// TODO - error handling - something wrong with channel closing in case of error
 			if msg == nil || msg.Type == "error" {
 				if msg == nil {
-					logrus.Errorf("Message channel closed")
+					logrus.Warnf("Message channel closed")
 				} else {
-					logrus.Errorf("Got error message from channel %+v\n", msg)
+					logrus.Warnf("Got error message from channel %+v\n", msg)
 				}
-				// Restart everything
-				b.stopWS()
-				b.in = make(chan *slack.Message)
-				b.startWS()
+				// TODO - should we restart the WS for this user?
 				continue
 			}
 			b.handleMessage(msg)

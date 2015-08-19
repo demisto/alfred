@@ -5,4 +5,4 @@ COPY ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY g-bot.conf /etc/g-bot.conf
 COPY alfred /bin/alfred
 
-CMD alfred -conf=/etc/g-bot.conf
+CMD alfred -conf=/etc/g-bot.conf -loglevel=debug
