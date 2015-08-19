@@ -18,6 +18,7 @@ import (
 type queuePubSub struct {
 	svc    *pubsub.Service
 	closed bool
+	host   string
 }
 
 // Returns a fully qualified resource name for Cloud Pub/Sub.
@@ -48,10 +49,11 @@ func newPubSub() (*queuePubSub, error) {
 	if err != nil {
 		return nil, err
 	}
+	var host string
 	names := []string{conf.Options.G.ConfName, conf.Options.G.MessageName, conf.Options.G.WorkName}
 	// If we are a bot or a web tier, create a reply queue for us
 	if conf.Options.Bot || conf.Options.Web {
-		host, err := ReplyQueueName()
+		host, err = ReplyQueueName()
 		if err != nil {
 			return nil, err
 		}
@@ -68,13 +70,17 @@ func newPubSub() (*queuePubSub, error) {
 		if err != nil && !strings.Contains(err.Error(), "409") {
 			return nil, err
 		}
+		// Each bot will have it's own subscription
+		if conf.Options.Bot && n == conf.Options.G.ConfName {
+			n += "-" + host
+		}
 		sub := &pubsub.Subscription{Topic: fullTopicName(conf.Options.G.Project, n)}
 		_, err = svc.Projects.Subscriptions.Create(fullSubName(conf.Options.G.Project, n), sub).Do()
 		if err != nil && !strings.Contains(err.Error(), "409") {
 			return nil, err
 		}
 	}
-	return &queuePubSub{svc: svc}, nil
+	return &queuePubSub{svc: svc, host: host}, nil
 }
 
 func (q *queuePubSub) push(qname string, body interface{}) error {
@@ -147,7 +153,7 @@ func (q *queuePubSub) PushConf(u *domain.User, c *domain.Configuration) error {
 
 func (q *queuePubSub) PopConf(timeout time.Duration) (*domain.User, *domain.Configuration, error) {
 	var msg ConfigurationMessage
-	err := q.pop(conf.Options.G.ConfName, timeout, &msg)
+	err := q.pop(conf.Options.G.ConfName+"-"+q.host, timeout, &msg)
 	if err != nil {
 		return nil, nil, err
 	}

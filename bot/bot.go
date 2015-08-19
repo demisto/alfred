@@ -189,7 +189,7 @@ func (b *Bot) startWS() error {
 		for i := range v.subscriptions {
 			if !v.subscriptions[i].started {
 				logrus.Infof("Starting WS for team %s, user - %s (%s)\n", k, v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
-				info, err := v.subscriptions[i].s.RTMStart("alfred.demisto.com", b.in, &domain.Context{Team: k, User: v.subscriptions[i].user.ID})
+				info, err := v.subscriptions[i].s.RTMStart("dbot.demisto.com", b.in, &domain.Context{Team: k, User: v.subscriptions[i].user.ID})
 				if err != nil {
 					logrus.Warnf("Unable to start WS for user %s (%s) - %v\n", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name, err)
 					continue
@@ -377,6 +377,15 @@ func (b *Bot) subscriptionChanged(user *domain.User, configuration *domain.Confi
 				sub.s.RTMStop()
 				sub.started = false
 			}
+		} else if !sub.started {
+			logrus.Infof("Starting WS for team %s, user - %s (%s)\n", user.Team, user.ID, user.Name)
+			info, err := sub.s.RTMStart("dbot.demisto.com", b.in, &domain.Context{Team: user.Team, User: user.ID})
+			if err != nil {
+				logrus.Warnf("Unable to start WS for user %s (%s) - %v\n", user.ID, user.Name, err)
+				return
+			}
+			subs.info = info
+			sub.started = true
 		}
 	}
 }
