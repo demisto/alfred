@@ -163,9 +163,6 @@ func (b *Bot) loadSubscriptions() error {
 			logrus.Warnf("Error loading user configuration - %v\n", err)
 			continue
 		}
-		if !subs.IsActive() {
-			continue
-		}
 		s, err := slack.New(slack.SetToken(u.Token),
 			slack.SetErrorLog(log.New(conf.LogWriter, "SLACK:", log.Lshortfile)))
 		if err != nil {
@@ -187,7 +184,7 @@ func (b *Bot) startWS() error {
 	defer b.mu.Unlock()
 	for k, v := range b.subscriptions {
 		for i := range v.subscriptions {
-			if !v.subscriptions[i].started {
+			if !v.subscriptions[i].started && v.subscriptions[i].interest.IsActive() {
 				logrus.Infof("Starting WS for team %s, user - %s (%s)\n", k, v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
 				info, err := v.subscriptions[i].s.RTMStart("dbot.demisto.com", b.in, &domain.Context{Team: k, User: v.subscriptions[i].user.ID})
 				if err != nil {

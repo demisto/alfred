@@ -70,11 +70,11 @@ func newPubSub() (*queuePubSub, error) {
 		if err != nil && !strings.Contains(err.Error(), "409") {
 			return nil, err
 		}
+		sub := &pubsub.Subscription{Topic: fullTopicName(conf.Options.G.Project, n)}
 		// Each bot will have it's own subscription
 		if conf.Options.Bot && n == conf.Options.G.ConfName {
 			n += "-" + host
 		}
-		sub := &pubsub.Subscription{Topic: fullTopicName(conf.Options.G.Project, n)}
 		_, err = svc.Projects.Subscriptions.Create(fullSubName(conf.Options.G.Project, n), sub).Do()
 		if err != nil && !strings.Contains(err.Error(), "409") {
 			return nil, err
