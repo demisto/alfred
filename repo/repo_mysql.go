@@ -137,6 +137,8 @@ func NewMySQL() (Repo, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Have to set it to make sure no connection is left idle and being killed
+	db.SetMaxIdleConns(0)
 	creates := strings.Split(schema, ";")
 	tx, err := db.Begin()
 	if err != nil {
@@ -391,6 +393,7 @@ func (r *repoMySQL) TeamSubscriptions(team string) (map[string]*domain.Configura
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var user, channel string
 		if err = rows.Scan(&user, &channel); err != nil {
@@ -425,6 +428,7 @@ func (r *repoMySQL) OpenUsers() ([]domain.UserBot, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var user string
 		var bot sql.NullString

@@ -2,7 +2,7 @@
 set -m
 
 freshclam -d &
-/worker -conf /etc/g-worker.conf &
+/worker -conf /etc/g-worker.conf -loglevel=debug &
 
 pids=`jobs -p`
 
