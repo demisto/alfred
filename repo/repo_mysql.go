@@ -348,6 +348,11 @@ func (r *repoMySQL) SetChannelsAndGroups(user string, configuration *domain.Conf
 	var all []string
 	copy(all, configuration.Channels)
 	all = append(all, configuration.Groups...)
+	// First, delete the configuration for the user
+	_, err = tx.Exec("DELETE FROM configuration WHERE user = ?", user)
+	if err != nil {
+		return err
+	}
 	stmt, err := tx.Prepare("INSERT INTO configurations (user, channel) VALUES (?, ?)")
 	if err != nil {
 		return err
