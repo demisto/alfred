@@ -1,6 +1,6 @@
 /*!
  *
- * Alfred - Demisto Security Bot
+ * DBOT - Demisto Security Bot
  *
  * Author: @demisto
  * Website: https://www.demisto.com
@@ -213,7 +213,7 @@
     // If we are on the homepage
     if ($('#slack-message').length) {
       $.getJSON('/user', function(data) {
-        $('#slack-message').text('Configure Alfred');
+        $('#slack-message').text('Configure DBOT');
         $('#action').attr('href', '/conf')
       });
     }

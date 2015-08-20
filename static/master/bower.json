@@ -1,10 +1,10 @@
 {
-  "name": "Alfred",
+  "name": "DBOT",
   "version": "0.0.1",
   "authors": [
     "@demisto"
   ],
-  "description": "Alfred - Demisto bot for slack and hipchat integration",
+  "description": "DBOT - Demisto bot for slack and hipchat integration",
   "main": "index.html",
   "keywords": [
     "demisto",

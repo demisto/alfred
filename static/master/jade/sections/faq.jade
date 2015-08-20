@@ -38,7 +38,10 @@ section#faq.config-page
                 | Who created Dbot?
           #a1.panel-collapse.collapse.in(role="tabpanel", aria-labelledby="q1")
             .panel-body
-              | Dbot is brought to you by !Demisto. We are a U.S.-based security
+              | Dbot is brought to you by
+              a(href='https://www.demisto.com')
+                img.logosmall(src='img/logo.png', alt='')
+              |We are a U.S.-based security
               | software company led by security veterans who are committed to make the world a safer place. To learn more about us visit our website: www.demisto.com
         .panel.panel-default
           #q2.panel-heading(role="tab")
@@ -47,9 +50,13 @@ section#faq.config-page
                 | Do you use any external services when scanning the message?
           #a2.panel-collapse.collapse(role="tabpanel", aria-labelledby="q2")
             .panel-body
-              | Yes. We currently use IBM X-Force Exchange http://www-03.ibm.com/software/products/en/xforce-exchange,
-              | Virus total https://www.virustotal.com/en/about/  and clamAV http://www.clamav.net/index.html. We are grateful to the
-              | communities and companies behind these services for their support. We may add more services as well as replace the current ones in the
+              | Yes. We currently use
+              a(href="http://www-03.ibm.com/software/products/en/xforce-exchange") IBM X-Force Exchange
+              |,
+              a(href="https://www.virustotal.com/en/about/") VirusTotal
+              |, and 
+              a(href="http://www.clamav.net/index.html") clamAV
+              | . We are grateful to the communities and companies behind these services for their support. We may add more services as well as replace the current ones in the
               | future. Check this page for changes.
         .panel.panel-default
           #q3.panel-heading(role="tab")
@@ -68,6 +75,15 @@ section#faq.config-page
             .panel-body
               | Anybody who uses Slack benefits from the security scanning provided by Slack. In addition, IT security professionals and analysts benefit
               | from Dbot by comfortably checking IP addresses, URLs, files, fie hashes, without leaving Slack.
+        .panel.panel-default
+          #q13.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a13", aria-expanded="false", aria-controls="a13")
+                | Is DBOT free?
+          #a13.panel-collapse.collapse(role="tabpanel", aria-labelledby="q5")
+            .panel-body
+              | Yes, it is. DBOT is a preview of the security automation capabilities that we will be building in our product. DBOT will remain free
+              | for all users and you can enjoy secure collaboration.
         .panel.panel-default
           #q5.panel-heading(role="tab")
             h4.panel-title
