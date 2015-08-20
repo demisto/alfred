@@ -30,7 +30,7 @@ func (d *Dedup) Start() {
 	for {
 		msg, err := d.q.PopMessage(0)
 		if err != nil || msg == nil {
-			logrus.Infoln("Stoping DEDUP process")
+			logrus.Info("Stoping DEDUP process - %v, %v", err, msg)
 			return
 		}
 		logrus.Debugf("Deduping message %s\n", msg.MessageID)
