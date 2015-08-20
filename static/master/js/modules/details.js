@@ -676,6 +676,7 @@
               return(
                 <div>
                   DBot is collecting security details for your query... it might take upto a minute!
+                  
                 </div>
               );
             } else if (this.state.status == 1) {
