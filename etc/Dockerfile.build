@@ -32,7 +32,7 @@ COPY Makefile /
 COPY demisto_git_rsa_clear /root/.ssh/id_rsa
 RUN chmod 400 /root/.ssh/id_rsa
 WORKDIR /
-COPY tmp/build-date /
+COPY build-date /
 RUN make setup
 RUN make buildgo
 RUN make buildgoav
