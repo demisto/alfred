@@ -878,7 +878,7 @@ func isBanned(remoteAddr string) bool {
 	if remoteAddr != "" {
 		parts := strings.Split(remoteAddr, ":")
 		ip := net.ParseIP(parts[0])
-		ipInt := binary.LittleEndian.Uint32(ip)
+		ipInt := binary.BigEndian.Uint32(ip.To4())
 		for i := range bannedCountries {
 			if ipInt >= bannedCountries[i].ipFrom && ipInt <= bannedCountries[i].ipTo {
 				return true
