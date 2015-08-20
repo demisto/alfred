@@ -28,7 +28,7 @@
   // -----------------------------------
 
   var stickyNavScroll;
-  var stickySelector = '.navbar-sticky';
+  var stickySelector = '#header .navbar-sticky';
 
   // Setup functions based on screen
   if (matchMedia('(min-width: 992px), (max-width: 767px)').matches) {

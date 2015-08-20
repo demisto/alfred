@@ -1,0 +1,146 @@
+section#faq.config-page
+  .full-screen-conf
+    .navbar.navbar-default.navbar-fixed-top.navbar-sticky.navbar-sticky-color
+      .container
+        .navbar-header
+          button.navbar-toggle(type='button', data-toggle='collapse', data-target='#navbar-main')
+            span.sr-only Toggle navigation
+            span.icon-bar
+            span.icon-bar
+            span.icon-bar
+          a.navbar-brand(href='/')
+            img(src='img/logo.png', alt='')
+        // MENU
+        #navbar-main.navbar-collapse.collapse
+          ul.nav.navbar-nav.navbar-right.main-navbar
+            li
+              a(href='/#') Home
+            li
+              a(href='#') FAQ
+            li
+              a(href='/#integrations') Users
+            li
+              a(href='/#features') Features
+            li
+              a(href='#contact') Contact
+
+        // END STICKY NAVBAR
+
+    .container
+      br
+      br
+      h2 FREQUENTLY ASKED QUESTIONS
+      #accordion.panel-group(role="tablist", aria-multiselectable="true")
+        .panel.panel-default
+          #q1.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a1", aria-expanded="false", aria-controls="a1")
+                | Who created Dbot?
+          #a1.panel-collapse.collapse.in(role="tabpanel", aria-labelledby="q1")
+            .panel-body
+              | Dbot is brought to you by !Demisto. We are a U.S.-based security
+              | software company led by security veterans who are committed to make the world a safer place. To learn more about us visit our website: www.demisto.com
+        .panel.panel-default
+          #q2.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a2", aria-expanded="false", aria-controls="a2")
+                | Do you use any external services when scanning the message?
+          #a2.panel-collapse.collapse(role="tabpanel", aria-labelledby="q2")
+            .panel-body
+              | Yes. We currently use IBM X-Force Exchange http://www-03.ibm.com/software/products/en/xforce-exchange,
+              | Virus total https://www.virustotal.com/en/about/  and clamAV http://www.clamav.net/index.html. We are grateful to the
+              | communities and companies behind these services for their support. We may add more services as well as replace the current ones in the
+              | future. Check this page for changes.
+        .panel.panel-default
+          #q3.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a3", aria-expanded="false", aria-controls="a3")
+                | Can the external services know who I am?
+          #a3.panel-collapse.collapse(role="tabpanel", aria-labelledby="q3")
+            .panel-body
+              | No, the queries to 3rd party services are done anonymously.
+        .panel.panel-default
+          #q4.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a4", aria-expanded="false", aria-controls="a4")
+                | Who uses Dbot?
+          #a4.panel-collapse.collapse(role="tabpanel", aria-labelledby="q4")
+            .panel-body
+              | Anybody who uses Slack benefits from the security scanning provided by Slack. In addition, IT security professionals and analysts benefit
+              | from Dbot by comfortably checking IP addresses, URLs, files, fie hashes, without leaving Slack.
+        .panel.panel-default
+          #q5.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a5", aria-expanded="false", aria-controls="a5")
+                | Are you storing and tracking my conversations? 
+          #a5.panel-collapse.collapse(role="tabpanel", aria-labelledby="q5")
+            .panel-body
+              | No we’re not. We only store your e-mail address so we can be in touch with you. We also keep anonymous statistics of the number of messages
+              | that Dbot scanned. Dbot scans all messages for malware and other risks but does not store the messages anywhere.
+        .panel.panel-default
+          #q6.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a6", aria-expanded="false", aria-controls="a6")
+                | What do you do with my e-mail address?
+          #a6.panel-collapse.collapse(role="tabpanel", aria-labelledby="q6")
+            .panel-body
+              | We keep your e-mail address so that we can contact you in the future with news about !Demisto and new products.
+              | We do not sell or share your information with anyone else. Check out our Privacy Policy XXXadd link XXX for more details.
+        .panel.panel-default
+          #q7.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a7", aria-expanded="false", aria-controls="a7")
+                | How do I uninstall Dbot?
+          #a7.panel-collapse.collapse(role="tabpanel", aria-labelledby="q7")
+            .panel-body
+              | Rishi/SlavikXXX (you also asked how to delete account. Let’s discuss if we want this here)
+        .panel.panel-default
+          #q8.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a8", aria-expanded="false", aria-controls="a8")
+                | I have an Antivirus/Endpoint Security suite/other security product. Do I still need Dbot?
+          #a8.panel-collapse.collapse(role="tabpanel", aria-labelledby="q8")
+            .panel-body
+              | You do. For several reasons:
+              ol
+                  li To the best of our knowledge at this stage no other product scans Slack messages for risks.
+                  li It is always better to identify a risk early (e.g. when it first appears in Slack) vs. late (e.g. when downloaded to your PC or phone).
+                  li Many users access Slack from several devices. A malicious content can put all devices at risk.
+        .panel.panel-default
+          #q9.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a9", aria-expanded="false", aria-controls="a9")
+                | How does Dbot determine that a URL or IP address is malicious?
+          #a9.panel-collapse.collapse(role="tabpanel", aria-labelledby="q9")
+            .panel-body
+              | We use services that continuously check URLs and IP addresses for malicious activity. These services collect threat information from multiple
+              | sources and provide up to date information. When DBot sees an IP address or URL in a message it automatically queries these services to
+              | find out whether the address is known to be bad.
+        .panel.panel-default
+          #q10.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a10", aria-expanded="false", aria-controls="a10")
+                | How does Dbot determine that a file is malicious?
+          #a10.panel-collapse.collapse(role="tabpanel", aria-labelledby="q10")
+            .panel-body
+              | We use services that continuously index malware as well as scan files for trojans, viruses and other malware.
+              | When DBot recognizes a posting of a file in a Slack message, it checks the file and warns you if a known malware is detected.
+        .panel.panel-default
+          #q11.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a11", aria-expanded="false", aria-controls="a11")
+                | What do I do if DBot issues a warning about a URL/IP address/File?
+          #a11.panel-collapse.collapse(role="tabpanel", aria-labelledby="q11")
+            .panel-body
+              | You need to exercise good judgement. It is advisable not to follow a link that is known to be malicious and not to download a malicious
+              | file to any of your devices. It is also advisable to ask the person who posted a malicious file to delete it from Slack to prevent other
+              | users from accidentally downloading it.
+        .panel.panel-default
+          #q12.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a12", aria-expanded="false", aria-controls="a12")
+                | Do I need to scan all channels?
+          #a12.panel-collapse.collapse(role="tabpanel", aria-labelledby="q12")
+            .panel-body
+              | We recommend that you scan all channels, all private groups and all direct messages as malware can appear anywhere. However, you do have the choice of
+              | selecting particular channels if you wish to limit the protection provided by DBot to these channels only.
