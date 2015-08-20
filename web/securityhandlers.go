@@ -33,7 +33,12 @@ const (
 )
 
 func (ac *AppContext) initiateOAuth(w http.ResponseWriter, r *http.Request) {
-	// First, generate a random state
+	// First - check that you are not from a banned country
+	if isBanned(r.RemoteAddr) {
+		http.Redirect(w, r, "/banned", http.StatusFound)
+		return
+	}
+	// Now, generate a random state
 	uuid, err := random.New()
 	if err != nil {
 		panic(err)

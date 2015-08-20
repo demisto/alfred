@@ -84,6 +84,7 @@ func New(appC *AppContext) *Router {
 	r.Get("/conf", staticHandlers.ThenFunc(pageHandler("/conf.html")))
 	r.Get("/details", staticHandlers.ThenFunc(pageHandler("/details.html")))
 	r.Get("/faq", staticHandlers.ThenFunc(pageHandler("/faq.html")))
+	r.Get("/banned", staticHandlers.ThenFunc(pageHandler("/banned.html")))
 	r.ServeFiles("/css/*filepath", Dir(conf.IsDev(), "/css/"))
 	r.ServeFiles("/img/*filepath", Dir(conf.IsDev(), "/img/"))
 	r.ServeFiles("/js/*filepath", Dir(conf.IsDev(), "/js/"))
