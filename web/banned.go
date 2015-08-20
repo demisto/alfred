@@ -877,11 +877,15 @@ var bannedCountries = []banned{
 func isBanned(remoteAddr string) bool {
 	if remoteAddr != "" {
 		parts := strings.Split(remoteAddr, ":")
-		ip := net.ParseIP(parts[0])
-		ipInt := binary.BigEndian.Uint32(ip.To4())
-		for i := range bannedCountries {
-			if ipInt >= bannedCountries[i].ipFrom && ipInt <= bannedCountries[i].ipTo {
-				return true
+		if len(parts) > 0 && parts[0] != "" {
+			ip := net.ParseIP(parts[0]).To4()
+			if ip != nil {
+				ipInt := binary.BigEndian.Uint32(ip)
+				for i := range bannedCountries {
+					if ipInt >= bannedCountries[i].ipFrom && ipInt <= bannedCountries[i].ipTo {
+						return true
+					}
+				}
 			}
 		}
 	}
