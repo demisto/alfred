@@ -192,21 +192,6 @@
 
   });
 
-
-  // Nivo Lightbox
-  // -----------------------------------
-  $(function () {
-
-    $('#appshots a').nivoLightbox({
-
-      effect: 'fadeScale',                        // The effect to use when showing the lightbox
-      theme: 'default',                           // The lightbox theme to use
-      keyboardNav: true                           // Enable/Disable keyboard navigation (left/right/escape)
-
-    });
-
-  });
-
   // Check if we already have the cookie and if so, change the title of the button
   // -----------------------------------
   $(function () {
