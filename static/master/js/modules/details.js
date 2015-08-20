@@ -675,8 +675,21 @@
             if (this.state.status == 0) {
               return(
                 <div>
-                  DBot is collecting security details for your query... it might take upto a minute!
-                  
+                  <h2><center>DBot is collecting security details for your query. It might take upto a minute!</center></h2>
+                  <br/>
+                  <br/>
+                  <div className="ball-grid-pulse center-block">
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                  </div>
+
                 </div>
               );
             } else if (this.state.status == 1) {

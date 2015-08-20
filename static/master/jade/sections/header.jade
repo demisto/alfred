@@ -29,9 +29,12 @@ header#header.header
         // END STICKY NAVBAR
     .container
       .row
-        .col-lg-8.col-lg-offset-2.col-md-10.col-md-offset-1
-          // INTRO MESSAGE
-          .intro-section
+        .intro-section
+          .col-lg-6.col-md-6
+            .intro-shot
+              img.img-responsive(src="img/header.shot.png", alt="Header shot", data-no-retina="")
+
+          .col-lg-6.col-md-6
             h1.intro.banner "DBOT" - Slack integrated Security Bot
             .text-center
               a#action.btn.btn-xlarge.btn-theme(href='/oauth')
@@ -41,8 +44,6 @@ header#header.header
               | By clicking this button you are agreeing to our
               a.btn(data-toggle="modal", data-target="#privacyModal") Privacy Policy
 
-          .intro-shot
-            img.img-responsive(src="img/header.shot.png", alt="Header shot", data-no-retina="")
 
 div.modal.fade(id="privacyModal", aria-labelledby="privacyModalLabel")
   .modal-dialog
