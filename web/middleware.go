@@ -1,6 +1,7 @@
 package web
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"net/http"
 	"reflect"
@@ -76,6 +77,59 @@ func contentTypeHandler(next http.Handler) http.Handler {
 	}
 
 	return http.HandlerFunc(fn)
+}
+
+const (
+	encodingGzip = "gzip"
+
+	headerAcceptEncoding  = "Accept-Encoding"
+	headerContentEncoding = "Content-Encoding"
+	headerContentLength   = "Content-Length"
+	headerContentType     = "Content-Type"
+	headerVary            = "Vary"
+
+	bestCompression    = gzip.BestCompression
+	bestSpeed          = gzip.BestSpeed
+	defaultCompression = gzip.DefaultCompression
+	noCompression      = gzip.NoCompression
+)
+
+type gzipWriter struct {
+	http.ResponseWriter
+	gzwriter *gzip.Writer
+}
+
+func newGzipWriter(writer http.ResponseWriter, gzwriter *gzip.Writer) *gzipWriter {
+	return &gzipWriter{writer, gzwriter}
+}
+
+func (g *gzipWriter) Write(data []byte) (int, error) {
+	return g.gzwriter.Write(data)
+}
+
+func doGzip(level int) func(http.Handler) http.Handler {
+	m := func(next http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			if !strings.Contains(r.Header.Get(headerAcceptEncoding), encodingGzip) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			gz, err := gzip.NewWriterLevel(w, level)
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+			defer gz.Close()
+			headers := w.Header()
+			headers.Set(headerContentEncoding, encodingGzip)
+			headers.Set(headerVary, headerAcceptEncoding)
+			gzwriter := newGzipWriter(w, gz)
+			next.ServeHTTP(gzwriter, r)
+			w.Header().Del(headerContentLength)
+		}
+		return http.HandlerFunc(fn)
+	}
+	return m
 }
 
 func bodyHandler(v interface{}) func(http.Handler) http.Handler {
