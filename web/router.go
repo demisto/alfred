@@ -90,6 +90,7 @@ func New(appC *AppContext) *Router {
 	r.ServeFiles("/js/*filepath", Dir(conf.IsDev(), "/js/"))
 	r.ServeFiles("/vendor/*filepath", Dir(conf.IsDev(), "/vendor/"))
 	r.ServeFiles("/video/*filepath", Dir(conf.IsDev(), "/video/"))
+	r.NotFound = pageHandler("/404.html")
 	return r
 }
 
