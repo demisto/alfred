@@ -34,18 +34,36 @@
   if (matchMedia('(min-width: 992px), (max-width: 767px)').matches) {
     stickyNavScroll = function () {
       var top = (document.documentElement && document.documentElement.scrollTop) || document.body.scrollTop;
-      if (top > 40) $(stickySelector).stop().animate({'top': '0'});
-
-      else $(stickySelector).stop().animate({'top': '-80'});
+      if (top > 40) {
+        if (!$(stickySelector).hasClass('navbar-sticky-color')) {
+          // change the transparency
+          $(stickySelector).stop().css('top', '-80px');
+          $(stickySelector).addClass('navbar-sticky-color');
+          $(stickySelector).stop().animate({'top': '0'});
+        }
+      }
+      else {
+        $(stickySelector).removeClass('navbar-sticky-color');
+        $(stickySelector).stop().css('top', '0px');
+      }
     };
   }
 
   if (matchMedia('(min-width: 768px) and (max-width: 991px)').matches) {
     stickyNavScroll = function () {
       var top = (document.documentElement && document.documentElement.scrollTop) || document.body.scrollTop;
-      if (top > 40) $(stickySelector).stop().animate({'top': '0'});
-
-      else $(stickySelector).stop().animate({'top': '-120'});
+      if (top > 40) {
+        if (!$(stickySelector).hasClass('navbar-sticky-color')) {
+          // change the transparency
+          $(stickySelector).stop().css('top', '-120px');
+          $(stickySelector).addClass('navbar-sticky-color');
+          $(stickySelector).stop().animate({'top': '0'});
+        }
+      }
+      else {
+        $(stickySelector).removeClass('navbar-sticky-color');
+        $(stickySelector).stop().css('top', '0px');
+      }
     };
   }
 
