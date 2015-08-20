@@ -69,6 +69,8 @@
     // Load the channels
     // TODO - add fail handling
     $.getJSON('/info', function(data) {
+      $('.ball-grid-pulse').hide();
+      $('#configdiv').show();
 
       var channels = [];
       var groups = [];

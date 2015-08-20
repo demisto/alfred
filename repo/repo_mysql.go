@@ -160,7 +160,9 @@ func NewMySQL() (Repo, error) {
 		hostname: name,
 		stop:     make(chan bool),
 	}
-	go r.cleanOAuthState()
+	if conf.Options.Web {
+		go r.cleanOAuthState()
+	}
 	return r, nil
 }
 

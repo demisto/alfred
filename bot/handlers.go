@@ -101,7 +101,7 @@ func (w *Worker) Start() {
 	for {
 		msg, err := w.q.PopWork(0)
 		if err != nil || msg == nil {
-			logrus.Info("Stoping WorkManager process")
+			logrus.Infof("Stoping WorkManager process - %v, %v", err, msg)
 			close(w.c)
 			return
 		}

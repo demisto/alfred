@@ -10,14 +10,23 @@ section#conf.config-page
         button.pull-right.btn.btn-link(onclick='logout()', name='logout', type='button') logout
     // END STICKY NAVBAR
 
-
     .container
       .row
         .col-lg-8.col-lg-offset-1
           // INTRO MESSAGE
           .config-section
             h1 DBot Configuration
-            #configdiv
+            .ball-grid-pulse.center-block
+              div
+              div
+              div
+              div
+              div
+              div
+              div
+              div
+              div
+            #configdiv(style="display: none")
               h3 What communication do you want monitor?
               form(class="configform")
                 .checkbox.config-entry

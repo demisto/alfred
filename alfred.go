@@ -59,6 +59,7 @@ func run(signalCh chan os.Signal) {
 	defer q.Close()
 	closers = append(closers, q)
 
+	serviceChannel := make(chan bool)
 	if conf.Options.Bot {
 		b, err := bot.New(r, q)
 		if err != nil {
@@ -69,14 +70,17 @@ func run(signalCh chan os.Signal) {
 			if err != nil {
 				logrus.Fatal(err)
 			}
+			serviceChannel <- true
 		}()
-		defer b.Stop()
 		closers = append(closers, &botCloser{b})
 	}
 
 	if conf.Options.Dedup {
 		dd := bot.NewDedup(q)
-		go dd.Start()
+		go func() {
+			dd.Start()
+			serviceChannel <- true
+		}()
 	}
 
 	if conf.Options.Worker {
@@ -84,18 +88,26 @@ func run(signalCh chan os.Signal) {
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		go worker.Start()
+		go func() {
+			worker.Start()
+			serviceChannel <- true
+		}()
 	}
 
 	if conf.Options.Web {
 		appC := web.NewContext(r, q)
 		router := web.New(appC)
-		go router.Serve()
+		go func() {
+			router.Serve()
+			serviceChannel <- true
+		}()
 	}
 	// Block until one of the signals above is received
 	select {
 	case <-signalCh:
 		logrus.Infoln("Signal received, initializing clean shutdown...")
+	case <-serviceChannel:
+		logrus.Infoln("A service went downm shutting down...")
 	}
 	closeChannel := make(chan bool)
 	go func() {

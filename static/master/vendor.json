@@ -35,5 +35,7 @@
   "bower_components/uri.js/src/URI.min.js",
   "bower_components/react/react-with-addons.min.js",
   "bower_components/react/react-with-addons.js",
-  "bower_components/react/JSXTransformer.js"
+  "bower_components/react/JSXTransformer.js",
+  "bower_components/loaders.css/loaders.css.js",
+  "bower_components/loaders.css/loaders.min.css"
 ]
