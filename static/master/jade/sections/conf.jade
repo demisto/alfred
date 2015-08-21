@@ -33,7 +33,6 @@ section#conf.config-page
                   label
                     input#all(type='checkbox')
                     | Monitor ALL conversations
-                br
                 #channelsmonitored
                   h3 Channels Monitored
                   p#channellist
@@ -55,7 +54,7 @@ section#conf.config-page
                         .checkbox.config-entry
                           label
                             input#im(type='checkbox')
-                            | Monitor IM conversations
+                            | Monitor IM conversations (includes slackbot)
                 #accordion.panel-group(role="tablist", aria-multiselectable="true")
                   .panel.panel-default
                     #headingAdvConf.panel-heading(role="tab")

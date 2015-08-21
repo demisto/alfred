@@ -1,15 +1,19 @@
 // START PIC TEXT LEFT
 section#desc2.pic-text.pic-text-left
   .container
-    .row
+    // START SECTION HEADER
+    .section-header.wow.fadeIn.animated(data-wow-offset='120', data-wow-duration='1.3s')
+      // SECTION TITLE
+      h1 Detailed Security Analysis
+      .section-description Designed for Security Analysts, DBot delivers deep analysis for URL, File and IP by correlating multiple sources.
+    // END SECTION HEADER
+    .row.bottom-space
       // LEFT PIC
       .col-md-7.wow.fadeInLeft.animated(data-wow-offset='15', data-wow-duration='1.2s')
         .mockup-mobile
           img(src='img/shots/macbookpro.png', alt='', data-no-retina)
       // RIGHT TEXT
       .col-md-5
-        // SECTION TITLE
-        h2 Detailed Security Review
         p DBot uses multiple security threat feeds and malware analysis engines to review all the communication for security. File, IP and URL entities are
           | extracted and analyzed in real time for protecting users.
         // FEATURE LIST
@@ -17,22 +21,22 @@ section#desc2.pic-text.pic-text-left
           li
             span.fa-stack.fa-lg
               em.fa.fa-circle.fa-stack-2x
-              em.fa.fa-code.fa-stack-1x.fa-inverse
-            p Well organized &amp; commented code
+              em.fa.fa-link.fa-stack-1x.fa-inverse
+            p Correlation across multiple threat feeds
           li
             span.fa-stack.fa-lg
               em.fa.fa-circle.fa-stack-2x
-              em.fa.fa-bullhorn.fa-stack-1x.fa-inverse
-            p LESS, JADE &amp; modular Javascript
+              em.fa.fa-check-square-o.fa-stack-1x.fa-inverse
+            p Complete file scan by engine in cloud
           li
             span.fa-stack.fa-lg
               em.fa.fa-circle.fa-stack-2x
-              em.fa.fa-compass.fa-stack-1x.fa-inverse
-            p Multiple layout options
+              em.fa.fa-file-text.fa-stack-1x.fa-inverse
+            p Detailed Reports for Security Analyst
           li
             span.fa-stack.fa-lg
               em.fa.fa-circle.fa-stack-2x
-              em.fa.fa-paint-brush.fa-stack-1x.fa-inverse
-            p Multiple color options
+              em.fa.fa-refresh.fa-stack-1x.fa-inverse
+            p Recent data fetched at time of review
 
 // END PIC TEXT LEFT
