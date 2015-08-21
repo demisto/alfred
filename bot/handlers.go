@@ -12,6 +12,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
@@ -234,13 +235,19 @@ func (w *Worker) handleIP(ip string, reply *domain.WorkReply) {
 		<-c
 	}
 	var vtPositives uint16
+	now := time.Now()
 	for i := range reply.IP.VT.IPReport.DetectedUrls {
-		if reply.IP.VT.IPReport.DetectedUrls[i].Positives > vtPositives {
+		t, err := time.Parse("2006-01-02 15:04:05", reply.IP.VT.IPReport.DetectedUrls[i].ScanDate)
+		if err != nil {
+			logrus.Debugf("Error parsing scan date - %v", err)
+			continue
+		}
+		if reply.IP.VT.IPReport.DetectedUrls[i].Positives > vtPositives && t.Add(365*24*time.Hour).After(now) {
 			vtPositives = reply.IP.VT.IPReport.DetectedUrls[i].Positives
 		}
 	}
 	reply.IP.Result = domain.ResultUnknown
-	if reply.IP.XFE.IPReputation.Score > xfeScoreToConvict || vtPositives > numOfPositivesToConvict {
+	if reply.IP.XFE.IPReputation.Score > xfeScoreToConvict || vtPositives > numOfPositivesToConvict && reply.IP.XFE.NotFound {
 		// This is known bad scenario
 		reply.IP.Result = domain.ResultDirty
 	} else if !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
