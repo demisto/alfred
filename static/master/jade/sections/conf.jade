@@ -3,11 +3,29 @@ section#conf.config-page
   .full-screen-conf
     // START STICKY NAVBAR
     .navbar.navbar-default.navbar-fixed-top.navbar-fixed
-      .container
-        .navbar-header
-          a.navbar-brand(href='https://www.demisto.com')
-            img(src='img/logo.png', alt='')
-        button.pull-right.btn.btn-link(onclick='logout()', name='logout', type='button') logout
+      .navbar-header
+        a.navbar-brand(href='https://www.demisto.com')
+          img(src='img/logo.png', alt='')
+      ul.nav.navbar-nav.navbar-right.main-navbar
+        li
+          a(href='/#') Home
+        li
+          a(href='/faq') FAQ
+        li.dropdown.dropdown-list
+          a(href="#", data-toggle="dropdown", aria-expanded="true")
+            span.navbar-name#realname
+          ul.dropdown-menu.dropdown-menu-right
+            li
+              #userrealname
+              #useremail
+              #teamname
+            li.divider
+            li
+              button.btn.btn-link(onclick='logout()', name='logout', type='button') LOGOUT
+
+
+
+
     // END STICKY NAVBAR
 
     .container
@@ -47,10 +65,10 @@ section#conf.config-page
                       .panel-body
                         .form-group.config-entry
                           label(for='channels') Select "Slack channels" that DBot will monitor
-                          select.form-control.chosen-select#channels(data-placeholder='Please chose channels to monitor', multiple)
+                          select.form-control.chosen-select#channels(data-placeholder='Please choose channels to monitor', multiple)
                         .form-group.config-entry
                           label(for='groups') Select "Private groups" that DBot will monitor
-                          select.form-control.chosen-select#groups(data-placeholder='Please chose groups to monitor', multiple)
+                          select.form-control.chosen-select#groups(data-placeholder='Please choose groups to monitor', multiple)
                         .checkbox.config-entry
                           label
                             input#im(type='checkbox')

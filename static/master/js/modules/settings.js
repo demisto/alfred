@@ -30,7 +30,13 @@
         mergedArr.push(k);
       }
 
-      $('#channellist').html(mergedArr.sort().join(", "));
+      if (mergedArr.length > 0) {
+        $('#channellist').html(mergedArr.sort().join(", "));
+      } else {
+        $('#channellist').html("<p class='warning-text'>DBOT is not monitoring any conversations. Please <b>select channels</b> to monitor below\
+         or select <b>\'Monitor ALL conversations\'</b> above.</p>");
+      }
+
 
     }
 
@@ -263,6 +269,11 @@
     if ($('#channels').length) {
       // get the user information
       $.getJSON('/user', function(data) {
+
+        $('#realname').html(data.real_name);
+        $('#useremail').html(data.email);
+        $('#teamname').html('Team: ' + data.team_name);
+
         FreshWidget.init("", {"queryString": "&widgetType=popup&searchArea=no&helpdesk_ticket[subject]=Configuration:&helpdesk_ticket[requester]="+data.email, "utf8": "✓",
           "widgetType": "popup", "buttonType": "text", "buttonText": "Feedback", "buttonColor": "white", "buttonBg": "#006063",
           "alignment": "2", "offset": "500px", "formHeight": "500px", "url": "https://demisto.freshdesk.com"} );
