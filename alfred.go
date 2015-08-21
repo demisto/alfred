@@ -48,7 +48,6 @@ func run(signalCh chan os.Signal) {
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	defer r.Close()
 	closers = append(closers, r)
 
 	// Create the queue for the various message exchanges
@@ -56,7 +55,6 @@ func run(signalCh chan os.Signal) {
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	defer q.Close()
 	closers = append(closers, q)
 
 	serviceChannel := make(chan bool)
@@ -107,7 +105,7 @@ func run(signalCh chan os.Signal) {
 	case <-signalCh:
 		logrus.Infoln("Signal received, initializing clean shutdown...")
 	case <-serviceChannel:
-		logrus.Infoln("A service went downm shutting down...")
+		logrus.Infoln("A service went down, shutting down...")
 	}
 	closeChannel := make(chan bool)
 	go func() {

@@ -27,6 +27,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
@@ -40,6 +41,7 @@ var (
 type clamEngine struct {
 	engine *clamav.Engine
 	l      net.Listener
+	mu     sync.Mutex
 }
 
 func newClamEngine() (*clamEngine, error) {
@@ -63,6 +65,8 @@ func newClamEngine() (*clamEngine, error) {
 }
 
 func (ce *clamEngine) loadSigs() error {
+	ce.mu.Lock()
+	defer ce.mu.Unlock()
 	sigs, err := ce.engine.Load(*clamdb, clamav.DbStdopt)
 	if err != nil {
 		logrus.Errorf("Cannot initialize ClamAV engine: %v", err)
@@ -77,7 +81,7 @@ func (ce *clamEngine) listenUpdate() {
 	for {
 		c, err := ce.l.Accept()
 		if err != nil {
-			logrus.Debugln("Shutting down ClamAV engine update")
+			logrus.Debugf("Shutting down ClamAV engine update - %v", err)
 			return
 		}
 		b := &bytes.Buffer{}
@@ -94,6 +98,10 @@ func (ce *clamEngine) listenUpdate() {
 		if err != nil {
 			logrus.Infof("Error updating freshclam - %v\n", err)
 		}
+		if err = ce.loadSigs(); err != nil {
+			logrus.Errorf("Error reloading, stopping loop: %v", err)
+			break
+		}
 	}
 }
 
@@ -105,6 +113,8 @@ func (ce *clamEngine) close() {
 
 // scan the given bytes (file) using clamav and return the virus name
 func (ce *clamEngine) scan(filename string, b []byte) (string, error) {
+	ce.mu.Lock()
+	defer ce.mu.Unlock()
 	fmap := clamav.OpenMemory(b)
 	defer clamav.CloseMemory(fmap)
 
