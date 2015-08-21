@@ -179,20 +179,25 @@ func (b *Bot) loadSubscriptions() error {
 	return nil
 }
 
+func (b *Bot) startWSForUser(team string, teamSub *subscriptions, userSub *subscription) error {
+	logrus.Infof("Starting WS for team %s, user - %s (%s)\n", team, userSub.user.ID, userSub.user.Name)
+	info, err := userSub.s.RTMStart("dbot.demisto.com", b.in, &domain.Context{Team: team, User: userSub.user.ID})
+	if err != nil {
+		logrus.Warnf("Unable to start WS for user %s (%s) - %v\n", userSub.user.ID, userSub.user.Name, err)
+		return err
+	}
+	teamSub.info = info
+	userSub.started = true
+	return nil
+}
+
 func (b *Bot) startWS() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	for k, v := range b.subscriptions {
 		for i := range v.subscriptions {
 			if !v.subscriptions[i].started && v.subscriptions[i].interest.IsActive() {
-				logrus.Infof("Starting WS for team %s, user - %s (%s)\n", k, v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
-				info, err := v.subscriptions[i].s.RTMStart("dbot.demisto.com", b.in, &domain.Context{Team: k, User: v.subscriptions[i].user.ID})
-				if err != nil {
-					logrus.Warnf("Unable to start WS for user %s (%s) - %v\n", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name, err)
-					continue
-				}
-				v.info = info
-				v.subscriptions[i].started = true
+				b.startWSForUser(k, v, &v.subscriptions[i])
 			}
 		}
 	}
@@ -323,11 +328,31 @@ func (b *Bot) Start() error {
 			// TODO - error handling - something wrong with channel closing in case of error
 			if msg == nil || msg.Type == "error" {
 				if msg == nil {
-					logrus.Warnf("Message channel closed")
+					logrus.Fatal("Message channel from Slack closed - should never happen")
 				} else {
-					logrus.Warnf("Got error message from channel %+v\n", msg)
+					logrus.Infof("Got error message from channel %+v\n", msg)
+					// Check if we need to restart the channel
+					ctx, err := GetContext(msg.Context)
+					if err != nil {
+						logrus.Warnf("Unable to get context from message, not restarting - %+v", msg)
+					} else {
+						b.mu.Lock()
+						teamSub := b.subscriptions[ctx.Team]
+						if teamSub != nil {
+							userSub := teamSub.SubForUser(ctx.User)
+							if userSub != nil {
+								if userSub.started && userSub.interest.IsActive() {
+									b.startWSForUser(ctx.Team, teamSub, userSub)
+								}
+							} else {
+								logrus.Warn("User subscription not found, not restarting")
+							}
+						} else {
+							logrus.Warn("Team subscription not found, not restarting")
+						}
+						b.mu.Unlock()
+					}
 				}
-				// TODO - should we restart the WS for this user?
 				continue
 			}
 			b.handleMessage(msg)
@@ -369,18 +394,11 @@ func (b *Bot) subscriptionChanged(user *domain.User, configuration *domain.Confi
 		sub.interest = configuration
 		if !configuration.IsActive() {
 			if sub.started {
-				sub.s.RTMStop()
 				sub.started = false
+				sub.s.RTMStop()
 			}
 		} else if !sub.started {
-			logrus.Infof("Starting WS for team %s, user - %s (%s)\n", user.Team, user.ID, user.Name)
-			info, err := sub.s.RTMStart("dbot.demisto.com", b.in, &domain.Context{Team: user.Team, User: user.ID})
-			if err != nil {
-				logrus.Warnf("Unable to start WS for user %s (%s) - %v\n", user.ID, user.Name, err)
-				return
-			}
-			subs.info = info
-			sub.started = true
+			b.startWSForUser(user.Team, subs, sub)
 		}
 	}
 }
