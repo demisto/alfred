@@ -82,10 +82,12 @@ func (ce *clamEngine) listenUpdate() {
 		c, err := ce.l.Accept()
 		if err != nil {
 			logrus.Debugf("Shutting down ClamAV engine update - %v", err)
-			return
+			break
 		}
+		logrus.Debug("Updating ClamAV engine signatures")
 		b := &bytes.Buffer{}
 		_, err = io.Copy(b, c)
+		logrus.Debug("Reading input...")
 		if err != nil {
 			logrus.Errorf("Error updating from freshclam - %v\n", err)
 			continue
@@ -94,10 +96,14 @@ func (ce *clamEngine) listenUpdate() {
 		if reload != "RELOAD" {
 			logrus.Infof("Weird - got %s from freshclam\n", reload)
 		}
+		logrus.Debug("Writing RELOADING...")
 		_, err = c.Write([]byte("RELOADING"))
 		if err != nil {
 			logrus.Infof("Error updating freshclam - %v\n", err)
 		}
+		logrus.Debug("Closing...")
+		c.Close()
+		logrus.Debug("Reloading signatures...")
 		if err = ce.loadSigs(); err != nil {
 			logrus.Errorf("Error reloading, stopping loop: %v", err)
 			break
