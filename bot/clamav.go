@@ -54,7 +54,7 @@ func newClamEngine() (*clamEngine, error) {
 		return nil, err
 	}
 	os.Chmod(conf.Options.ClamCtl, 0666)
-	ce := &clamEngine{engine: clamav.New()}
+	ce := &clamEngine{}
 	err = ce.loadSigs()
 	if err != nil {
 		return nil, err
@@ -67,6 +67,10 @@ func newClamEngine() (*clamEngine, error) {
 func (ce *clamEngine) loadSigs() error {
 	ce.mu.Lock()
 	defer ce.mu.Unlock()
+	if ce.engine != nil {
+		ce.engine.Free()
+	}
+	ce.engine = clamav.New()
 	sigs, err := ce.engine.Load(*clamdb, clamav.DbStdopt)
 	if err != nil {
 		logrus.Errorf("Cannot initialize ClamAV engine: %v", err)
@@ -93,7 +97,7 @@ func (ce *clamEngine) listenUpdate() {
 			continue
 		}
 		reload := b.String()
-		if reload != "RELOAD\n" {
+		if reload != "RELOAD" {
 			logrus.Infof("Weird - got %s from freshclam\n", reload)
 		}
 		logrus.Debug("Writing RELOADING...")
