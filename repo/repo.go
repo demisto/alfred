@@ -22,6 +22,8 @@ type Repo interface {
 	SetTeam(team *domain.Team) error
 	SetTeamAndUser(team *domain.Team, user *domain.User) error
 	TeamMembers(team string) ([]domain.User, error)
+	MessageSentOnChannel(team, channel string) error
+	WasMessageSentOnChannel(team, channel string) (bool, error)
 	OAuthState(state string) (*domain.OAuthState, error)
 	SetOAuthState(state *domain.OAuthState) error
 	DelOAuthState(state string) error

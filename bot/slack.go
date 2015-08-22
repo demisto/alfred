@@ -31,6 +31,7 @@ const (
 	md5CommentBad      = "Warning: MD5 hash (%s) is malicious: %s."
 	md5CommentWarning  = "Unable to find details regarding this MD5 hash (%s): %s."
 	mainMessage        = "Security check by DBot - Demisto Bot. Click <%s|here> for configuration and details."
+	firstMessage       = "<@%s|%s> has added <%s|DBot> by Demisto to monitor this channel."
 )
 
 func joinMap(m map[string]bool) string {
@@ -228,6 +229,38 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 	}
 }
 
+func (b *Bot) maybeSendFirstMessage(u *domain.User, s *slack.Slack, data *domain.Context) error {
+	if data.Channel != "" && !strings.HasPrefix(data.Channel, "D") {
+		if b.firstMessages[data.Channel+"@"+data.Team] {
+			return nil
+		}
+		sent, err := b.r.WasMessageSentOnChannel(data.Team, data.Channel)
+		if err != nil {
+			logrus.Infof("Error reading first message info - %v", err)
+			return err
+		}
+		if !sent {
+			// If there is an error here, it might happen because someone did this in parallel
+			err = b.r.MessageSentOnChannel(data.Team, data.Channel)
+			if err != nil {
+				return nil
+			}
+			b.firstMessages[data.Channel+"@"+data.Team] = true
+			postMessage := &slack.PostMessageRequest{
+				Channel:  data.Channel,
+				Text:     fmt.Sprintf(firstMessage, u.ExternalID, u.Name, conf.Options.ExternalAddress),
+				Username: botName,
+			}
+			_, err = s.PostMessage(postMessage, false)
+			if err != nil {
+				logrus.Infof("Unable to send first message to Slack - %v\n", err)
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // post uses the correct client to post to the channel
 // See if the original message poster is subscribed and if so use him.
 // If not, use the first user we have that is subscribed to the channel.
@@ -243,6 +276,10 @@ func (b *Bot) post(message *slack.PostMessageRequest, reply *domain.WorkReply, d
 		}
 	}
 	s, err := slack.New(slack.SetToken(u.Token))
+	if err != nil {
+		return err
+	}
+	err = b.maybeSendFirstMessage(u, s, data)
 	if err != nil {
 		return err
 	}

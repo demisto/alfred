@@ -91,6 +91,13 @@ CREATE TABLE IF NOT EXISTS team_statistics (
 	ips_unknown BIGINT NOT NULL,
 	CONSTRAINT team_statistics_pk PRIMARY KEY (team),
 	CONSTRAINT team_statistics_team_fk FOREIGN KEY (team) REFERENCES teams (id)
+);
+CREATE TABLE IF NOT EXISTS first_messages (
+	team VARCHAR(64) NOT NULL,
+	channel VARCHAR(64) NOT NULL,
+	ts TIMESTAMP NOT NULL,
+	CONSTRAINT first_messages_pk PRIMARY KEY (team, channel),
+	CONSTRAINT first_messages_team_fk FOREIGN KEY (team) REFERENCES teams (id)
 )`
 
 type repoMySQL struct {
@@ -568,4 +575,21 @@ sum(urls_clean) as urls_clean, sum(urls_dirty) as urls_dirty, sum(urls_unknown) 
 sum(hashes_clean) as hashes_clean, sum(hashes_dirty) as hashes_dirty, sum(hashes_unknown) as hashes_unknown,
 sum(ips_clean) as ips_clean, sum(ips_dirty) as ips_dirty, sum(ips_unknown) as ips_unknown FROM team_statistics`)
 	return stats, err
+}
+
+func (r *repoMySQL) MessageSentOnChannel(team, channel string) error {
+	_, err := r.db.Exec(`INSERT INTO first_messages (team, channel, ts) VALUES (?, ?, now())`, team, channel)
+	return err
+}
+
+func (r *repoMySQL) WasMessageSentOnChannel(team, channel string) (bool, error) {
+	var data int
+	err := r.db.Get(&data, "SELECT 1 FROM first_messages WHERE team = ? AND channel = ?", team, channel)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, err
 }

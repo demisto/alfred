@@ -99,6 +99,7 @@ type Bot struct {
 	replyQueue    string
 	smu           sync.Mutex // Guards the statistics
 	stats         map[string]*domain.Statistics
+	firstMessages map[string]bool
 }
 
 // New returns a new bot
@@ -115,6 +116,7 @@ func New(r repo.Repo, q queue.Queue) (*Bot, error) {
 		q:             q,
 		replyQueue:    host,
 		stats:         make(map[string]*domain.Statistics),
+		firstMessages: make(map[string]bool),
 	}, nil
 }
 

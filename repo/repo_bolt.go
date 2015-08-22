@@ -46,6 +46,10 @@ func New() (Repo, error) {
 		if err != nil {
 			return err
 		}
+		_, err = tx.CreateBucketIfNotExists([]byte("firstmessage"))
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {
@@ -376,4 +380,20 @@ func (r *repo) Statistics(team string) (*domain.Statistics, error) {
 
 func (r *repo) GlobalStatistics() (*domain.Statistics, error) {
 	return &domain.Statistics{Team: "Global"}, nil
+}
+
+func (r *repo) MessageSentOnChannel(team, channel string) error {
+	return r.set("firstmessage", channel+"@"+"team", "Y")
+}
+
+func (r *repo) WasMessageSentOnChannel(team, channel string) (bool, error) {
+	var x string
+	err := r.get("firstmessage", channel+"@"+team, &x)
+	if err != nil {
+		if err == ErrNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
