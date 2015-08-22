@@ -33,7 +33,13 @@ section#conf.config-page
         .col-lg-10.col-lg-offset-1
           // INTRO MESSAGE
           .config-section
-            h1.text-center DBot Configuration
+            table
+              tr
+                td
+                  h1 Configure DBot
+                td
+                  h1.pull-right
+                    a.btn-link(href='/next') What's Next?
             .ball-grid-pulse.center-block
               div
               div
@@ -47,15 +53,10 @@ section#conf.config-page
             #configdiv(style="display: none")
               h3 What communication do you want monitor?
               form(class="configform")
-                table
-                  tr
-                    td
-                      .checkbox.config-entry
-                        label
-                          input#all(type='checkbox')
-                          | Monitor ALL conversations
-                    td
-                      a.next-link.btn-link.config-entry(href='/next') What's Next?
+                .checkbox.config-entry
+                  label
+                    input#all(type='checkbox')
+                    | Monitor ALL conversations
                 #channelsmonitored
                   h3 Channels Monitored
                   p#channellist
