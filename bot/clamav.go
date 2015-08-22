@@ -86,14 +86,14 @@ func (ce *clamEngine) listenUpdate() {
 		}
 		logrus.Debug("Updating ClamAV engine signatures")
 		b := &bytes.Buffer{}
-		_, err = io.Copy(b, c)
 		logrus.Debug("Reading input...")
+		_, err = io.CopyN(b, c, 7)
 		if err != nil {
 			logrus.Errorf("Error updating from freshclam - %v\n", err)
 			continue
 		}
 		reload := b.String()
-		if reload != "RELOAD" {
+		if reload != "RELOAD\n" {
 			logrus.Infof("Weird - got %s from freshclam\n", reload)
 		}
 		logrus.Debug("Writing RELOADING...")
