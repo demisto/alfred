@@ -37,5 +37,6 @@
   "bower_components/react/react-with-addons.js",
   "bower_components/react/JSXTransformer.js",
   "bower_components/loaders.css/loaders.css.js",
-  "bower_components/loaders.css/loaders.min.css"
+  "bower_components/loaders.css/loaders.min.css",
+  "bower_components/twitter-bootstrap-wizard/jquery.bootstrap.wizard.min.js"
 ]

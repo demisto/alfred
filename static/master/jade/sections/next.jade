@@ -1,0 +1,52 @@
+// START CONFIGURATION
+section#next.config-page
+  .full-screen-conf
+    // START STICKY NAVBAR
+    .navbar.navbar-default.navbar-fixed-top.navbar-fixed
+      .navbar-header
+        a.navbar-brand(href='https://www.demisto.com')
+          img(src='img/logo.png', alt='')
+      ul.nav.navbar-nav.navbar-right.main-navbar
+        li
+          a(href='/#') Home
+        li
+          a(href='/faq') FAQ
+        li.dropdown.dropdown-list
+          a(href="#", data-toggle="dropdown", aria-expanded="true")
+            span.navbar-name#realname
+          ul.dropdown-menu.dropdown-menu-right
+            li
+              #userrealname
+              #useremail
+              #teamname
+            li.divider
+            li
+              button.btn.btn-link(onclick='logout()', name='logout', type='button') LOGOUT
+
+
+
+
+    // END STICKY NAVBAR
+
+    .container
+      .row
+        .col-lg-10.col-lg-offset-1
+          // INTRO MESSAGE
+          .config-section
+            center
+              h2
+                p You are all set! DBot is now active and protecting you.
+              img.next-section-img.img-responsive(src='img/slackscreenshot.png')
+              #channellist
+              .ball-grid-pulse.center-block
+                div
+                div
+                div
+                div
+                div
+                div
+                div
+                div
+                div
+              h2
+                p#closelink You can #[a(href='') close] the browser and get back to work.

@@ -708,7 +708,7 @@
             else {
               return(
                 <div>
-                DBot encountered an error while trying to serve your request. The issues has been reported and will be analyze.
+                DBot encountered an error while trying to serve your request. The issues has been reported and will be analyzed.
                 Please try to click the link again from Slack interface.
                 <hr></hr>
                 {this.state.errmsg}

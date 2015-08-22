@@ -204,6 +204,10 @@
     }
   });
 
+  $('#closelink > a').click(function() {
+    window.close();
+  });
+
   window.logout = function() {
     $.getJSON('/logout', function() {
       var loc = window.location;

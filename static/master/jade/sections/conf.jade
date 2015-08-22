@@ -47,10 +47,15 @@ section#conf.config-page
             #configdiv(style="display: none")
               h3 What communication do you want monitor?
               form(class="configform")
-                .checkbox.config-entry
-                  label
-                    input#all(type='checkbox')
-                    | Monitor ALL conversations
+                table
+                  tr
+                    td
+                      .checkbox.config-entry
+                        label
+                          input#all(type='checkbox')
+                          | Monitor ALL conversations
+                    td
+                      a.next-link.btn-link.config-entry(href='/next') What's Next?
                 #channelsmonitored
                   h3 Channels Monitored
                   p#channellist

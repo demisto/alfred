@@ -41,8 +41,8 @@ header#header.header
                 span
                   strong#slack-message Add to Slack
               br
-              | By clicking this button you are agreeing to our
-              a.btn(data-toggle="modal", data-target="#privacyModal") Privacy Policy
+              br
+              p By clicking this button you are agreeing to our #[a.btn-link(data-toggle="modal", data-target="#privacyModal") Privacy Policy ] and #[a.btn-link(href='/terms') Legal Terms]
 
 
 div.modal.fade(id="privacyModal", aria-labelledby="privacyModalLabel")
@@ -53,6 +53,8 @@ div.modal.fade(id="privacyModal", aria-labelledby="privacyModalLabel")
             span(aria-hidden="true") &times;
           h4(id="privacyModalLabel", class="modal-title") Privacy Policy
       .modal-body
-        p We protect your basic user information like we would protect our own and track nothing else about you or your teams and that is our privacy policy in nutshell. If you would like to read the legal language, you can enjoy it here<link>.
+        p We protect your basic user information like we would protect our own and track nothing else about you or your teams and that
+          | is our privacy policy in nutshell. If you would like to read the legal language, you can enjoy it #[a.btn-link.warning-text(href='/privacy') here].
+
 
 // END HEADER
