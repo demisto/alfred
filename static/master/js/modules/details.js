@@ -56,7 +56,7 @@
     var URLRiskScore = React.createClass({
       render: function() {
         var xfedata = this.props.data;
-        if (xfedata.not_found) {
+        if (xfedata.not_found ) {
           return (<div></div>);
         }
         else {
@@ -474,20 +474,20 @@
     var DetectedEngines = React.createClass({
       render: function() {
         var urldata = this.props.urldata;
-        var detected_engines = " ";
+        var detected_engines = [];
         // display the engines that convicted this URL
         if (urldata.vt.url_report.positives > 0) {
           var numEngines = urldata.vt.url_report.scans.length;
           var scanMap = urldata.vt.url_report.scans;
           for (var k in scanMap) {
             if (scanMap[k].detected) {
-              detected_engines = detected_engines + k + " ";
+              detected_engines.push(k);
             }
           }
           return(
             <div>
               <h3> Detected Engines : </h3>
-              <h4> {detected_engines} </h4>
+              <h4> {detected_engines.join(', ')} </h4>
 
             </div>
           );
