@@ -39,6 +39,33 @@
       }
     });
 
+    var IPRiskScore = React.createClass({
+      render: function() {
+        var xfedata = this.props.data;
+        if (xfedata.not_found) {
+          return (<div></div>);
+        }
+        else {
+          return (
+            <h3> Risk Score: {xfedata.ip_reputation.score}</h3>
+          );
+        }
+      }
+    });
+
+    var URLRiskScore = React.createClass({
+      render: function() {
+        var xfedata = this.props.data;
+        if (xfedata.not_found) {
+          return (<div></div>);
+        }
+        else {
+          return (
+            <h3> Risk Score: {xfedata.url_details.score} </h3>
+          );
+        }
+      }
+    });
 
 
     // Details for the ip address query
@@ -71,7 +98,8 @@
             <h2>{ipdata.details}</h2>
             </div>
             <h3> {this.resultmessage()} </h3>
-            <h3> Risk Score: {ipdata.xfe.ip_reputation.score} </h3>
+
+            <IPRiskScore data={ipdata.xfe} />
             <h3> Country: {ipdata.xfe.ip_reputation.geo? ipdata.xfe.ip_reputation.geo['country']:'Unknown'} </h3>
 
             <div className="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
@@ -300,7 +328,7 @@
           DBot URL Report for:
           <h2>{urldata.details}</h2>
           <h3> {this.resultmessage()} </h3>
-          <h3> Risk Score: {urldata.xfe.url_details.score} </h3>
+          <URLRiskScore data={urldata.xfe} />
           <DetectedEngines urldata={urldata} />
           <ARecord urldata={urldata} />
           <AAAARecord urldata={urldata} />
