@@ -41,8 +41,7 @@
     "toastr": "~2.1.1",
     "uri.js": "~1.16.0",
     "react": "~0.13.3",
-    "loaders.css": "*",
-    "twitter-bootstrap-wizard": "~1.0.0"
+    "loaders.css": "*"
   },
   "resolutions": {
     "jquery": ">= 1.9.1"

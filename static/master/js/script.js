@@ -24,6 +24,7 @@
     $body.addClass('site-loaded');
   });
 
+
   // Show sticky topbar on scroll
   // -----------------------------------
 
@@ -38,12 +39,14 @@
         if (!$(stickySelector).hasClass('navbar-sticky-color')) {
           // change the transparency
           $(stickySelector).stop().css('top', '-80px');
+          $(stickySelector).removeClass('navbar-sticky-color-trans');
           $(stickySelector).addClass('navbar-sticky-color');
           $(stickySelector).stop().animate({'top': '0'});
         }
       }
       else {
         $(stickySelector).removeClass('navbar-sticky-color');
+        $(stickySelector).addClass('navbar-sticky-color-trans')
         $(stickySelector).stop().css('top', '0px');
       }
     };
@@ -57,11 +60,13 @@
           // change the transparency
           $(stickySelector).stop().css('top', '-120px');
           $(stickySelector).addClass('navbar-sticky-color');
+          $(stickySelector).removeClass('navbar-sticky-color-trans');
           $(stickySelector).stop().animate({'top': '0'});
         }
       }
       else {
         $(stickySelector).removeClass('navbar-sticky-color');
+        $(stickySelector).addClass('navbar-sticky-color-trans')
         $(stickySelector).stop().css('top', '0px');
       }
     };
@@ -89,7 +94,7 @@
 
   // Video Background
   // -----------------------------------
-
+  //
   // $(function() {
   //
   //   if (matchMedia('(min-width: 640px)').matches) {
@@ -98,9 +103,9 @@
   //       'align':    'centerXY',
   //       'width':    1280,
   //       'height':   720,
-  //       'path':     'video/',
+  //       'path':     'img/videobg.mp4',
   //       'filename': 'video',
-  //       'types':    ['mp4', 'webm']
+  //       'types':    ['mp4']
   //     });
   //   }
   //
