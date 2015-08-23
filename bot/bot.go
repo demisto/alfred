@@ -309,7 +309,11 @@ func (b *Bot) storeStatistics() {
 
 // Start the monitoring process - will start a separate Go routine
 func (b *Bot) Start() error {
-	err := b.loadSubscriptions()
+	err := b.r.BotHeartbeat()
+	if err != nil {
+		return err
+	}
+	err = b.loadSubscriptions()
 	if err != nil {
 		return err
 	}
