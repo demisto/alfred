@@ -149,10 +149,10 @@ func (r *repo) TeamByExternalID(id string) (*domain.Team, error) {
 			}
 			if t.ExternalID == id {
 				team = &t
-				break
+				return nil
 			}
 		}
-		return nil
+		return ErrNotFound
 	})
 	return team, err
 }

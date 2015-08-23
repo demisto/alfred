@@ -275,7 +275,7 @@ func (b *Bot) post(message *slack.PostMessageRequest, reply *domain.WorkReply, d
 			return err
 		}
 	}
-	message.IconURL = conf.Options.ExternalAddress + "/img/favicon/D icon 5757.png"
+	message.IconURL = conf.Options.ExternalAddress + "/img/favicon/D%20icon%205757.png"
 	s, err := slack.New(slack.SetToken(u.Token))
 	if err != nil {
 		return err

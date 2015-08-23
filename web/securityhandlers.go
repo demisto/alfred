@@ -107,6 +107,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	log.Debugln("Got all details about myself from Slack")
 	ourTeam, err := ac.r.TeamByExternalID(team.Team.ID)
 	if err != nil {
+		log.Debugf("Got a new team registered - %s", team.Team.Name)
 		teamID, err := random.New()
 		if err != nil {
 			panic(err)
@@ -121,12 +122,15 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 			Created:     time.Now(),
 		}
 	} else {
+		log.Debugf("Got an existing team - %s", team.Team.Name)
 		ourTeam.Name, ourTeam.EmailDomain, ourTeam.Domain, ourTeam.Plan =
 			team.Team.Name, team.Team.EmailDomain, team.Team.Domain, team.Team.Plan
 	}
 	newUser := false
+	log.Debugln("Finding the user...")
 	ourUser, err := ac.r.UserByExternalID(user.User.ID)
 	if err != nil {
+		log.Debugf("Got a new user registered - %s", user.User.Name)
 		userID, err := random.New()
 		if err != nil {
 			panic(err)
@@ -154,6 +158,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 		ourUser.Name, ourUser.RealName, ourUser.Email, ourUser.Token =
 			user.User.Name, user.User.RealName, user.User.Profile.Email, token.AccessToken
 	}
+	log.Debugln("Saving to the DB...")
 	err = ac.r.SetTeamAndUser(ourTeam, ourUser)
 	if err != nil {
 		panic(err)
