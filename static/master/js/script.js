@@ -118,22 +118,20 @@
   // Video Background
   // -----------------------------------
   //
-  // $(function() {
-  //
-  //   if (matchMedia('(min-width: 640px)').matches) {
-  //
-  //     var videobackground = new $.backgroundVideo( $body, {
-  //       'align':    'centerXY',
-  //       'width':    1280,
-  //       'height':   720,
-  //       'path':     'img/videobg.mp4',
-  //       'filename': 'video',
-  //       'types':    ['mp4']
-  //     });
-  //   }
-  //
-  // });
-
+  $(function() {
+    if (matchMedia('(min-width: 1024px)').matches) {
+      if ($('#video').length) {
+        var videobackground = new $.backgroundVideo( $('#video'), {
+          'align':    'centerXY',
+          'width':    1280,
+          'height':   720,
+          'path':     'img/',
+          'filename': 'videobg',
+          'types':    ['mp4']
+        });
+      }
+    }
+  });
 
   // Smooth Scroll
   // -----------------------------------
