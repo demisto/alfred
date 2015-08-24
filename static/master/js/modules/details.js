@@ -93,7 +93,7 @@
           return (<div></div>);
         }
         else return (
-          <div className="main-section-divider">
+          <div>
             <div>DBot IP Report for:
             <h2>{ipdata.details}</h2>
             </div>
@@ -107,6 +107,7 @@
               <ResolutionSection data={ipdata.VT.ip_report.Resolutions}/>
               <DetectedURLSection data={ipdata.VT.ip_report.detected_urls}/>
             </div>
+            <hr></hr>
           </div>
         );
       }
@@ -324,7 +325,7 @@
         if (!isurl) {
           return (<div></div>);
         } else return (
-          <div className="main-section-divider">
+          <div>
           DBot URL Report for:
           <h2>{urldata.details}</h2>
           <h3> {this.resultmessage()} </h3>
@@ -335,7 +336,7 @@
           <TXTRecord urldata={urldata} />
           <MXRecord urldata={urldata} />
           <URLCategory urldata={urldata} />
-
+          <hr></hr>
           </div>
         );
       }
@@ -547,11 +548,12 @@
         if (!isfile && !ismd5) {
           return (<div></div>);
         } else return (
-          <div className="main-section-divider">
+          <div>
           <FileNameHeader data={this.props.data} />
           <h3> {this.resultmessage()} </h3>
           <FileResult filedata={this.props.data.file} />
           <MD5Result md5data={this.props.data.md5} />
+          <hr></hr>
           </div>
         );
       }
@@ -725,11 +727,9 @@
                 <div>
                   <center><h1>DBot Analysis Report</h1></center>
                   <IpDiv data={this.state.data} />
-                  <hr></hr>
                   <UrlDiv data={this.state.data} />
-                  <hr></hr>
                   <FileDiv data={this.state.data} />
-                  <hr></hr>
+
                 </div>
               );
             }
