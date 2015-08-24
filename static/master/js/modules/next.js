@@ -7,7 +7,7 @@
     var groupsMatched = [];
     var allchecked = false;
     var im = false;
-    $('#closelink').hide();
+
 
     var updateChannelList = function() {
       // update the channels Monitored
@@ -46,7 +46,6 @@
     // TODO - add fail handling
     $.getJSON('/info', function(data) {
       $('.ball-grid-pulse').hide();
-      $('#closelink').show();
 
       for (var i=0; data.channels && i<data.channels.length; i++) {
         if (data.channels[i].selected)

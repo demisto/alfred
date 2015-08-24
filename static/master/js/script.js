@@ -30,8 +30,6 @@
 
   var stickyNavScroll;
   var stickySelector = '#header .navbar-sticky';
-  var features_section_top = $("#features").offset().top;
-  var features_section_bottom = features_section_top + $("#features").outerHeight();
 
   // Setup functions based on screen
   if (matchMedia('(min-width: 992px), (max-width: 767px)').matches) {
@@ -39,6 +37,8 @@
       var top = (document.documentElement && document.documentElement.scrollTop) || document.body.scrollTop;
       var social_widget_top = $("#social").offset().top;
       var social_widget_bottom = social_widget_top + $("#social").outerHeight();
+      var features_section_top = $("#features").offset().top;
+      var features_section_bottom = features_section_top + $("#features").outerHeight();
 
       if (social_widget_bottom > features_section_top && social_widget_top < features_section_bottom) {
         $('#social').addClass('socialwidget-light');
@@ -96,9 +96,11 @@
   }
 
   // Finally attach to events
-  $doc.ready(stickyNavScroll);
-  $win.scroll(stickyNavScroll);
-
+  // attach only on home page
+  if ($('#slack-message').length) {
+    $doc.ready(stickyNavScroll);
+    $win.scroll(stickyNavScroll);
+}
 
   // Sticky Navigation
   // -----------------------------------

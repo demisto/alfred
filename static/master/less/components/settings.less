@@ -92,6 +92,10 @@
   color: #FFFFFF;
 }
 
+#details .table {
+  table-layout: fixed;
+  word-wrap: break-word;
+}
 .panel {
   background-color: @brand-primary;
 }
@@ -112,8 +116,16 @@
   color: #afc4cb;
 }
 
+.danger-text {
+  color: @brand-danger;
+}
+
 .warning-text {
-  color: @brand-warning-light;
+  color: @brand-warning;
+}
+
+.success-text {
+  color:  @brand-success;
 }
 
 .config-section table {
@@ -132,6 +144,18 @@
   padding-top: 150px;
   color: #000000;
 }
+
+.slack_logo {
+  display: inline;
+  margin-bottom: 15px;
+  max-height: 110px;
+}
+
+#integrations h1 {
+  display: inline;
+}
+
+
 /* ========================================================================
    Component: Details
  ========================================================================== */

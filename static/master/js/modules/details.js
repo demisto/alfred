@@ -28,6 +28,11 @@
       dataType: 'json',
       contentType: 'application/json; charset=utf-8',
       success: function(data) {
+
+        $('#realname').html(data.real_name);
+        $('#useremail').html(data.email);
+        $('#teamname').html('Team: ' + data.team_name);
+
         FreshWidget.init("", {"queryString": "&widgetType=popup&searchArea=no&helpdesk_ticket[subject]=Details:&helpdesk_ticket[requester]="+data.email, "utf8": "✓",
           "widgetType": "popup", "buttonType": "text", "buttonText": "Feedback", "buttonColor": "white", "buttonBg": "#006063",
           "alignment": "2", "offset": "500px", "formHeight": "500px", "url": "https://demisto.freshdesk.com"} );
@@ -67,26 +72,34 @@
       }
     });
 
-
-    // Details for the ip address query
-    var IpDiv = React.createClass({
-      resultmessage: function() {
+    var IPResultMessage = React.createClass({
+      render: function() {
+        var ipdata = this.props.data;
         var resultMessage;
-        var ipdata = this.props.data.ip;
+        var result;
+
         if (ipdata.Result == 0)
         {
           resultMessage = "IP address is found to be clean.";
+          return (<h3 className='success-text'>{resultMessage}</h3>)
         }
         else if (ipdata.Result == 1)
         {
           resultMessage = "IP address is found to be malicious.";
+          return (<h3 className='danger-text'>{resultMessage}</h3>)
         }
         else
         {
           resultMessage = "Could not determine the IP address reputation.";
+          return (<h3 className='warning-text'>{resultMessage}</h3>)
         }
         return resultMessage;
-      },
+
+      }
+    });
+
+    // Details for the ip address query
+    var IpDiv = React.createClass({
       render: function() {
         var ipdata = this.props.data.ip;
         if (!isip) {
@@ -94,11 +107,10 @@
         }
         else return (
           <div>
-            <div>DBot IP Report for:
-            <h2>{ipdata.details}</h2>
+            <div>
+            <h2>IP: {ipdata.details}</h2>
             </div>
-            <h3> {this.resultmessage()} </h3>
-
+            <IPResultMessage data={ipdata} />
             <IPRiskScore data={ipdata.xfe} />
             <h3> Country: {ipdata.xfe.ip_reputation.geo? ipdata.xfe.ip_reputation.geo['country']:'Unknown'} </h3>
 
@@ -150,12 +162,12 @@
                   <div>
                   <table className="table">
                   <thead>
-                  <th className="col-lg-8">URL</th>
-                  <th className="col-lg-1">Positives</th>
-                  <th className="col-lg-3">Scan Date</th>
+                    <th style={{width:'70%'}}>URL</th>
+                    <th>Positives</th>
+                    <th>Scan Date</th>
                   </thead>
                   <tbody>
-                  {rows}
+                    {rows}
                   </tbody>
                   </table>
                   </div>
@@ -300,35 +312,43 @@
       }
     });
 
-    // URL Details Section
-    var UrlDiv = React.createClass({
-      resultmessage: function() {
+
+    var URLResultMessage = React.createClass({
+      render: function() {
+        var urldata = this.props.data;
         var resultMessage;
-        var urldata = this.props.data.url;
+        var result;
+
         if (urldata.Result == 0)
         {
-          resultMessage = "URL is found to be clean.";
+          resultMessage = "URL address is found to be clean.";
+          return (<h3 className='success-text'>{resultMessage}</h3>)
         }
         else if (urldata.Result == 1)
         {
-          resultMessage = "URL is found to be malicious.";
+          resultMessage = "URL address is found to be malicious.";
+          return (<h3 className='danger-text'>{resultMessage}</h3>)
         }
         else
         {
           resultMessage = "Could not determine the URL reputation.";
+          return (<h3 className='warning-text'>{resultMessage}</h3>)
         }
         return resultMessage;
-      },
 
+      }
+    });
+
+    // URL Details Section
+    var UrlDiv = React.createClass({
       render: function() {
         var urldata = this.props.data.url;
         if (!isurl) {
           return (<div></div>);
         } else return (
           <div>
-          DBot URL Report for:
-          <h2>{urldata.details}</h2>
-          <h3> {this.resultmessage()} </h3>
+          <h2>URL: {urldata.details}</h2>
+          <URLResultMessage data={urldata} />
           <URLRiskScore data={urldata.xfe} />
           <DetectedEngines urldata={urldata} />
           <ARecord urldata={urldata} />
@@ -503,46 +523,32 @@
       }
     });
 
-
-    var FileDiv = React.createClass({
-      resultmessage: function() {
+    var FileResultMessage = React.createClass({
+      render: function() {
         var resultMessage;
         var filedata = null;
         var md5data = null;
-        if (isfile) {
-          filedata = this.props.data.file;
-          md5data = this.props.data.md5;
-          if (filedata.Result == 0)
-          {
-            resultMessage = "File is found to be clean.";
-          }
-          else if (filedata.Result == 1)
-          {
-            resultMessage = "File is found to be malicious.";
-          }
-          else
-          {
-            resultMessage = "Could not determine the File reputation.";
-          }
+        filedata = this.props.data.file;
+        md5data = this.props.data.md5;
+        if ((isfile && (filedata.Result == 0)) || (md5data.Result == 0))
+        {
+          resultMessage = "File is found to be clean.";
+          return (<h3 className='success-text'>{resultMessage}</h3>)
         }
-        else {
-          md5data = this.props.data.md5;
-          if (md5data.Result == 0)
-          {
-            resultMessage = "File is found to be clean.";
-          }
-          else if (md5data.Result == 1)
-          {
-            resultMessage = "File is found to be malicious.";
-          }
-          else
-          {
-            resultMessage = "Could not determine the File reputation.";
-          }
+        else if ((isfile && (filedata.Result == 1)) || (md5data.Result == 1))
+        {
+          resultMessage = "File is found to be malicious.";
+          return (<h3 className='danger-text'>{resultMessage}</h3>)
         }
-        return resultMessage;
-      },
+        else
+        {
+          resultMessage = "Could not determine the File reputation.";
+          return (<h3 className='warning-text'>{resultMessage}</h3>)
+        }
+      }
+    });
 
+    var FileDiv = React.createClass({
       render: function() {
         var data = this.props.data;
         if (!isfile && !ismd5) {
@@ -550,7 +556,7 @@
         } else return (
           <div>
           <FileNameHeader data={this.props.data} />
-          <h3> {this.resultmessage()} </h3>
+          <FileResultMessage data={this.props.data} />
           <FileResult filedata={this.props.data.file} />
           <MD5Result md5data={this.props.data.md5} />
           <hr></hr>
@@ -566,16 +572,14 @@
         {
           return (
             <div>
-              DBot File Report for:
-              <h2>{data.file.details.name}</h2>
+              <h2>File: {data.file.details.name}</h2>
             </div>
           );
         }
         else if (ismd5) {
           return (
             <div>
-              DBot File Report for:
-              <h2>{data.md5.details}</h2>
+              <h2>File: {data.md5.details}</h2>
             </div>
           );
         }
@@ -630,22 +634,27 @@
           rows.push(<ScanResultRow enginename={k} scandata={file_reports_map[k]} />);
         }
 
-        return (
-          <div>
-          <table className="table">
-          <thead>
-          <th>Engine Name</th>
-          <th>Version</th>
-          <th>Detected</th>
-          <th>Result</th>
-          <th>Update</th>
-          </thead>
-          <tbody>
-          {rows}
-          </tbody>
-          </table>
-          </div>
-          );
+        if (rows.length > 0) {
+
+          return (
+            <div>
+            <table className="table">
+            <thead>
+            <th>Engine Name</th>
+            <th>Version</th>
+            <th>Detected</th>
+            <th>Result</th>
+            <th>Update</th>
+            </thead>
+            <tbody>
+            {rows}
+            </tbody>
+            </table>
+            </div>
+            );
+          } else {
+            return (<div></div>);
+          }
 
       }
 
@@ -726,10 +735,9 @@
               return (
                 <div>
                   <center><h1>DBot Analysis Report</h1></center>
-                  <IpDiv data={this.state.data} />
                   <UrlDiv data={this.state.data} />
                   <FileDiv data={this.state.data} />
-
+                  <IpDiv data={this.state.data} />
                 </div>
               );
             }
