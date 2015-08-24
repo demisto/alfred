@@ -526,6 +526,9 @@ WHERE team = ? AND ts = ?`,
 }
 
 func (r *repoMySQL) UpdateStatistics(stats *domain.Statistics) error {
+	if stats == nil || !stats.HasSomething() {
+		return nil
+	}
 	// Can be probably done via UPSERT
 	// The code selects current timestamp. If there is no row for the team, we try to insert. If insert fails (because someone already inserted this team) then move to updates.
 	// The updates try to update the row while making sure that the timestamp is the same as we selected. If someone changed data, we will need to re-select timestmap to prevent lost updates.

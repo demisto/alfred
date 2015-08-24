@@ -106,6 +106,7 @@ func (w *Worker) Start() {
 			close(w.c)
 			return
 		}
+		logrus.Debugf("Working on message - %+v", msg)
 		w.c <- msg
 	}
 }

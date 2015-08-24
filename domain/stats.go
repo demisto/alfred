@@ -37,3 +37,20 @@ func (s *Statistics) Reset() {
 	s.IPsDirty = 0
 	s.IPsUnknown = 0
 }
+
+// HasSomething that is not 0 in the statistics
+func (s *Statistics) HasSomething() bool {
+	return s.Messages != 0 ||
+		s.FilesClean != 0 ||
+		s.FilesDirty != 0 ||
+		s.FilesUnknown != 0 ||
+		s.URLsClean != 0 ||
+		s.URLsDirty != 0 ||
+		s.URLsUnknown != 0 ||
+		s.HashesClean != 0 ||
+		s.HashesDirty != 0 ||
+		s.HashesUnknown != 0 ||
+		s.IPsClean != 0 ||
+		s.IPsDirty != 0 ||
+		s.IPsUnknown != 0
+}
