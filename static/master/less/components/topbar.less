@@ -49,7 +49,9 @@
 
 .navbar-sticky-color-trans {
   background: @brand-primary;
-  opacity: 0.7;
+  @media @desktop {
+    opacity: 0.7;
+  }
 }
 
 .navbar-fixed {
