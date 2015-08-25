@@ -25,6 +25,7 @@ type subscription struct {
 	interest *domain.Configuration
 	s        *slack.Slack // the slack client
 	started  bool         // did we start subscription for this guy
+	ts       time.Time    // When did we start the WS
 }
 
 type subscriptions struct {
@@ -190,6 +191,7 @@ func (b *Bot) startWSForUser(team string, teamSub *subscriptions, userSub *subsc
 	}
 	teamSub.info = info
 	userSub.started = true
+	userSub.ts = time.Now()
 	return nil
 }
 
@@ -275,11 +277,30 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 		}
 		// If we need to handle the message, pass it to the queue
 		if push {
-			logrus.Debug("Pushing to queue")
 			workReq := domain.WorkRequestFromMessage(msg)
-			ctx.OriginalUser, ctx.Channel, ctx.Type = msg.User, msg.Channel, msg.Type
-			workReq.ReplyQueue, workReq.Context = b.replyQueue, ctx
-			b.q.PushMessage(workReq)
+			t, err := slack.TimestampToTime(workReq.MessageID)
+			if err != nil {
+				logrus.Warnf("Unable to get message timestamp %s - %v", workReq.MessageID, err)
+				return
+			}
+			subs := b.subscriptions[ctx.Team]
+			if subs == nil {
+				logrus.Warnf("Unable to find team %s in subscriptions", ctx.Team)
+				return
+			}
+			sub := subs.SubForUser(ctx.User)
+			if subs == nil {
+				logrus.Warnf("Unable to find subscription for user %s", ctx.User)
+				return
+			}
+			if sub.started && sub.ts.Before(t) {
+				logrus.Debug("Pushing to queue")
+				ctx.OriginalUser, ctx.Channel, ctx.Type = msg.User, msg.Channel, msg.Type
+				workReq.ReplyQueue, workReq.Context = b.replyQueue, ctx
+				b.q.PushMessage(workReq)
+			} else {
+				logrus.Infof("Got old message from Slack - %s", workReq.MessageID)
+			}
 		} else {
 			b.smu.Lock()
 			defer b.smu.Unlock()
