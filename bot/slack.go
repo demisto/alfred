@@ -82,7 +82,8 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
 		color = "good"
 		comment = fileCommentGood
 	}
-	if data.Channel != "" {
+	// For now, don't handle clean results
+	if data.Channel != "" && reply.File.Result != domain.ResultClean {
 		fileMessage := fmt.Sprintf(comment, reply.File.Details.Name, fmt.Sprintf("<%s|Details>", link))
 		postMessage := &slack.PostMessageRequest{
 			Channel:  data.Channel,
@@ -153,8 +154,7 @@ func (b *Bot) handleReplyStats(reply *domain.WorkReply, ctx *domain.Context) {
 }
 
 func (b *Bot) handleReply(reply *domain.WorkReply) {
-	logrus.Debugf("Handling reply - %+v\n", reply)
-	logrus.Debugf("Context- %v\n", reply.Context)
+	logrus.Debugf("Handling reply - %s", reply.MessageID)
 	data, err := GetContext(reply.Context)
 	if err != nil {
 		logrus.Warnf("Error getting context from reply - %+v\n", reply)
@@ -221,10 +221,22 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				Color:    color,
 			})
 		}
-		err = b.post(postMessage, reply, data)
-		if err != nil {
-			logrus.Errorf("Unable to send message to Slack - %v\n", err)
-			return
+		clean := true
+		for i := range postMessage.Attachments {
+			if postMessage.Attachments[i].Color != "good" {
+				clean = false
+				break
+			}
+		}
+		if !clean {
+			logrus.Debugf("Reply %s dirty, posting", reply.MessageID)
+			err = b.post(postMessage, reply, data)
+			if err != nil {
+				logrus.Errorf("Unable to send message to Slack - %v\n", err)
+				return
+			}
+		} else {
+			logrus.Debugf("Reply %s clean, ignoring", reply.MessageID)
 		}
 	}
 }

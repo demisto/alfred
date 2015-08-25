@@ -256,7 +256,6 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 			logrus.Debugf("No one is interested in the channel %s\n", msg.Channel)
 			return
 		}
-		logrus.Debugf("Handling message - %+v\n", msg)
 		push := false
 		switch msg.Subtype {
 		case "":
@@ -277,6 +276,7 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 		}
 		// If we need to handle the message, pass it to the queue
 		if push {
+			logrus.Debugf("Handling message - %+v\n", msg)
 			workReq := domain.WorkRequestFromMessage(msg)
 			t, err := slack.TimestampToTime(workReq.MessageID)
 			if err != nil {
