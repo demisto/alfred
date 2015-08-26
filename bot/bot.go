@@ -435,6 +435,8 @@ func (b *Bot) monitorChanges() {
 		user, configuration, err := b.q.PopConf(0)
 		if err != nil || user == nil || configuration == nil {
 			logrus.Infof("Quiting monitoring changes - %v\n", err)
+			// Go down
+			b.Stop()
 			break
 		}
 		logrus.Debugf("Configuration change received: %+v, %+v\n", user, configuration)
@@ -447,6 +449,8 @@ func (b *Bot) monitorReplies() {
 		reply, err := b.q.PopWorkReply(b.replyQueue, 0)
 		if err != nil || reply == nil {
 			logrus.Infof("Quiting monitoring replies - %v\n", err)
+			// Go down
+			b.Stop()
 			break
 		}
 		b.handleReply(reply)
