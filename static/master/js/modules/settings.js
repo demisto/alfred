@@ -12,6 +12,7 @@
     var verbosegroupsMatched = [];
     var allMonitored = false;
 
+
     var updateChannelList = function() {
       // update the channels Monitored
       var mergedList = new Object();
@@ -45,9 +46,12 @@
 
       if (allMonitored) {
         $('#channellist').html("DBOT is monitoring all conversations for your team. You can close the browser and get back to work.");
-      } else if (mergedArr.length > 0 || verbosemergedArr.length > 0) {
+      }
+      else {
         $('#channellist').html('');
-        if (mergedArr.length > 0) {
+      }
+      if (mergedArr.length > 0 || verbosemergedArr.length > 0) {
+        if (mergedArr.length > 0 && !allMonitored) {
           $('#channellist').append('<h4> Channels Monitored: </h4>');
           $('#channellist').append(mergedArr.sort().join(", "));
         }
@@ -64,22 +68,21 @@
 
     }
 
-
     var disableAll = function() {
 
       $("#channels").attr("disabled", true).trigger("chosen:updated");
       $("#groups").attr("disabled", true).trigger("chosen:updated");
       $("#im").attr("disabled", true);
-      $("#verbosechannels").attr("disabled", true).trigger("chosen:updated");
-      $("#verbosegroups").attr("disabled", true).trigger("chosen:updated");
-      $("#verboseim").attr("disabled", true);
+      // $("#verbosechannels").attr("disabled", true).trigger("chosen:updated");
+      // $("#verbosegroups").attr("disabled", true).trigger("chosen:updated");
+      // $("#verboseim").attr("disabled", true);
       $('#headingConf').addClass('grayout');
       $('#configpanel').addClass('grayout');
       $('#headingConf a').removeAttr("href");
-      $('#verboseheadingConf').addClass('grayout');
-      $('#verboseconfigpanel').addClass('grayout');
-      $('#verboseheadingConf a').removeAttr("href");
-      $('#verboseheadingAdvConf .collapsed').removeAttr("href");
+      // $('#verboseheadingConf').addClass('grayout');
+      // $('#verboseconfigpanel').addClass('grayout');
+      // $('#verboseheadingConf a').removeAttr("href");
+      // $('#verboseheadingAdvConf .collapsed').removeAttr("href");
       // $('#channelsmonitored').hide();
 
 
@@ -88,15 +91,15 @@
       $("#channels").removeAttr("disabled").trigger("chosen:updated");
       $("#groups").removeAttr("disabled").trigger("chosen:updated");
       $("#im").removeAttr("disabled");
-      $("#verbosechannels").removeAttr("disabled").trigger("chosen:updated");
-      $("#verbosegroups").removeAttr("disabled").trigger("chosen:updated");
-      $("#verboseim").removeAttr("disabled");
+      // $("#verbosechannels").removeAttr("disabled").trigger("chosen:updated");
+      // $("#verbosegroups").removeAttr("disabled").trigger("chosen:updated");
+      // $("#verboseim").removeAttr("disabled");
       $('#headingConf').removeClass('grayout');
       $('#configpanel').removeClass('grayout');
       $('#headingConf a').attr("href", "#configpanel");
-      $('#verboseheadingConf').removeClass('grayout');
-      $('#verboseconfigpanel').removeClass('grayout');
-      $('#verboseheadingConf a').attr("href", '#verboseconfigpanel');
+      // $('#verboseheadingConf').removeClass('grayout');
+      // $('#verboseconfigpanel').removeClass('grayout');
+      // $('#verboseheadingConf a').attr("href", '#verboseconfigpanel');
       // $('#channelsmonitored').show();
     }
 
@@ -202,24 +205,6 @@
           dataType: 'json',
           contentType: 'application/json; charset=utf-8',
           success: function(){
-            toastr.options = {
-              "closeButton": false,
-              "debug": false,
-              "newestOnTop": false,
-              "progressBar": false,
-              "positionClass": "toast-top-center",
-              "preventDuplicates": true,
-              "onclick": null,
-              "showDuration": "300",
-              "hideDuration": "1000",
-              "timeOut": "5000",
-              "extendedTimeOut": "1000",
-              "showEasing": "swing",
-              "hideEasing": "linear",
-              "showMethod": "fadeIn",
-              "hideMethod": "fadeOut"
-            };
-            toastr["success"]("Configuration Saved");
           },
           error: function(xhr, status, error) {
             var err = error;
