@@ -7,14 +7,17 @@
   // Run this only on conf
   if ($('#channels').length) {
     var timerExists = false;
-    var regexChannelsMatched = [];
     var channelsMatched = [];
     var groupsMatched = [];
+    var verbosechannelsMatched = [];
+    var verbosegroupsMatched = [];
 
     var updateChannelList = function() {
       // update the channels Monitored
       var mergedList = new Object();
       var mergedArr = [];
+      var verbosemergedList = new Object();
+      var verbosemergedArr = [];
 
       for (var i = 0; channelsMatched && i<channelsMatched.length; i++) {
         mergedList[channelsMatched[i]] = true;
@@ -22,16 +25,27 @@
       for (var i = 0; groupsMatched && i<groupsMatched.length; i++) {
         mergedList[groupsMatched[i]] = true;
       }
-      for (var i = 0; regexChannelsMatched && i<regexChannelsMatched.length; i++) {
-        mergedList[regexChannelsMatched[i]] = true;
+      for (var i = 0; verbosechannelsMatched && i<verbosechannelsMatched.length; i++) {
+        verbosemergedList[verbosechannelsMatched[i]] = true;
       }
+      for (var i = 0; verbosegroupsMatched && i<verbosegroupsMatched.length; i++) {
+        verbosemergedList[verbosegroupsMatched[i]] = true;
+      }
+
+
 
       for (var k in mergedList) {
         mergedArr.push(k);
       }
 
-      if (mergedArr.length > 0) {
+      for (var k in verbosemergedList) {
+        verbosemergedArr.push(k);
+      }
+
+
+      if (mergedArr.length > 0 || verbosemergedArr.length > 0) {
         $('#channellist').html(mergedArr.sort().join(", "));
+        $('#channellist').append(verbosemergedArr.sort().join(", "));
       } else {
         $('#channellist').html("<p class='warning-text'>DBOT is not monitoring any conversations. Please <b>select channels</b> to monitor below\
          or select <b>\'Monitor ALL conversations\'</b> above.</p>");
@@ -90,22 +104,30 @@
 
       for (var i=0; data.channels && i<data.channels.length; i++) {
 
-        verbosechannels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].verbose && data.channels[i].selected ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
+        verbosechannels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].verbose ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
         channels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].selected ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
 
 
         if (data.channels[i].selected)
           channelsMatched.push(data.channels[i].name)
+
+        if (data.channels[i].verbose)
+            verbosechannelsMatched.push(data.channels[i].name)
+
       }
       $('#channels').append(channels.join(''));
       $('#verbosechannels').append(verbosechannels.join(''));
 
       for (var i=0; data.groups && i<data.groups.length; i++) {
-        verbosegroups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].verbose && data.groups[i].selected ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
+        verbosegroups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].verbose ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
         groups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].selected ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
 
         if (data.groups[i].selected)
           groupsMatched.push(data.groups[i].name)
+
+        if (data.groups[i].verbose)
+          verbosegroupsMatched.push(data.groups[i].name)
+
       }
 
       $('#groups').append(groups.join(''));
@@ -132,27 +154,30 @@
         save.channels = [];
         save.groups = [];
         save.im = $('#im').is(':checked');
-        save.channels_verbose = [];
-        save.groups_verbose = [];
-        save.im_verbose = $('#verboseim').is(':checked');
+        save.verbose_channels = [];
+        save.verbose_groups = [];
+        save.verbose_im = $('#verboseim').is(':checked');
         save.all = $('#all').is(':checked');
         channelsMatched = [];
         groupsMatched = [];
+        verbosechannelsMatched = [];
+        verbosegroupsMatched = [];
+
         $('#channels option:selected').each(function() {
           save.channels.push($(this).val());
           channelsMatched.push($(this).text());
         });
         $('#verbosechannels option:selected').each(function() {
-          save.channels_verbose.push($(this).val());
-          channelsMatched.push($(this).text());
+          save.verbose_channels.push($(this).val());
+          verbosechannelsMatched.push($(this).text());
         });
         $('#groups option:selected').each(function() {
           save.groups.push($(this).val());
           groupsMatched.push($(this).text());
         });
         $('#verbosegroups option:selected').each(function() {
-          save.groups_verbose.push($(this).val());
-          groupsMatched.push($(this).text());
+          save.verbose_groups.push($(this).val());
+          verbosegroupsMatched.push($(this).text());
         });
 
         updateChannelList();
@@ -189,7 +214,6 @@
             if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
               err += " - " + xhr.responseJSON.errors[0].detail;
             }
-            $('#regexpChannels').html(err);
           }
         });
       };
@@ -201,80 +225,11 @@
         }
         saveAll();
       });
-      $('.chosen-select,#im').change(function(evt) {
+      $('.chosen-select,#im,#verboseim').change(function(evt) {
         saveAll();
       });
 
-      var saveRegex = function(evt)
-      {
-        var timer;
-        if (evt.type == "keyup") {
-          if (!timerExists)
-          {
-            timerExists = true;
-            var timer = setTimeout(function(){
-              timerExists = false;
-              if (evt && evt.target && evt.target.value) {
-                $.ajax({
-                  type: 'POST',
-                  url: '/match',
-                  data: JSON.stringify({regexp: evt.target.value}),
-                  headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
-                  dataType: 'json',
-                  contentType: 'application/json; charset=utf-8',
-                  success: function(data){
-                    regexChannelsMatched = data;
-                    // $('#regexpChannels').html('Matched Channels: ' + data.join(', '));
-                    saveAll();
-                  },
-                  error: function(xhr, status, error) {
-                    var err = error;
-                    if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
-                      err += " - " + xhr.responseJSON.errors[0].detail;
-                    }
-                    $('#regexpChannels').html(err);
-                  }
-                });
-              }
-              else if (evt && evt.target) {
-                regexChannelsMatched = [];
-                saveAll();
-              }
-            }, 5000);
-          }
-        }
-        else if (evt.type == "change") {
-          if (timerExists) {
-            clearTimeout(timer);
-            timerExists = false;
-          }
-          if (evt && evt.target && evt.target.value) {
-            $.ajax({
-              type: 'POST',
-              url: '/match',
-              data: JSON.stringify({regexp: evt.target.value}),
-              headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
-              dataType: 'json',
-              contentType: 'application/json; charset=utf-8',
-              success: function(data){
-                regexChannelsMatched = data;
-                saveAll();
-              },
-              error: function(xhr, status, error) {
-                var err = error;
-                if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
-                  err += " - " + xhr.responseJSON.errors[0].detail;
-                }
-                $('#regexpChannels').html(err);
-              }
-            });
-          }
-        }
-      }
 
-
-      $('#regexp').keyup(saveRegex);
-      $('#regexp').change(saveRegex);
 
     });
   }
