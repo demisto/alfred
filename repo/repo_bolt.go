@@ -68,6 +68,10 @@ func (r *repo) Close() error {
 	return r.db.Close()
 }
 
+func (r *repo) BotName() string {
+	return "Bot"
+}
+
 func (r *repo) get(bucket, key string, data interface{}) error {
 	return r.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
@@ -357,7 +361,7 @@ func (r *repo) IsVerboseChannel(team, channel string) (bool, error) {
 }
 
 // OpenUsers just returns all users without associating them with a bot since this is on dev system
-func (r *repo) OpenUsers() ([]domain.UserBot, error) {
+func (r *repo) OpenUsers(includeMine bool) ([]domain.UserBot, error) {
 	var users []domain.UserBot
 	err := r.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket([]byte("users")).Cursor()

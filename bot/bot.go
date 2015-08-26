@@ -122,7 +122,7 @@ func New(r repo.Repo, q queue.Queue) (*Bot, error) {
 }
 
 // loadSubscriptions loads all subscriptions per team
-func (b *Bot) loadSubscriptions() error {
+func (b *Bot) loadSubscriptions(includingMine bool) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	cnt := 0
@@ -135,16 +135,21 @@ func (b *Bot) loadSubscriptions() error {
 	}
 	cnt = 0
 	// Everything must run in separate transactions as it is written here
-	openUsers, err := b.r.OpenUsers()
+	openUsers, err := b.r.OpenUsers(includingMine)
 	if err != nil {
 		return err
 	}
 	for i := range openUsers {
-		locked, err := b.r.LockUser(&openUsers[i])
-		logrus.Debugf("Trying to lock user %s\n", openUsers[i].User)
-		if err != nil || !locked {
-			logrus.Debugf("Unable to lock user %v\n", err)
-			continue
+		// Don't lock our own users
+		if !includingMine || openUsers[i].Bot != b.r.BotName() {
+			logrus.Debugf("Trying to lock user %s", openUsers[i].User)
+			locked, err := b.r.LockUser(&openUsers[i])
+			if err != nil || !locked {
+				logrus.Debugf("Unable to lock user %v", err)
+				continue
+			}
+		} else {
+			logrus.Debugf("User %s is mine", openUsers[i].User)
 		}
 		u, err := b.r.User(openUsers[i].User)
 		if err != nil {
@@ -334,7 +339,7 @@ func (b *Bot) Start() error {
 	if err != nil {
 		return err
 	}
-	err = b.loadSubscriptions()
+	err = b.loadSubscriptions(true)
 	if err != nil {
 		return err
 	}
@@ -388,7 +393,7 @@ func (b *Bot) Start() error {
 			if err != nil {
 				logrus.Errorf("Unable to update heartbeat - %v\n", err)
 			}
-			err = b.loadSubscriptions()
+			err = b.loadSubscriptions(false)
 			if err != nil {
 				logrus.Errorf("Unable to load subscriptions - %v\n", err)
 			}

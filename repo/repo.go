@@ -13,6 +13,7 @@ var (
 
 // Repo provides access to a persistent storage
 type Repo interface {
+	BotName() string
 	User(id string) (*domain.User, error)
 	UserByExternalID(id string) (*domain.User, error)
 	SetUser(user *domain.User) error
@@ -32,7 +33,7 @@ type Repo interface {
 	TeamSubscriptions(team string) (map[string]*domain.Configuration, error)
 	IsVerboseChannel(team, channel string) (bool, error)
 	// OpenUsers retrieves all users who are currently not associated with another ACTIVE bot
-	OpenUsers() ([]domain.UserBot, error)
+	OpenUsers(includeMine bool) ([]domain.UserBot, error)
 	// LockUser associates a user to us and locks it from other bots
 	LockUser(user *domain.UserBot) (bool, error)
 	// BotHeartbeat updates the bot keep-alive timestamp

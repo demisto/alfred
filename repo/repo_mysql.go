@@ -178,6 +178,10 @@ func (r *repoMySQL) Close() error {
 	return r.db.Close()
 }
 
+func (r *repoMySQL) BotName() string {
+	return r.hostname
+}
+
 func (r *repoMySQL) get(tableName, field, id string, data interface{}) error {
 	err := r.db.Get(data, "SELECT * FROM "+tableName+" WHERE "+field+" = ?", id)
 	if err == sql.ErrNoRows {
@@ -479,10 +483,15 @@ func (r *repoMySQL) IsVerboseChannel(team, channel string) (bool, error) {
 	return count > 0, nil
 }
 
-func (r *repoMySQL) OpenUsers() ([]domain.UserBot, error) {
+func (r *repoMySQL) OpenUsers(includeMine bool) ([]domain.UserBot, error) {
 	var users []domain.UserBot
-	rows, err := r.db.Query(
-		"SELECT u.id as user, ub.bot, ub.ts FROM users u LEFT OUTER JOIN bot_for_user ub ON u.id = ub.user LEFT OUTER JOIN bots b ON ub.bot = b.bot WHERE ub.bot IS NULL OR b.ts + interval ? minute < now() LIMIT 1000", 3)
+	query := "SELECT u.id as user, ub.bot, ub.ts FROM users u LEFT OUTER JOIN bot_for_user ub ON u.id = ub.user LEFT OUTER JOIN bots b ON ub.bot = b.bot WHERE ub.bot IS NULL OR b.ts + interval ? minute < now() LIMIT 1000"
+	args := []interface{}{3}
+	if includeMine {
+		query = "SELECT u.id as user, ub.bot, ub.ts FROM users u LEFT OUTER JOIN bot_for_user ub ON u.id = ub.user LEFT OUTER JOIN bots b ON ub.bot = b.bot WHERE ub.bot IS NULL OR b.ts + interval ? minute < now() or ub.bot = ? LIMIT 1000"
+		args = append(args, r.hostname)
+	}
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
