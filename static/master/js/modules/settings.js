@@ -84,37 +84,41 @@
       $('#configdiv').show();
 
       var channels = [];
+      var verbosechannels = [];
       var groups = [];
+      var verbosegroups = [];
+
       for (var i=0; data.channels && i<data.channels.length; i++) {
-        channels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].selected ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
+        if (data.channels[i].verbose) {
+          verbosechannels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].selected ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
+        } else {
+          channels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].selected ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
+        }
+
         if (data.channels[i].selected)
           channelsMatched.push(data.channels[i].name)
       }
       $('#channels').append(channels.join(''));
+      $('#verbosechannels').append(verbosechannels.join(''));
+
       for (var i=0; data.groups && i<data.groups.length; i++) {
-        groups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].selected ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
+        if (data.groups[i].verbose) {
+          verbosegroups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].selected ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
+        } else {
+          groups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].selected ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
+        }
+
         if (data.groups[i].selected)
           groupsMatched.push(data.groups[i].name)
       }
+
       $('#groups').append(groups.join(''));
+      $('#verbosegroups').append(groups.join(''));
+
       $('#im').prop('checked', data.im);
+      $('#verboseim').prop('checked', data.verbose_im);
       $('#all').prop('checked', data.all);
-      $('#regexp').val(data.regexp);
-      if (data.regexp) {
-        $.ajax({
-          type: 'POST',
-          url: '/match',
-          data: JSON.stringify({regexp: data.regexp}),
-          headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
-          dataType: 'json',
-          contentType: 'application/json; charset=utf-8',
-          success: function(data){
-            // $('#regexpChannels').html('Channels Monitored: ' + data.join(', '));
-            regexChannelsMatched = data;
-            updateChannelList();
-          }
-        });
-      }
+    
 
       updateChannelList();
 
