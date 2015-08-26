@@ -16,14 +16,16 @@ type idName struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Selected bool   `json:"selected"`
+	Verbose  bool   `json:"verbose"`
 }
 
 type infoResponse struct {
-	Channels []idName `json:"channels"`
-	Groups   []idName `json:"groups"`
-	IM       bool     `json:"im"`
-	Regexp   string   `json:"regexp"`
-	All      bool     `json:"all"`
+	Channels  []idName `json:"channels"`
+	Groups    []idName `json:"groups"`
+	IM        bool     `json:"im"`
+	VerboseIM bool     `json:"verbose_im"`
+	Regexp    string   `json:"regexp"`
+	All       bool     `json:"all"`
 }
 
 func (ac *AppContext) info(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +47,8 @@ func (ac *AppContext) info(w http.ResponseWriter, r *http.Request) {
 	for i := range ch.Channels {
 		if ch.Channels[i].IsMember {
 			selected := util.In(savedChannels.Channels, ch.Channels[i].ID)
-			res.Channels = append(res.Channels, idName{ID: ch.Channels[i].ID, Name: ch.Channels[i].Name, Selected: selected})
+			verbose := util.In(savedChannels.VerboseChannels, ch.Channels[i].ID)
+			res.Channels = append(res.Channels, idName{ID: ch.Channels[i].ID, Name: ch.Channels[i].Name, Selected: selected, Verbose: verbose})
 		}
 	}
 	gr, err := s.GroupList(true)
@@ -54,9 +57,11 @@ func (ac *AppContext) info(w http.ResponseWriter, r *http.Request) {
 	}
 	for i := range gr.Groups {
 		selected := util.In(savedChannels.Groups, gr.Groups[i].ID)
-		res.Groups = append(res.Groups, idName{ID: gr.Groups[i].ID, Name: gr.Groups[i].Name, Selected: selected})
+		verbose := util.In(savedChannels.VerboseGroups, gr.Groups[i].ID)
+		res.Groups = append(res.Groups, idName{ID: gr.Groups[i].ID, Name: gr.Groups[i].Name, Selected: selected, Verbose: verbose})
 	}
 	res.IM = savedChannels.IM
+	res.VerboseIM = savedChannels.VerboseIM
 	res.Regexp = savedChannels.Regexp
 	res.All = savedChannels.All
 	json.NewEncoder(w).Encode(res)
