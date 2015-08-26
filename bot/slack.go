@@ -62,7 +62,7 @@ func mainMessageFormatted() string {
 	return fmt.Sprintf(mainMessage, conf.Options.ExternalAddress)
 }
 
-func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
+func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub *subscription, verbose bool) {
 	link := fmt.Sprintf("%s/details?f=%s&u=%s", conf.Options.ExternalAddress, reply.File.Details.ID, data.User)
 	if reply.File.FileTooLarge {
 		err := b.fileComment(fmt.Sprintf(fileCommentBig, reply.File.Details.Name, link), reactionTooBig, reply)
@@ -97,7 +97,7 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context) {
 				},
 			},
 		}
-		err := b.post(postMessage, reply, data)
+		err := b.post(postMessage, reply, data, sub)
 		if err != nil {
 			logrus.Errorf("Unable to send message to Slack - %v\n", err)
 			return
@@ -153,6 +153,20 @@ func (b *Bot) handleReplyStats(reply *domain.WorkReply, ctx *domain.Context) {
 	}
 }
 
+func (b *Bot) relevantUser(ctx *domain.Context) *subscription {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	subs := b.subscriptions[ctx.Team]
+	if subs == nil {
+		return nil
+	}
+	sub := subs.SubForUser(ctx.OriginalUser)
+	if sub != nil {
+		return sub
+	}
+	return subs.SubForUser(ctx.User)
+}
+
 func (b *Bot) handleReply(reply *domain.WorkReply) {
 	logrus.Debugf("Handling reply - %s", reply.MessageID)
 	data, err := GetContext(reply.Context)
@@ -161,8 +175,24 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 		return
 	}
 	b.handleReplyStats(reply, data)
+	sub := b.relevantUser(data)
+	if sub == nil {
+		logrus.Warnf("User not found in subscriptions for message %s", reply.MessageID)
+	}
+	verbose := false
+	if data.Channel != "" {
+		if data.Channel[0] == 'D' {
+			verbose = sub.interest.VerboseIM
+		} else {
+			verbose, err = b.r.IsVerboseChannel(data.Team, data.Channel)
+			if err != nil {
+				logrus.Warnf("Error reading verbose channel status %v", err)
+				verbose = false
+			}
+		}
+	}
 	if reply.Type&domain.ReplyTypeFile > 0 {
-		b.handleFileReply(reply, data)
+		b.handleFileReply(reply, data, sub, verbose)
 	} else {
 		link := fmt.Sprintf("%s/details?c=%s&m=%s&u=%s", conf.Options.ExternalAddress, data.Channel, reply.MessageID, data.User)
 		postMessage := &slack.PostMessageRequest{
@@ -222,15 +252,16 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 			})
 		}
 		clean := true
-		for i := range postMessage.Attachments {
-			if postMessage.Attachments[i].Color != "good" {
-				clean = false
-				break
+		if !verbose {
+			for i := range postMessage.Attachments {
+				if postMessage.Attachments[i].Color != "good" {
+					clean = false
+					break
+				}
 			}
 		}
-		if !clean {
-			logrus.Debugf("Reply %s dirty, posting", reply.MessageID)
-			err = b.post(postMessage, reply, data)
+		if verbose || !clean {
+			err = b.post(postMessage, reply, data, sub)
 			if err != nil {
 				logrus.Errorf("Unable to send message to Slack - %v\n", err)
 				return
@@ -276,17 +307,8 @@ func (b *Bot) maybeSendFirstMessage(u *domain.User, s *slack.Slack, data *domain
 // post uses the correct client to post to the channel
 // See if the original message poster is subscribed and if so use him.
 // If not, use the first user we have that is subscribed to the channel.
-func (b *Bot) post(message *slack.PostMessageRequest, reply *domain.WorkReply, data *domain.Context) error {
-	u, err := b.r.UserByExternalID(data.OriginalUser)
-	if err != nil && err != repo.ErrNotFound {
-		return err
-	}
-	if err != nil {
-		u, err = b.r.User(data.User)
-		if err != nil {
-			return err
-		}
-	}
+func (b *Bot) post(message *slack.PostMessageRequest, reply *domain.WorkReply, data *domain.Context, sub *subscription) error {
+	u := sub.user
 	message.IconURL = conf.Options.ExternalAddress + "/img/favicon/D%20icon%205757.png"
 	s, err := slack.New(slack.SetToken(u.Token))
 	if err != nil {

@@ -30,6 +30,7 @@ type Repo interface {
 	ChannelsAndGroups(user string) (*domain.Configuration, error)
 	SetChannelsAndGroups(user string, configuration *domain.Configuration) error
 	TeamSubscriptions(team string) (map[string]*domain.Configuration, error)
+	IsVerboseChannel(team, channel string) (bool, error)
 	// OpenUsers retrieves all users who are currently not associated with another ACTIVE bot
 	OpenUsers() ([]domain.UserBot, error)
 	// LockUser associates a user to us and locks it from other bots

@@ -450,9 +450,33 @@ func (r *repoMySQL) TeamSubscriptions(team string) (map[string]*domain.Configura
 			subscriptions[user].Regexp = channel[1:]
 		case 'A':
 			subscriptions[user].All = true
+		case 'X':
+			subscriptions[user].VerboseChannels = append(subscriptions[user].VerboseChannels, channel[1:])
+		case 'Y':
+			subscriptions[user].VerboseGroups = append(subscriptions[user].VerboseGroups, channel[1:])
+		case 'Z':
+			subscriptions[user].VerboseIM = true
 		}
 	}
 	return subscriptions, err
+}
+
+func (r *repoMySQL) IsVerboseChannel(team, channel string) (bool, error) {
+	var count int
+	if team == "" || channel == "" {
+		return false, nil
+	}
+	switch channel[0] {
+	case 'C':
+		channel = "X" + channel
+	case 'G':
+		channel = "Y" + channel
+	}
+	err := r.db.Get(&count, "SELECT count(*) FROM configurations WHERE user IN (SELECT id FROM users WHERE team = ?) AND channel = ?", team, channel)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func (r *repoMySQL) OpenUsers() ([]domain.UserBot, error) {

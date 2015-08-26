@@ -343,6 +343,19 @@ func (r *repo) TeamSubscriptions(team string) (map[string]*domain.Configuration,
 	return subscriptions, err
 }
 
+func (r *repo) IsVerboseChannel(team, channel string) (bool, error) {
+	subs, err := r.TeamSubscriptions(team)
+	if err != nil {
+		return false, err
+	}
+	for _, v := range subs {
+		if v.IsVerbose(channel, "") {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // OpenUsers just returns all users without associating them with a bot since this is on dev system
 func (r *repo) OpenUsers() ([]domain.UserBot, error) {
 	var users []domain.UserBot

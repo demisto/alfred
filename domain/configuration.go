@@ -42,7 +42,7 @@ func (c *Configuration) IsInterestedIn(channel, channelName string) bool {
 	case 'D':
 		return c.IM || c.VerboseIM
 	}
-	if !found && c.Regexp != "" {
+	if !found && c.Regexp != "" && channelName != "" {
 		re, err := regexp.Compile(c.Regexp)
 		if err != nil {
 			logrus.Warnf("Found invalid regexp in configuration - %v\n", err)

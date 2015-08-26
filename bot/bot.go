@@ -71,9 +71,9 @@ func (subs *subscriptions) ChannelName(channel string, subscriber int) string {
 
 func (subs *subscriptions) FirstSubForChannel(channel string) *subscription {
 	for i := range subs.subscriptions {
-		channelName := subs.ChannelName(channel, i)
-		logrus.Debugf("Channel %s (%s)\n", channel, channelName)
-		if subs.subscriptions[i].interest.IsInterestedIn(channel, channelName) {
+		// channelName := subs.ChannelName(channel, i)
+		// logrus.Debugf("Channel %s (%s)\n", channel, channelName)
+		if subs.subscriptions[i].interest.IsInterestedIn(channel, "") {
 			return &subs.subscriptions[i]
 		}
 	}
