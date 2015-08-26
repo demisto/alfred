@@ -33,13 +33,7 @@ section#conf.config-page
         .col-lg-10.col-lg-offset-1
           // INTRO MESSAGE
           .config-section
-            table
-              tr
-                td
-                  h1 Configure DBot
-                td
-                  h1.pull-right
-                    a.btn-link(href='/next') What's Next?
+            h1.text-center Configure DBot
             .ball-grid-pulse.center-block
               div
               div
@@ -80,16 +74,28 @@ section#conf.config-page
                             input#im(type='checkbox')
                             | Monitor Direct Messages (includes slackbot)
                 #accordion.panel-group(role="tablist", aria-multiselectable="true")
-                  .panel.panel-default
-                    #headingAdvConf.panel-heading(role="tab")
-                      h4.panel-title
-                        a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#advconfig", aria-expanded="false", aria-controls="advconfig")
-                          | Advanced Configuration
-                    #advconfig.panel-collapse.collapse(role="tabpanel", aria-labelledby="headingAdvConf")
-                      .panel-body
-                        .form-group.config-entry
-                          label(for='regexp') Regular expression to select both groups and channels that DBot will monitor (you can just ignore if you don't know what this means)
-                          input.form-control#regexp(placeholder='Please enter regular expression')
-                          #regexpChannels
+                .panel.panel-default
+                  #verboseheadingConf.panel-heading(role="tab")
+                    h4.panel-title
+                      a(role="button", data-toggle="collapse", data-parent="#verboseaccordion", href="#verboseconfigpanel", aria-expanded="false", aria-controls="configpanel")
+                        | Advanced Configuration - for Security Analysts
+                  #verboseconfigpanel.panel-collapse.in.collapse(role="tabpanel", aria-labelledby="headingConf")
+                    .panel-body
+                      .form-group.config-entry
+                        label(for='channels') Select "Slack channels" that DBot will monitor
+                        select.form-control.chosen-select#verbosechannels(data-placeholder='Please choose channels to monitor', multiple)
+                      .form-group.config-entry
+                        label(for='groups') Select "Private groups" that DBot will monitor
+                        select.form-control.chosen-select#verbosegroups(data-placeholder='Please choose groups to monitor', multiple)
+                      .checkbox.config-entry
+                        label
+                          input#verboseim(type='checkbox')
+                          | Monitor Direct Messages (includes slackbot)
+
+
+              .text-center
+                a#action.btn.btn-xlarge.btn-theme(href='/next')
+                  strong Done
+              br
 
 // END CONFIGURATION

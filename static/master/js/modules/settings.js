@@ -46,13 +46,16 @@
       $("#channels").attr("disabled", true).trigger("chosen:updated");
       $("#groups").attr("disabled", true).trigger("chosen:updated");
       $("#im").attr("disabled", true);
-      $("#regexp").attr("disabled", true);
+      $("#verbosechannels").attr("disabled", true).trigger("chosen:updated");
+      $("#verbosegroups").attr("disabled", true).trigger("chosen:updated");
+      $("#verboseim").attr("disabled", true);
       $('#headingConf').addClass('grayout');
       $('#configpanel').addClass('grayout');
       $('#headingConf a').removeAttr("href");
-      $('#headingAdvConf').addClass('grayout');
-      $('#advconfig').addClass('grayout');
-      $('#headingAdvConf .collapsed').removeAttr("href");
+      $('#verboseheadingConf').addClass('grayout');
+      $('#verboseconfigpanel').addClass('grayout');
+      $('#verboseheadingConf a').removeAttr("href");
+      $('#verboseheadingAdvConf .collapsed').removeAttr("href");
       $('#channelsmonitored').hide();
 
 
@@ -61,13 +64,15 @@
       $("#channels").removeAttr("disabled").trigger("chosen:updated");
       $("#groups").removeAttr("disabled").trigger("chosen:updated");
       $("#im").removeAttr("disabled");
-      $("#regexp").removeAttr("disabled");
+      $("#verbosechannels").removeAttr("disabled").trigger("chosen:updated");
+      $("#verbosegroups").removeAttr("disabled").trigger("chosen:updated");
+      $("#verboseim").removeAttr("disabled");
       $('#headingConf').removeClass('grayout');
       $('#configpanel').removeClass('grayout');
       $('#headingConf a').attr("href", "#configpanel");
-      $('#headingAdvConf').removeClass('grayout');
-      $('#advconfig').removeClass('grayout');
-      $('#headingAdvConf .collapsed').attr("href", "#advconfig");
+      $('#verboseheadingConf').removeClass('grayout');
+      $('#verboseconfigpanel').removeClass('grayout');
+      $('#verboseheadingAdvConf .collapsed').attr("href", '#verboseconfig');
       $('#channelsmonitored').show();
     }
 

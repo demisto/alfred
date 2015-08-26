@@ -613,22 +613,23 @@
         var detection_string = "";
         if (numVTDetections > 0) {
           detection_string = "Positive Detections: " + numVTDetections;
+          return (
+            <div>
+            {malware_family_string}
+            <ScanResult detection_string={detection_string} data={md5data.vt.file_report} />
+            </div>
+          );
 
         }
 
-        return (
-          <div>
-          {malware_family_string}
-          {detection_string}
-          <ScanResult data={md5data.vt.file_report} />
-          </div>
-        );
       }
     });
 
     var ScanResult = React.createClass ({
       render: function() {
         var file_reports_map = this.props.data.scans;
+        var detection_string = this.props.detection_string;
+
         var rows = [];
         for (var k in file_reports_map) {
           rows.push(<ScanResultRow enginename={k} scandata={file_reports_map[k]} />);
@@ -637,20 +638,35 @@
         if (rows.length > 0) {
 
           return (
-            <div>
-            <table className="table">
-            <thead>
-            <th>Engine Name</th>
-            <th>Version</th>
-            <th>Detected</th>
-            <th>Result</th>
-            <th>Update</th>
-            </thead>
-            <tbody>
-            {rows}
-            </tbody>
-            </table>
+            <div className="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+              <div className="panel panel-default">
+                <div className="panel-heading" role="tab" id="scanresultheading">
+                <h4 className="panel-title">
+                  <a className="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#scanresult" aria-expanded="false" aria-controls="scanresult">
+                    {detection_string}
+                  </a>
+                </h4>
+              </div>
+              <div id="scanresult" className="panel-collapse collapse" role="tabpanel" aria-labelledby="scanresultheading">
+                <div className="panel-body">
+                  <div>
+                    <table className="table">
+                    <thead>
+                    <th>Engine Name</th>
+                    <th>Version</th>
+                    <th>Detected</th>
+                    <th>Result</th>
+                    <th>Update</th>
+                    </thead>
+                    <tbody>
+                    {rows}
+                    </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
             );
           } else {
             return (<div></div>);
