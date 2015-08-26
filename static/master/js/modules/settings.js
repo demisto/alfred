@@ -89,11 +89,10 @@
       var verbosegroups = [];
 
       for (var i=0; data.channels && i<data.channels.length; i++) {
-        if (data.channels[i].verbose) {
-          verbosechannels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].selected ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
-        } else {
-          channels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].selected ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
-        }
+
+        verbosechannels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].verbose && data.channels[i].selected ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
+        channels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].selected ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
+
 
         if (data.channels[i].selected)
           channelsMatched.push(data.channels[i].name)
@@ -102,23 +101,20 @@
       $('#verbosechannels').append(verbosechannels.join(''));
 
       for (var i=0; data.groups && i<data.groups.length; i++) {
-        if (data.groups[i].verbose) {
-          verbosegroups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].selected ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
-        } else {
-          groups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].selected ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
-        }
+        verbosegroups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].verbose && data.groups[i].selected ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
+        groups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].selected ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
 
         if (data.groups[i].selected)
           groupsMatched.push(data.groups[i].name)
       }
 
       $('#groups').append(groups.join(''));
-      $('#verbosegroups').append(groups.join(''));
+      $('#verbosegroups').append(verbosegroups.join(''));
 
       $('#im').prop('checked', data.im);
       $('#verboseim').prop('checked', data.verbose_im);
       $('#all').prop('checked', data.all);
-    
+
 
       updateChannelList();
 
@@ -136,16 +132,26 @@
         save.channels = [];
         save.groups = [];
         save.im = $('#im').is(':checked');
+        save.channels_verbose = [];
+        save.groups_verbose = [];
+        save.im_verbose = $('#verboseim').is(':checked');
         save.all = $('#all').is(':checked');
-        save.regexp = $('#regexp').val();
         channelsMatched = [];
         groupsMatched = [];
         $('#channels option:selected').each(function() {
           save.channels.push($(this).val());
           channelsMatched.push($(this).text());
         });
+        $('#verbosechannels option:selected').each(function() {
+          save.channels_verbose.push($(this).val());
+          channelsMatched.push($(this).text());
+        });
         $('#groups option:selected').each(function() {
           save.groups.push($(this).val());
+          groupsMatched.push($(this).text());
+        });
+        $('#verbosegroups option:selected').each(function() {
+          save.groups_verbose.push($(this).val());
           groupsMatched.push($(this).text());
         });
 
