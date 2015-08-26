@@ -345,6 +345,12 @@ func (r *repoMySQL) ChannelsAndGroups(user string) (*domain.Configuration, error
 			res.Regexp = s[1:]
 		case 'A':
 			res.All = true
+		case 'X':
+			res.VerboseChannels = append(res.VerboseChannels, s[1:])
+		case 'Y':
+			res.VerboseGroups = append(res.VerboseGroups, s[1:])
+		case 'Z':
+			res.VerboseIM = true
 		}
 	}
 	return res, err
@@ -390,6 +396,24 @@ func (r *repoMySQL) SetChannelsAndGroups(user string, configuration *domain.Conf
 	}
 	if configuration.All {
 		_, err = stmt.Exec(user, "A")
+		if err != nil {
+			return err
+		}
+	}
+	for i := range configuration.VerboseChannels {
+		_, err = stmt.Exec(user, "X"+configuration.VerboseChannels[i])
+		if err != nil {
+			return err
+		}
+	}
+	for i := range configuration.VerboseGroups {
+		_, err = stmt.Exec(user, "Y"+configuration.VerboseGroups[i])
+		if err != nil {
+			return err
+		}
+	}
+	if configuration.VerboseIM {
+		_, err = stmt.Exec(user, "Z")
 		if err != nil {
 			return err
 		}
