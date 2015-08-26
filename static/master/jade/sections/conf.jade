@@ -45,16 +45,19 @@ section#conf.config-page
               div
               div
             #configdiv(style="display: none")
-              h3 What communication do you want monitor?
+              #channelsmonitored
+                h3
+                  b Channels Currently Monitored:
+                  p#channellist
+              hr
+              h3
+                b What communication do you want monitor?
               form(class="configform")
                 .checkbox.config-entry
                   label
                     input#all(type='checkbox')
                     | Monitor ALL conversations
-                #channelsmonitored
-                  h3 Channels Monitored
-                  p#channellist
-                hr
+
                 #accordion.panel-group(role="tablist", aria-multiselectable="true")
                   .panel.panel-default
                     #headingConf.panel-heading(role="tab")
@@ -74,23 +77,24 @@ section#conf.config-page
                             input#im(type='checkbox')
                             | Monitor Direct Messages (includes slackbot)
                 #accordion.panel-group(role="tablist", aria-multiselectable="true")
-                .panel.panel-default
-                  #verboseheadingConf.panel-heading(role="tab")
-                    h4.panel-title
-                      a(role="button", data-toggle="collapse", data-parent="#verboseaccordion", href="#verboseconfigpanel", aria-expanded="false", aria-controls="configpanel")
-                        | Advanced Configuration - for Security Analysts
-                  #verboseconfigpanel.panel-collapse.in.collapse(role="tabpanel", aria-labelledby="headingConf")
-                    .panel-body
-                      .form-group.config-entry
-                        label(for='channels') Select "Slack channels" that DBot will monitor
-                        select.form-control.chosen-select#verbosechannels(data-placeholder='Please choose channels to monitor', multiple)
-                      .form-group.config-entry
-                        label(for='groups') Select "Private groups" that DBot will monitor
-                        select.form-control.chosen-select#verbosegroups(data-placeholder='Please choose groups to monitor', multiple)
-                      .checkbox.config-entry
-                        label
-                          input#verboseim(type='checkbox')
-                          | Monitor Direct Messages (includes slackbot)
+                  .panel.panel-default
+                    #verboseheadingConf.panel-heading(role="tab")
+                      h4.panel-title
+                        a(role="button", data-toggle="collapse", data-parent="#verboseaccordion", href="#verboseconfigpanel", aria-expanded="false", aria-controls="verboseconfigpanel")
+                          | Advanced Configuration - for Security Analysts
+                    #verboseconfigpanel.panel-collapse.in.collapse(role="tabpanel", aria-labelledby="verboseheadingConf")
+                      .panel-body
+                        | Verbode Mode reports results for clean results as well and include detailed messages for each check.
+                        .form-group.config-entry
+                          label(for='channels') Select "Slack channels" that DBot will monitor (verbose mode)
+                          select.form-control.chosen-select#verbosechannels(data-placeholder='Please choose channels to monitor', multiple)
+                        .form-group.config-entry
+                          label(for='groups') Select "Private groups" that DBot will monitor (verbose mode)
+                          select.form-control.chosen-select#verbosegroups(data-placeholder='Please choose groups to monitor', multiple)
+                        .checkbox.config-entry
+                          label
+                            input#verboseim(type='checkbox')
+                            | Monitor Direct Messages (verbose mode including slackbot)
 
 
               .text-center

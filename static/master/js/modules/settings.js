@@ -6,11 +6,11 @@
   'use strict';
   // Run this only on conf
   if ($('#channels').length) {
-    var timerExists = false;
     var channelsMatched = [];
     var groupsMatched = [];
     var verbosechannelsMatched = [];
     var verbosegroupsMatched = [];
+    var allMonitored = false;
 
     var updateChannelList = function() {
       // update the channels Monitored
@@ -43,12 +43,22 @@
       }
 
 
-      if (mergedArr.length > 0 || verbosemergedArr.length > 0) {
-        $('#channellist').html(mergedArr.sort().join(", "));
-        $('#channellist').append(verbosemergedArr.sort().join(", "));
+      if (allMonitored) {
+        $('#channellist').html("DBOT is monitoring all conversations for your team. You can close the browser and get back to work.");
+      } else if (mergedArr.length > 0 || verbosemergedArr.length > 0) {
+        $('#channellist').html('');
+        if (mergedArr.length > 0) {
+          $('#channellist').append('<h4> Channels Monitored: </h4>');
+          $('#channellist').append(mergedArr.sort().join(", "));
+        }
+        if (verbosemergedArr.length > 0) {
+          $('#channellist').append('<h4> Channels Monitored in verbose mode: </h4>');
+          $('#channellist').append(verbosemergedArr.sort().join(", "));
+        }
+
       } else {
         $('#channellist').html("<p class='warning-text'>DBOT is not monitoring any conversations. Please <b>select channels</b> to monitor below\
-         or select <b>\'Monitor ALL conversations\'</b> above.</p>");
+         or select <b>\'Monitor ALL conversations\'</b>.</p>");
       }
 
 
@@ -70,7 +80,7 @@
       $('#verboseconfigpanel').addClass('grayout');
       $('#verboseheadingConf a').removeAttr("href");
       $('#verboseheadingAdvConf .collapsed').removeAttr("href");
-      $('#channelsmonitored').hide();
+      // $('#channelsmonitored').hide();
 
 
     };
@@ -86,8 +96,8 @@
       $('#headingConf a').attr("href", "#configpanel");
       $('#verboseheadingConf').removeClass('grayout');
       $('#verboseconfigpanel').removeClass('grayout');
-      $('#verboseheadingAdvConf .collapsed').attr("href", '#verboseconfig');
-      $('#channelsmonitored').show();
+      $('#verboseheadingConf a').attr("href", '#verboseconfigpanel');
+      // $('#channelsmonitored').show();
     }
 
 
@@ -136,6 +146,7 @@
       $('#im').prop('checked', data.im);
       $('#verboseim').prop('checked', data.verbose_im);
       $('#all').prop('checked', data.all);
+      allMonitored = data.all;
 
 
       updateChannelList();
@@ -179,6 +190,7 @@
           save.verbose_groups.push($(this).val());
           verbosegroupsMatched.push($(this).text());
         });
+        allMonitored = $('#all').is(':checked');
 
         updateChannelList();
 
