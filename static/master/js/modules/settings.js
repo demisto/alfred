@@ -43,7 +43,8 @@
         verbosemergedArr.push(k);
       }
 
-
+      $('#verbosechannellist').html('');
+      $('#verbosechannelsmonitored').hide();
       if (allMonitored) {
         $('#channellist').html("DBOT is monitoring all conversations for your team. You can close the browser and get back to work.");
       }
@@ -57,7 +58,6 @@
         }
         if (verbosemergedArr.length > 0) {
           $('#verbosechannelsmonitored').show();
-          $('#channellist').html('');
           $('#verbosechannellist').append(verbosemergedArr.sort().join(", "));
         }
 
@@ -74,17 +74,9 @@
       $("#channels").attr("disabled", true).trigger("chosen:updated");
       $("#groups").attr("disabled", true).trigger("chosen:updated");
       $("#im").attr("disabled", true);
-      // $("#verbosechannels").attr("disabled", true).trigger("chosen:updated");
-      // $("#verbosegroups").attr("disabled", true).trigger("chosen:updated");
-      // $("#verboseim").attr("disabled", true);
       $('#headingConf').addClass('grayout');
       $('#configpanel').addClass('grayout');
       $('#headingConf a').removeAttr("href");
-      // $('#verboseheadingConf').addClass('grayout');
-      // $('#verboseconfigpanel').addClass('grayout');
-      // $('#verboseheadingConf a').removeAttr("href");
-      // $('#verboseheadingAdvConf .collapsed').removeAttr("href");
-      // $('#channelsmonitored').hide();
 
 
     };
@@ -213,7 +205,7 @@
               "newestOnTop": false,
               "progressBar": false,
               "positionClass": "toast-bottom-full-width",
-              "preventDuplicates": false,
+              "preventDuplicates": true,
               "onclick": null,
               "showDuration": "300",
               "hideDuration": "1000",
