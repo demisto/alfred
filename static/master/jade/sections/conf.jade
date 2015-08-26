@@ -100,10 +100,16 @@ section#conf.config-page
                       strong Done
                   br
             .col-lg-3
-              #channelsmonitored
-                h3
-                  b Channels Currently Monitored:
-                  p#channellist
-
+              #channelsmonitored.channelsmonitored(style="display: none")
+                h3.text-center
+                  | Channels Monitored
+                hr
+                p#channellist
+              br
+              #verbosechannelsmonitored.channelsmonitored(style="display: none")
+                h3.text-center
+                  | Verbose Channels Monitored
+                hr
+                p#verbosechannellist
 
 // END CONFIGURATION

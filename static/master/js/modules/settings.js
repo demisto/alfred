@@ -52,12 +52,13 @@
       }
       if (mergedArr.length > 0 || verbosemergedArr.length > 0) {
         if (mergedArr.length > 0 && !allMonitored) {
-          $('#channellist').append('<h4> Channels Monitored: </h4>');
-          $('#channellist').append(mergedArr.sort().join(", "));
+
+          $('#channellist').append('<p>' + mergedArr.sort().join(", ")+'</p>');
         }
         if (verbosemergedArr.length > 0) {
-          $('#channellist').append('<h4> Channels Monitored in verbose mode: </h4>');
-          $('#channellist').append(verbosemergedArr.sort().join(", "));
+          $('#verbosechannelsmonitored').show();
+          $('#channellist').html('');
+          $('#verbosechannellist').append(verbosemergedArr.sort().join(", "));
         }
 
       } else {
@@ -109,6 +110,7 @@
     $.getJSON('/info', function(data) {
       $('.ball-grid-pulse').hide();
       $('#configdiv').show();
+      $('#channelsmonitored').show();
 
       var channels = [];
       var verbosechannels = [];
