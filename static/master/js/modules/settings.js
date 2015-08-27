@@ -45,7 +45,7 @@
       $('#verbosechannellist').html('');
       if (allMonitored) {
         $('#channellist').html("DBOT is monitoring all conversations for your team. You can close the browser and get back to work.");
-      } else if mergedArr.length > 0 {
+      } else if (mergedArr.length > 0) {
         $('#channellist').append('<p>' + mergedArr.sort().join(", ")+'</p>');
       } else if (verbosemergedArr.length == 0){
         $('#channellist').html("<p class='warning-text'>DBOT is not monitoring any conversations. Please <b>select channels</b> to monitor below\
