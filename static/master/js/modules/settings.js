@@ -15,9 +15,9 @@
 
     var updateChannelList = function() {
       // update the channels Monitored
-      var mergedList = new Object();
+      var mergedList = {};
       var mergedArr = [];
-      var verbosemergedList = new Object();
+      var verbosemergedList = {};
       var verbosemergedArr = [];
 
       for (var i = 0; channelsMatched && i<channelsMatched.length; i++) {
@@ -33,8 +33,6 @@
         verbosemergedList[verbosegroupsMatched[i]] = true;
       }
 
-
-
       for (var k in mergedList) {
         mergedArr.push(k);
       }
@@ -43,30 +41,22 @@
         verbosemergedArr.push(k);
       }
 
+      $('#channellist').html('');
       $('#verbosechannellist').html('');
-      $('#verbosechannelsmonitored').hide();
       if (allMonitored) {
         $('#channellist').html("DBOT is monitoring all conversations for your team. You can close the browser and get back to work.");
-      }
-      else {
-        $('#channellist').html('');
-      }
-      if (mergedArr.length > 0 || verbosemergedArr.length > 0) {
-        if (mergedArr.length > 0 && !allMonitored) {
-
-          $('#channellist').append('<p>' + mergedArr.sort().join(", ")+'</p>');
-        }
-        if (verbosemergedArr.length > 0) {
-          $('#verbosechannelsmonitored').show();
-          $('#verbosechannellist').append(verbosemergedArr.sort().join(", "));
-        }
-
-      } else {
+      } else if mergedArr.length > 0 {
+        $('#channellist').append('<p>' + mergedArr.sort().join(", ")+'</p>');
+      } else if (verbosemergedArr.length == 0){
         $('#channellist').html("<p class='warning-text'>DBOT is not monitoring any conversations. Please <b>select channels</b> to monitor below\
          or select <b>\'Monitor ALL conversations\'</b>.</p>");
       }
-
-
+      if (verbosemergedArr.length > 0) {
+        $('#verbosechannelsmonitored').show();
+        $('#verbosechannellist').append('<p>' + verbosemergedArr.sort().join(", ")+'</p>');
+      } else {
+        $('#verbosechannelsmonitored').hide();
+      }
     }
 
     var disableAll = function() {
