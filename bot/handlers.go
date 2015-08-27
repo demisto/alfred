@@ -24,8 +24,9 @@ import (
 )
 
 const (
-	numOfPositivesToConvict = 7
-	xfeScoreToConvict       = 6
+	numOfPositivesToConvict         = 7
+	numOfPositivesToConvictForFiles = 3
+	xfeScoreToConvict               = 7
 )
 
 // Worker reads messages from the queue and does the actual work
@@ -179,7 +180,7 @@ func (w *Worker) handleURL(text string, reply *domain.WorkReply) {
 		for i := 0; i < 2; i++ {
 			<-c
 		}
-		if reply.URL.XFE.URLDetails.Score > xfeScoreToConvict || reply.URL.VT.URLReport.Positives > numOfPositivesToConvict {
+		if reply.URL.XFE.URLDetails.Score >= xfeScoreToConvict || reply.URL.VT.URLReport.Positives >= numOfPositivesToConvict {
 			// This is known bad scenario
 			reply.URL.Result = domain.ResultDirty
 		} else if !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
@@ -248,7 +249,7 @@ func (w *Worker) handleIP(ip string, reply *domain.WorkReply) {
 		}
 	}
 	reply.IP.Result = domain.ResultUnknown
-	if reply.IP.XFE.IPReputation.Score > xfeScoreToConvict || vtPositives > numOfPositivesToConvict && reply.IP.XFE.NotFound {
+	if reply.IP.XFE.IPReputation.Score >= xfeScoreToConvict || vtPositives >= numOfPositivesToConvict && reply.IP.XFE.NotFound {
 		// This is known bad scenario
 		reply.IP.Result = domain.ResultDirty
 	} else if !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
@@ -289,7 +290,7 @@ func (w *Worker) handleMD5(md5 string, reply *domain.WorkReply) {
 		<-c
 	}
 	reply.MD5.Result = domain.ResultUnknown
-	if len(reply.MD5.XFE.Malware.Family) > 0 || reply.MD5.VT.FileReport.Positives > numOfPositivesToConvict {
+	if len(reply.MD5.XFE.Malware.Family) > 0 || reply.MD5.VT.FileReport.Positives >= numOfPositivesToConvictForFiles {
 		// This is known bad scenario
 		reply.MD5.Result = domain.ResultDirty
 	} else if !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
