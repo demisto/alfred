@@ -155,6 +155,7 @@
 
       // Enable chosen
       $(".chosen-select").chosen({no_results_text: "Oops, No matching entry found:"});
+      $('#verboseconfigpanel').collapse('hide');
 
       // Function to save all properties
       var saveAll = function() {
@@ -209,7 +210,7 @@
               "onclick": null,
               "showDuration": "300",
               "hideDuration": "1000",
-              "timeOut": "5000",
+              "timeOut": "3000",
               "extendedTimeOut": "1000",
               "showEasing": "swing",
               "hideEasing": "linear",
@@ -228,11 +229,11 @@
                 "newestOnTop": false,
                 "progressBar": false,
                 "positionClass": "toast-bottom-full-width",
-                "preventDuplicates": false,
+                "preventDuplicates": true,
                 "onclick": null,
                 "showDuration": "300",
                 "hideDuration": "1000",
-                "timeOut": "5000",
+                "timeOut": "3000",
                 "extendedTimeOut": "1000",
                 "showEasing": "swing",
                 "hideEasing": "linear",

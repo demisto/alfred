@@ -74,20 +74,20 @@ section#conf.config-page
                               input#im(type='checkbox')
                               | Monitor Direct Messages (includes slackbot)
 
-                  #accordion.panel-group(role="tablist", aria-multiselectable="true")
-                    .panel.panel-default
+                  #verboseaccordion.panel-group(role="tablist", aria-multiselectable="true")
+                    .panel
                       #verboseheadingConf.panel-heading(role="tab")
                         h4.panel-title
                           a(role="button", data-toggle="collapse", data-parent="#verboseaccordion", href="#verboseconfigpanel", aria-expanded="false", aria-controls="verboseconfigpanel")
                             | Advanced Configuration - for Security Analysts (Verbose Mode)
-                      #verboseconfigpanel.panel-collapse.in.collapse(role="tabpanel", aria-labelledby="verboseheadingConf")
+                      #verboseconfigpanel.panel-collapse.collapse.in(role="tabpanel", aria-labelledby="verboseheadingConf")
                         .panel-body
                           | Verbose Mode alerts users on all results (including clean queries) and includes detailed messages for each check.
                           .form-group.config-entry
-                            label(for='channels') Select "Slack channels" that DBot will monitor (verbose mode)
+                            label(for='verbosechannels') Select "Slack channels" that DBot will monitor (verbose mode)
                             select.form-control.chosen-select#verbosechannels(data-placeholder='Please choose channels to monitor', multiple)
                           .form-group.config-entry
-                            label(for='groups') Select "Private groups" that DBot will monitor (verbose mode)
+                            label(for='verbosegroups') Select "Private groups" that DBot will monitor (verbose mode)
                             select.form-control.chosen-select#verbosegroups(data-placeholder='Please choose groups to monitor', multiple)
                           .checkbox.config-entry
                             label
