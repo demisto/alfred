@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	numOfPositivesToConvict = 3
-	xfeScoreToConvict       = 3
+	numOfPositivesToConvict = 7
+	xfeScoreToConvict       = 6
 )
 
 // Worker reads messages from the queue and does the actual work
