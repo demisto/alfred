@@ -229,6 +229,43 @@
         $('#slack-message').text('Configure DBOT');
         $('#action').attr('href', '/conf')
       });
+      var recaptcha_widget_id = null;
+      var captcha_callback = function(captcha_response) {
+      var emailaddress = $('#emailaddress').val();
+
+      $.ajax({
+        type: 'POST',
+        url: '/save',
+        data: JSON.stringify(""),
+        headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
+        dataType: 'json',
+        contentType: 'application/json; charset=utf-8',
+        success: function(){
+          $('recaptcha').modal('hide');
+        },
+        error: function(xhr, status, error) {
+          var err = error;
+          if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
+            err += " - " + xhr.responseJSON.errors[0].detail;
+          }
+          if (recaptcha_widget_id!=null) {
+            grecaptcha.reset(recaptcha_widget_id);
+          }
+        }
+      });
+    }
+
+
+
+      // recaptcha
+      var render_captcha = function() {
+        recaptcha_widget_id = grecaptcha.render('recaptchadiv', { 'sitekey' : '6Let7QsTAAAAAG90E160XQZtIGOWyh59nTefLXFx', 'callback': captcha_callback});
+      }
+
+      $('#recaptcha').on('shown.bs.modal', function () {
+          render_captcha();
+      });
+
     }
   });
 
