@@ -85,6 +85,15 @@ section#faq.config-page
               | Yes, it is. DBOT is a preview of the security automation capabilities that we will be building in our product. DBOT will remain free
               | for all users and you can enjoy secure collaboration.
         .panel.panel-default
+          #q14.panel-heading(role="tab")
+            h4.panel-title
+              a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a14", aria-expanded="false", aria-controls="a14")
+                | Is DBOT an open source project?
+          #a14.panel-collapse.collapse(role="tabpanel", aria-labelledby="q14")
+            .panel-body
+              | DBOT is not an open source project but at Demisto, we believe in contributing back. We have started multiple open source projects 
+              | that can be found on our #[a(href='https://github.com/demisto') github] page.
+        .panel.panel-default
           #q5.panel-heading(role="tab")
             h4.panel-title
               a.collapsed(role="button", data-toggle="collapse", data-parent="#accordion", href="#a5", aria-expanded="false", aria-controls="a5")
@@ -160,3 +169,4 @@ section#faq.config-page
             .panel-body
               | We recommend that you scan all channels, all private groups and all direct messages as malware can appear anywhere. However, you do have the choice of
               | selecting particular channels if you wish to limit the protection provided by DBot to these channels only.
+        
