@@ -70,7 +70,9 @@ div.modal.fade(id="recaptcha", aria-labelledby="recaptchaLabel")
   .modal-dialog
     .modal-content
       .modal-header
-          h4(id="recaptchaLabel", class="modal-title") Please confirm you are a human
+        button(type="button", class="close", data-dismiss="modal", aria-label="Close")
+          span(aria-hidden="true") &times;
+        h4(id="recaptchaLabel", class="modal-title") Please confirm you are a human
       .modal-body
         #recaptchadiv
 

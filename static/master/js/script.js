@@ -166,8 +166,10 @@
        var navToggle = $('.navbar-toggle');
 
        navMain.on('click', 'a', null, function () {
-          if ( navToggle.is(':visible') )
-            navMain.collapse('hide');
+         if (!(this.attr(id) == 'realname')) {
+           if ( navToggle.is(':visible') )
+             navMain.collapse('hide');           
+         }
        });
    });
 
