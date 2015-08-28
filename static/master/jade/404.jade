@@ -6,4 +6,37 @@ html(lang="en")
     include _head
 
   body
-    h1 Page not found
+    .full-screen-conf
+      .navbar.navbar-default.navbar-fixed-top.navbar-sticky.navbar-sticky-color
+        .container
+          .navbar-header
+            button.navbar-toggle(type='button', data-toggle='collapse', data-target='#navbar-main')
+              span.sr-only Toggle navigation
+              span.icon-bar
+              span.icon-bar
+              span.icon-bar
+            a.navbar-brand(href='https://www.demisto.com')
+              img(src='img/logo.png', alt='')
+          // MENU
+          #navbar-main.navbar-collapse.collapse
+            ul.nav.navbar-nav.navbar-right.main-navbar
+              li
+                a(href='/#') Home
+              li.current
+                a(href='#') FAQ
+              li
+                a(href='/#integrations') Users
+              li
+                a(href='/#features') Features
+              li
+                a(href='#desc2') Details
+
+          // END STICKY NAVBAR
+
+    section.config-page
+      .container
+        .row
+          .config-section
+            .col-lg-12
+              h1.text-center Page Not Found
+              h2.text-center Move #[a(href='/') along], there is nothing to see here.
