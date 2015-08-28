@@ -33,14 +33,16 @@
         $('#useremail').html(data.email);
         $('#teamname').html('Team: ' + data.team_name);
 
-        FreshWidget.init("", {"queryString": "&widgetType=popup&searchArea=no&helpdesk_ticket[subject]=Details:&helpdesk_ticket[requester]="+data.email, "utf8": "✓",
-          "widgetType": "popup", "buttonType": "text", "buttonText": "Feedback", "buttonColor": "white", "buttonBg": "#006063",
-          "alignment": "2", "offset": "500px", "formHeight": "500px", "url": "https://demisto.freshdesk.com"} );
+        zE(function() {
+          zE.identify({
+            name: data.real_name,
+            email: data.email,
+          });
+        });
+
       },
       error: function(xhr, status, error) {
-        FreshWidget.init("", {"queryString": "&widgetType=popup&searchArea=no&helpdesk_ticket[subject]=Details:", "utf8": "✓",
-          "widgetType": "popup", "buttonType": "text", "buttonText": "Feedback", "buttonColor": "white", "buttonBg": "#006063",
-          "alignment": "2", "offset": "500px", "formHeight": "500px", "url": "https://demisto.freshdesk.com"} );
+
       }
     });
 
