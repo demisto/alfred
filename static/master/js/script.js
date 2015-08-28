@@ -232,11 +232,11 @@
       var recaptcha_widget_id = null;
       var captcha_callback = function(captcha_response) {
       var emailaddress = $('#emailaddress').val();
-
+      var save = {'email':emailaddress , 'captcharesponse':captcha_response}
       $.ajax({
         type: 'POST',
-        url: '/save',
-        data: JSON.stringify(""),
+        url: '/slackchannel',
+        data: JSON.stringify(save),
         headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
         dataType: 'json',
         contentType: 'application/json; charset=utf-8',
