@@ -149,7 +149,7 @@ type googleResponse struct {
 
 func (ac *AppContext) joinSlack(w http.ResponseWriter, r *http.Request) {
 	req := context.Get(r, "body").(*join)
-	if !govalidator.IsEmail(req.Email) || req.CaptchaResponse == "" {
+	if !govalidator.IsEmail(req.Email) || req.CaptchaResponse == "" || len(req.Email) > 128 {
 		WriteError(w, ErrBadRequest)
 		return
 	}

@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS first_messages (
 	CONSTRAINT first_messages_team_fk FOREIGN KEY (team) REFERENCES teams (id)
 );
 CREATE TABLE IF NOT EXISTS slack_invites (
-	email VARCHAR(512) NOT NULL,
+	email VARCHAR(128) NOT NULL,
 	ts TIMESTAMP NOT NULL,
 	invited INT(1) NOT NULL,
 	CONSTRAINT slack_invites_pk PRIMARY KEY (email)
