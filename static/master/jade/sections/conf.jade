@@ -53,11 +53,13 @@ section#conf.config-page
               hr
               h3
                 b What communication do you want monitor?
-              form(class="configform")
-                .checkbox.config-entry
-                  label
-                    input#all(type='checkbox')
-                    | Monitor ALL conversations
+              form.configform                
+                .radio.config-entry
+                  input#all(type='radio', name='conversation', value='all')
+                  label(for='all') Monitor ALL conversations
+                  input#selectconv(type='radio', name='conversation', value='select')
+                  label(for='selectedconv') Selected Channels
+              br
               .col-lg-9
                   #accordion.panel-group(role="tablist", aria-multiselectable="true")
                     .panel.panel-default

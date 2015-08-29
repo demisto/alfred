@@ -132,7 +132,8 @@
 
       $('#im').prop('checked', data.im);
       $('#verboseim').prop('checked', data.verbose_im);
-      $('#all').prop('checked', data.all);
+      $('#all').attr('checked', data.all);
+      $('#selectconv').attr('checked', !data.all);
       allMonitored = data.all;
 
 
@@ -235,14 +236,16 @@
           }
         });
       };
-      $('#all').change(function(evt) {
+      var radio_button_change = function(evt) {
         if ($('#all').is(':checked')) {
           disableAll();
         } else {
           enableAll();
         }
         saveAll();
-      });
+      }
+      $('#all').change(radio_button_change);
+      $('#selectconv').change(radio_button_change);
       $('.chosen-select,#im,#verboseim').change(function(evt) {
         saveAll();
       });
@@ -268,7 +271,6 @@
             email: data.email,
           });
         });
-
       });
 
     }
