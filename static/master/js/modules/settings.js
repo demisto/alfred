@@ -268,7 +268,7 @@
         zE(function() {
           zE.identify({
             name: data.real_name,
-            email: data.email,
+            email: data.email
           });
         });
       });
