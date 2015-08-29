@@ -89,3 +89,10 @@ type UserBot struct {
 	Bot       string    `json:"bot"`
 	Timestamp time.Time `json:"ts" db:"ts"`
 }
+
+// JoinSlack holds invite information to join our Slack channel
+type JoinSlack struct {
+	Email     string    `json:"email"`
+	Timestamp time.Time `json:"ts" db:"ts"`
+	Invited   bool      `json:"invited"`
+}

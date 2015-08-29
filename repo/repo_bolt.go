@@ -50,6 +50,10 @@ func New() (Repo, error) {
 		if err != nil {
 			return err
 		}
+		_, err = tx.CreateBucketIfNotExists([]byte("joinslack"))
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {
@@ -416,4 +420,9 @@ func (r *repo) WasMessageSentOnChannel(team, channel string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func (r *repo) JoinSlackChannel(email string) error {
+	invite := &domain.JoinSlack{Email: email, Timestamp: time.Now()}
+	return r.set("joinslack", email, invite)
 }

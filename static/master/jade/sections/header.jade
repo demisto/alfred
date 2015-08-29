@@ -51,22 +51,22 @@ header#header.header
           .visible-xs-block.visible-sm-block.col-xs-12
             .intro-shot
               img.img-responsive(src="img/slackscreenshot.png", alt="Header shot", data-no-retina="")
-    .row      
+    .row
       .col-xs-12.bottom-bar
         span#bottom-bar.text-center
           h3
-            | Join other Security Analysts on Slack 
-            form(name="join-channel", method="post")
+            | Join Other Security Analysts on Slack
+            form#join(name="join-channel")
               div.input.inline-input
-                input#emailaddress.inline-input(type="text", name="email", placeholder="Enter email")
-              a.input.inline-input.btn.btn-xlarge.btn-theme(data-toggle="modal", data-target="#recaptcha")
+                input#emailaddress.inline-input(type="email", name="email", required="true", placeholder="Enter email")
+              button#emailsubmit.input.inline-input.btn.btn-xlarge.btn-theme(type="submit")
                 strong Join
 
 
     a(href='#integrations')
       i.fa.fa-5x.fa-angle-double-down.forward-section
 
-div.modal.fade(id="recaptcha", aria-labelledby="recaptchaLabel")
+div#recaptcha.modal.fade(aria-labelledby="recaptchaLabel")
   .modal-dialog
     .modal-content
       .modal-header

@@ -30,6 +30,8 @@ func WriteError(w http.ResponseWriter, err *Error) {
 var (
 	// ErrBadRequest is a generic bad request
 	ErrBadRequest = &Error{"bad_request", 400, "Bad request", "Request body is not well-formed. It must be JSON."}
+	// ErrBadCaptcha is a captcha error
+	ErrBadCaptcha = &Error{"bad_captcha", 400, "Bad CAPTCHA", "The provided CAPTCHA response does not match."}
 	// ErrMissingPartRequest returns 400 if the request is missing some parts
 	ErrMissingPartRequest = &Error{"missing_request", 400, "Bad request", "Request body is missing mandatory parts."}
 	// ErrBadContentRequest if the request content is wrong

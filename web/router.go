@@ -79,6 +79,7 @@ func New(appC *AppContext) *Router {
 	r.Post("/match", authHandlers.Append(contentTypeHandler, bodyHandler(regexpMatch{})).ThenFunc(appC.match))
 	r.Post("/save", authHandlers.Append(contentTypeHandler, bodyHandler(domain.Configuration{})).ThenFunc(appC.save))
 	r.Get("/work", commonHandlers.ThenFunc(appC.work))
+	r.Post("/join", commonHandlers.Append(contentTypeHandler, bodyHandler(join{})).ThenFunc(appC.joinSlack))
 	// Static
 	r.Get("/", staticHandlers.ThenFunc(pageHandler("/index.html")))
 	r.Get("/conf", staticHandlers.ThenFunc(pageHandler("/conf.html")))

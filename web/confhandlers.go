@@ -3,9 +3,13 @@ package web
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"regexp"
 
+	"github.com/Sirupsen/logrus"
+	"github.com/asaskevich/govalidator"
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/util"
 	"github.com/demisto/slack"
@@ -26,6 +30,11 @@ type infoResponse struct {
 	VerboseIM bool     `json:"verbose_im"`
 	Regexp    string   `json:"regexp"`
 	All       bool     `json:"all"`
+}
+
+type join struct {
+	Email           string `json:"email"`
+	CaptchaResponse string `json:"captcharesponse"`
 }
 
 func (ac *AppContext) info(w http.ResponseWriter, r *http.Request) {
@@ -128,6 +137,49 @@ func (ac *AppContext) save(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	ac.q.PushConf(u, req)
+	w.WriteHeader(http.StatusNoContent)
+	w.Write([]byte("\n"))
+}
+
+// Struct for parsing json in google's response
+type googleResponse struct {
+	Success    bool
+	ErrorCodes []string `json:"error-codes"`
+}
+
+func (ac *AppContext) joinSlack(w http.ResponseWriter, r *http.Request) {
+	req := context.Get(r, "body").(*join)
+	if !govalidator.IsEmail(req.Email) || req.CaptchaResponse == "" {
+		WriteError(w, ErrBadRequest)
+		return
+	}
+	resp, err := http.PostForm("https://www.google.com/recaptcha/api/siteverify",
+		url.Values{"secret": {"***REMOVED***"}, "response": {req.CaptchaResponse}})
+	if err != nil {
+		logrus.Debugf("Recaptcha error - %v", err)
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logrus.Debugf("Recaptcha body error - %v", err)
+		panic(err)
+	}
+	gr := &googleResponse{}
+	err = json.Unmarshal(body, gr)
+	if err != nil {
+		logrus.Debugf("Recaptcha body parse error - %v", err)
+		panic(err)
+	}
+	if !gr.Success {
+		WriteError(w, ErrBadCaptcha)
+		return
+	}
+
+	if err = ac.r.JoinSlackChannel(req.Email); err != nil {
+		panic(err)
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 	w.Write([]byte("\n"))
 }

@@ -41,5 +41,6 @@ type Repo interface {
 	UpdateStatistics(stats *domain.Statistics) error
 	Statistics(team string) (*domain.Statistics, error)
 	GlobalStatistics() (*domain.Statistics, error)
+	JoinSlackChannel(email string) error
 	Close() error
 }

@@ -98,6 +98,12 @@ CREATE TABLE IF NOT EXISTS first_messages (
 	ts TIMESTAMP NOT NULL,
 	CONSTRAINT first_messages_pk PRIMARY KEY (team, channel),
 	CONSTRAINT first_messages_team_fk FOREIGN KEY (team) REFERENCES teams (id)
+);
+CREATE TABLE IF NOT EXISTS slack_invites (
+	email VARCHAR(512) NOT NULL,
+	ts TIMESTAMP NOT NULL,
+	invited INT(1) NOT NULL,
+	CONSTRAINT slack_invites_pk PRIMARY KEY (email)
 )`
 
 type repoMySQL struct {
@@ -652,4 +658,9 @@ func (r *repoMySQL) WasMessageSentOnChannel(team, channel string) (bool, error) 
 		return false, err
 	}
 	return true, err
+}
+
+func (r *repoMySQL) JoinSlackChannel(email string) error {
+	_, err := r.db.Exec("INSERT INTO slack_invites (email, ts, invited) VALUES (?, now(), 0)", email)
+	return err
 }

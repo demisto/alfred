@@ -100,7 +100,7 @@
   if ($('#slack-message').length) {
     $doc.ready(stickyNavScroll);
     $win.scroll(stickyNavScroll);
-}
+  }
 
   // Sticky Navigation
   // -----------------------------------
@@ -168,7 +168,7 @@
        navMain.on('click', 'a', null, function () {
          if (!(this.attr(id) == 'realname')) {
            if ( navToggle.is(':visible') )
-             navMain.collapse('hide');           
+             navMain.collapse('hide');
          }
        });
    });
@@ -195,41 +195,47 @@
       });
       var recaptcha_widget_id = null;
       var captcha_callback = function(captcha_response) {
-      var emailaddress = $('#emailaddress').val();
-      var save = {'email':emailaddress , 'captcharesponse':captcha_response}
-      $.ajax({
-        type: 'POST',
-        url: '/slackchannel',
-        data: JSON.stringify(save),
-        headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
-        dataType: 'json',
-        contentType: 'application/json; charset=utf-8',
-        success: function(){
-          $('recaptcha').modal('hide');
-        },
-        error: function(xhr, status, error) {
-          var err = error;
-          if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
-            err += " - " + xhr.responseJSON.errors[0].detail;
+        var emailaddress = $('#emailaddress').val();
+        var save = {'email':emailaddress , 'captcharesponse':captcha_response}
+        $.ajax({
+          type: 'POST',
+          url: '/join',
+          data: JSON.stringify(save),
+          headers: {'X-XSRF-TOKEN': Cookies.get('XSRF')},
+          dataType: 'json',
+          contentType: 'application/json; charset=utf-8',
+          success: function(){
+            $('#recaptcha').modal('hide');
+          },
+          error: function(xhr, status, error) {
+            var err = error;
+            if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
+              err += " - " + xhr.responseJSON.errors[0].detail;
+            }
+            if (recaptcha_widget_id!=null) {
+              grecaptcha.reset(recaptcha_widget_id);
+            }
           }
-          if (recaptcha_widget_id!=null) {
-            grecaptcha.reset(recaptcha_widget_id);
-          }
-        }
-      });
-    }
-
-
+        });
+      }
 
       // recaptcha
       var render_captcha = function() {
+        // Clean the recaptcha
+        $('#recaptchadiv').html('');
         recaptcha_widget_id = grecaptcha.render('recaptchadiv', { 'sitekey' : '6Let7QsTAAAAAG90E160XQZtIGOWyh59nTefLXFx', 'callback': captcha_callback});
       }
+
+      $('#join').submit(function(event) {
+        event.preventDefault();
+        if ($('#emailaddress')[0].checkValidity()) {
+          $('#recaptcha').modal('show');
+        }
+      });
 
       $('#recaptcha').on('shown.bs.modal', function () {
           render_captcha();
       });
-
     }
   });
 
