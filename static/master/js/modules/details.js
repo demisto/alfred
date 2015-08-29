@@ -46,17 +46,363 @@
       }
     });
 
-    var IPRiskScore = React.createClass({
+    var sortByFirstSeen = function(a, b) {
+      return a.firstseen > b.firstseen ? -1 : a.firstseen < b.firstseen ? 1 : 0;
+    }
+
+    var sortByCreate = function(a, b) {
+      return a.created > b.created ? -1 : a.created < b.created ? 1 : 0;
+    }
+
+    var sortByScanDate = function(a, b) {
+      return a.scan_date > b.scan_date ? -1 : a.scan_date < b.scan_date ? 1 : 0;
+    }
+
+    var sortByLastResolved = function(a, b) {
+      return a.last_resolved > b.last_resolved ? -1 : a.last_resolved < b.last_resolved ? 1 : 0;
+    }
+
+    // ======================== IP section ===========================
+
+    var IPDiv = React.createClass({
       render: function() {
-        var xfedata = this.props.data;
-        if (xfedata.not_found) {
-          return (<div></div>);
+        if (!isip) {
+          return null;
         }
         else {
+          var ipdata = this.props.data.ip;
           return (
-            <h3> Risk Score: {xfedata.ip_reputation.score}</h3>
+            <div>
+              <h2>IP: {ipdata.details}</h2>
+              <IPResultMessage data={ipdata} />
+              <IPDetails data={ipdata} />
+            </div>
           );
         }
+      }
+    });
+
+    var IPResultMessage = React.createClass({
+      render: function() {
+        var ipdata = this.props.data;
+        var resultMessage = 'Could not determine the IP address reputation.';
+        var color = 'warning-text';
+
+        if (ipdata.Result == 0) {
+          resultMessage = 'IP address is found to be clean.';
+          color = 'success-text';
+        } else if (ipdata.Result == 1) {
+          resultMessage = "IP address is found to be malicious.";
+          color = 'danger-text';
+        }
+        return (<h3 className={color}>{resultMessage}</h3>)
+      }
+    });
+
+    var IPDetails = React.createClass({
+      render: function() {
+        var data = this.props.data;
+        if (data &&
+          (data.xfe && !data.xfe.not_found ||
+          data.vt.ip_report && data.vt.ip_report.response_code === 1)) {
+          return (
+            <div className="panel-group" id="ipproviders" role="tablist" aria-multiselectable="true">
+              <IPXFE data={data} />
+              <IPVT data={data} />
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+
+    var IPXFE = React.createClass({
+      render: function() {
+        var data = this.props.data;
+        if (data && data.xfe && !data.xfe.not_found) {
+          return (
+            <div className="panel panel-default">
+              <div className="panel-heading" role="tab" id="hipxfe">
+                <h4 className="panel-title">
+                  <a role="button" data-toggle="collapse" data-parent="#ipproviders" href="#ipxfe" aria-expanded="true" aria-controls="ipxfe">
+                    IBM X-Force Exchange Data
+                  </a>
+                </h4>
+              </div>
+              <div id="ipxfe" className="panel-collapse collapse in" role="tabpanel" aria-labelledby="hipxfe">
+                <div className="panel-body">
+                  <h3> Risk Score: {data.xfe.ip_reputation.score}</h3>
+                  <h3> Country: {data.xfe.ip_reputation.geo && data.xfe.ip_reputation.geo['country'] ? data.xfe.ip_reputation.geo['country'] : 'Unknown'} </h3>
+                  <h3> Categories: {Object.keys(data.xfe.ip_reputation.cats).join(', ')} </h3>
+                  <SubnetSection data={data.xfe.ip_reputation.subnets} />
+                  <IPHistory data={data.xfe.ip_history.history} />
+                </div>
+              </div>
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+
+    var SubnetSection = React.createClass({
+      render: function() {
+        var rows = [];
+        var subnets = this.props.data;
+        if (subnets && subnets.length > 0) {
+          subnets.sort(sortByCreate);
+          for (var i=0; i < subnets.length && i < 10; i++) {
+            rows.push(
+              <tr key={'ipr_subnet_' + i}>
+                <td>{subnets[i].subnet}</td>
+                <td>{subnets[i].score}</td>
+                <td>{Object.keys(subnets[i].cats).join(',')}</td>
+                <td>{subnets[i].geo && subnets[i].geo['country'] ? subnets[i].geo['country'] : 'Unknown'}</td>
+                <td>{subnets[i].reason}</td>
+                <td>{subnets[i].created}</td>
+              </tr>
+            )
+          }
+          return (
+            <div>
+              <h4>Subnets</h4>
+              <table className="table">
+                <thead>
+                  <th>Subnet</th>
+                  <th>Score</th>
+                  <th>Category</th>
+                  <th>Location</th>
+                  <th>Reason</th>
+                  <th>Created</th>
+                </thead>
+                <tbody>
+                  {rows}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+
+    var IPHistory = React.createClass({
+      render: function() {
+        var rows = [];
+        var history = this.props.data;
+        if (history && history.length > 0) {
+          history.sort(sortByCreate);
+          for (var i=0; i < history.length && i < 10; i++) {
+            rows.push(
+              <tr key={'ipr_hist_' + i}>
+                <td>{history[i].ip}</td>
+                <td>{history[i].score}</td>
+                <td>{Object.keys(history[i].cats).join(',')}</td>
+                <td>{history[i].geo && history[i].geo['country'] ? history[i].geo['country'] : 'Unknown'}</td>
+                <td>{history[i].reason}</td>
+                <td>{history[i].created}</td>
+              </tr>
+            )
+          }
+          return (
+            <div>
+              <h4>IP History</h4>
+              <table className="table">
+                <thead>
+                  <th>IP</th>
+                  <th>Score</th>
+                  <th>Category</th>
+                  <th>Location</th>
+                  <th>Reason</th>
+                  <th>Created</th>
+                </thead>
+                <tbody>
+                  {rows}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+
+    var IPVT = React.createClass({
+      render: function() {
+        var data = this.props.data;
+        if (data && data.vt && data.vt.ip_report && data.vt.ip_report.response_code === 1) {
+          var xfeFound = data.xfe && !data.xfe.not_found;
+          return (
+            <div className="panel panel-default">
+              <div className="panel-heading" role="tab" id="hurlvt">
+                <h4 className="panel-title">
+                  <a className={xfeFound ? 'collapsed' : ''} role="button" data-toggle="collapse" data-parent="#ipproviders" href="#ipvt" aria-expanded="true" aria-controls="ipvt">
+                    Virus Total Data
+                  </a>
+                </h4>
+              </div>
+              <div id="ipvt" className={xfeFound ? 'panel-collapse collapse' : 'panel-collapse collapse in'} role="tabpanel" aria-labelledby="hipvt">
+                <div className="panel-body">
+                  <ResolutionSection data={data.vt.ip_report.Resolutions}/>
+                  <DetectedURLSection data={data.vt.ip_report.detected_urls}/>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+
+    var DetectedURLSection = React.createClass({
+      render: function() {
+        var detected = this.props.data;
+        if (detected && detected.length > 0) {
+          detected.sort(sortByScanDate);
+          var rows = [];
+          for (var i=0; i < detected.length && i < 10; i++) {
+            rows.push(<tr key={'ip_detected_' + i}><td>{detected[i].url}</td><td>{detected[i].positives} / {detected[i].total}</td><td>{detected[i].scan_date}</td></tr>);
+          }
+          return (
+            <div>
+              <h4>Detected URLs</h4>
+              <table className="table">
+                <thead>
+                  <th style={{width:'70%'}}>URL</th>
+                  <th>Positives</th>
+                  <th>Scan Date</th>
+                </thead>
+                <tbody>
+                  {rows}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+
+    var ResolutionSection = React.createClass({
+      render: function() {
+        var resArr = this.props.data;
+        if (resArr && resArr.length > 0) {
+          resArr.sort(sortByLastResolved);
+          var rows = [];
+          for (var i=0; i<resArr.length && i < 10; i++) {
+            rows.push(<tr key={'resolv_' + i}><td>{resArr[i].hostname}</td><td>{resArr[i].last_resolved}</td></tr>);
+          }
+          return (
+            <div>
+              <h4>Historical Resolutions</h4>
+              <table className="table">
+                <thead>
+                  <th>Hostname</th>
+                  <th>Last Resolved</th>
+                </thead>
+                <tbody>
+                  {rows}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+    // ======================== END IP section ===========================
+
+    // ======================== URL section ===========================
+    var URLDiv = React.createClass({
+      render: function() {
+        if (!isurl) {
+          return null;
+        } else {
+          var urldata = this.props.data.url;
+          return (
+            <div>
+              <h2>URL: {urldata.details}</h2>
+              <URLResultMessage data={urldata} />
+              <URLDetails urldata={urldata} />
+            </div>
+          );
+        }
+      }
+    });
+
+    var URLResultMessage = React.createClass({
+      render: function() {
+        var urldata = this.props.data;
+        var resultMessage = 'Could not determine the URL reputation.';
+        var color = 'warning-text';
+
+        if (urldata.Result == 0)
+        {
+          resultMessage = 'URL address is found to be clean.';
+          color = 'success-text';
+        }
+        else if (urldata.Result == 1)
+        {
+          resultMessage = 'URL address is found to be malicious.';
+          color = 'danger-text';
+        }
+        return (<h3 className={color}>{resultMessage}</h3>)
+      }
+    });
+
+    var URLDetails = React.createClass({
+      render: function() {
+        var urldata = this.props.urldata;
+        if (urldata &&
+          (urldata.xfe && (!urldata.xfe.not_found || urldata.xfe.resolve && urldata.xfe.resolve.A) ||
+          urldata.vt.url_report && urldata.vt.url_report.response_code === 1)) {
+          return (
+            <div className="panel-group" id="urlproviders" role="tablist" aria-multiselectable="true">
+              <URLXFE urldata={urldata} />
+              <URLVT urldata={urldata} />
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+
+    var URLXFE = React.createClass({
+      render: function() {
+        var urldata = this.props.urldata;
+        if (urldata && urldata.xfe && (!urldata.xfe.not_found || urldata.xfe.resolve && urldata.xfe.resolve.A)) {
+          var mxToStr = function(mx) {
+            return mx.exchange + '(' + mx.priority + ')';
+          }
+          return (
+            <div className="panel panel-default">
+              <div className="panel-heading" role="tab" id="hurlxfe">
+                <h4 className="panel-title">
+                  <a role="button" data-toggle="collapse" data-parent="#urlproviders" href="#urlxfe" aria-expanded="true" aria-controls="urlxfe">
+                    IBM X-Force Exchange Data
+                  </a>
+                </h4>
+              </div>
+              <div id="urlxfe" className="panel-collapse collapse in" role="tabpanel" aria-labelledby="hurlxfe">
+                <div className="panel-body">
+                  <URLRiskScore data={urldata.xfe} />
+                  <URLCategory urldata={urldata} />
+                  <table className="table">
+                    <thead><th>Name</th><th>Value</th></thead>
+                    <tbody>
+                      <TDRecord t="A Records" arr={urldata.xfe.resolve.A} />
+                      <TDRecord t="AAAA Records" arr={urldata.xfe.resolve.AAAA} />
+                      <TDRecord t="TXT Records" arr={urldata.xfe.resolve.TXT} />
+                      <TDRecord t="MX Records" arr={urldata.xfe.resolve.MX} m={mxToStr} />
+                    </tbody>
+                  </table>
+                  <URLMalware urldata={urldata} />
+                </div>
+              </div>
+            </div>
+          );
+        }
+        return null;
       }
     });
 
@@ -64,7 +410,7 @@
       render: function() {
         var xfedata = this.props.data;
         if (xfedata.not_found ) {
-          return (<div></div>);
+          return null;
         }
         else {
           return (
@@ -74,423 +420,99 @@
       }
     });
 
-    var IPResultMessage = React.createClass({
+    var TDRecord = React.createClass({
       render: function() {
-        var ipdata = this.props.data;
-        var resultMessage;
-        var result;
-
-        if (ipdata.Result == 0)
-        {
-          resultMessage = "IP address is found to be clean.";
-          return (<h3 className='success-text'>{resultMessage}</h3>)
-        }
-        else if (ipdata.Result == 1)
-        {
-          resultMessage = "IP address is found to be malicious.";
-          return (<h3 className='danger-text'>{resultMessage}</h3>)
-        }
-        else
-        {
-          resultMessage = "Could not determine the IP address reputation.";
-          return (<h3 className='warning-text'>{resultMessage}</h3>)
-        }
-        return resultMessage;
-
-      }
-    });
-
-    // Details for the ip address query
-    var IpDiv = React.createClass({
-      render: function() {
-        var ipdata = this.props.data.ip;
-        if (!isip) {
-          return (<div></div>);
-        }
-        else return (
-          <div>
-            <div>
-            <h2>IP: {ipdata.details}</h2>
-            </div>
-            <IPResultMessage data={ipdata} />
-            <IPRiskScore data={ipdata.xfe} />
-            <h3> Country: {ipdata.xfe.ip_reputation.geo? ipdata.xfe.ip_reputation.geo['country']:'Unknown'} </h3>
-
-            <div className="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
-              <SubnetSection data={ipdata.xfe.ip_reputation.subnets} />
-              <ResolutionSection data={ipdata.VT.ip_report.Resolutions}/>
-              <DetectedURLSection data={ipdata.VT.ip_report.detected_urls}/>
-            </div>
-            <hr></hr>
-          </div>
-        );
-      }
-    });
-
-    var DetectedURLRow = React.createClass({
-      render: function() {
-        var urldata = this.props.urldata;
-        return(
-          <tr>
-          <td>{urldata.url}</td>
-          <td>{urldata.positives}</td>
-          <td>{urldata.scan_date}</td>
-          </tr>
-
-        );
-      }
-    });
-
-    var DetectedURLSection = React.createClass({
-      render: function() {
-        var detected_url_arr = this.props.data;
-        var rows = [];
-        if (detected_url_arr != null && detected_url_arr.length > 0) {
-          for (var i=0; i < detected_url_arr.length; i++) {
-            rows.push(<DetectedURLRow urldata={detected_url_arr[i]} />)
+        var handleArr = function(arr, m) {
+          if (arr && arr.length > 0) {
+            if (m) {
+              return arr.map(m).join(',');
+            }
+            return arr.join(',');
           }
-          return (
-
-            <div className="panel panel-default">
-              <div className="panel-heading" role="tab" id="headingThree">
-                <h4 className="panel-title">
-                  <a className="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                    Detected URLs
-                  </a>
-                </h4>
-              </div>
-              <div id="collapseThree" className="panel-collapse collapse" role="tabpanel" aria-labelledby="headingThree">
-                <div className="panel-body">
-                  <div>
-                  <table className="table">
-                  <thead>
-                    <th style={{width:'70%'}}>URL</th>
-                    <th>Positives</th>
-                    <th>Scan Date</th>
-                  </thead>
-                  <tbody>
-                    {rows}
-                  </tbody>
-                  </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-            );
+          return '';
         }
-        else
-        {
-          return (<div></div>);
-        }
-
-      }
-    });
-
-    var ResolutionRow = React.createClass({
-      render: function() {
-        var resdata = this.props.resdata;
-        return (
-          <tr>
-          <td>{resdata.hostname}</td>
-          <td>{resdata.last_resolved}</td>
-          </tr>
-        );
-      }
-    });
-
-    var ResolutionSection = React.createClass({
-      render: function() {
-        var resArr = this.props.data;
-        var rows = [];
-        if (resArr != null && resArr.length > 0) {
-          for (var i=0; i < resArr.length; i++) {
-            rows.push(<ResolutionRow resdata={resArr[i]} />)
-          }
-          return (
-            <div className="panel panel-default">
-              <div className="panel-heading" role="tab" id="headingTwo">
-                <h4 className="panel-title">
-                  <a className="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                    Historical Resolutions
-                  </a>
-                </h4>
-              </div>
-              <div id="collapseTwo" className="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
-                <div className="panel-body">
-                  <div>
-                    <table className="table">
-                      <thead>
-                        <th>Hostname</th>
-                        <th>Last Resolved</th>
-                      </thead>
-                      <tbody>
-                        {rows}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-            );
-        }
-        else
-          return (<div></div>);
-
-      }
-    });
-
-    var SubnetSection = React.createClass({
-      render: function() {
-        var rows = [];
-        var subnets = this.props.data;
-        if (subnets != null && subnets.length > 0) {
-          for (var i=0; i < subnets.length; i++) {
-            rows.push(<SubnetSectionRow subnetdata={subnets[i]} />)
-          }
-          return (
-
-            <div className="panel panel-default">
-              <div className="panel-heading" role="tab" id="headingOne">
-                <h4 className="panel-title">
-                  <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                    Subnets
-                  </a>
-                </h4>
-              </div>
-              <div id="collapseOne" className="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
-                <div className="panel-body">
-                  <div>
-                  <table className="table">
-                  <thead>
-                  <th>Subnet</th>
-                  <th>IP</th>
-                  <th>Category</th>
-                  <th>Location</th>
-                  </thead>
-                  <tbody>
-                  {rows}
-                  </tbody>
-                  </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        } else {
-          return (
-            <div></div>
-          );
-        }
-      }
-    });
-
-
-    var SubnetSectionRow = React.createClass({
-      render: function() {
-        var subnetdata = this.props.subnetdata;
-        var geodata = "";
-        if (subnetdata.geo != null) {
-          geodata = subnetdata.geo['country'];
-        }
-        var category = "";
-        var catsMap = subnetdata.cats;
-        var keys = Object.keys(catsMap);
-        var numEntries = keys.length;
-
-        for (var i=0; i < numEntries; i++) {
-          category += keys[i];
-          if (i != numEntries-1) {
-            category += ", ";
-          }
-        }
-        return (
-          <tr>
-          <td>{subnetdata.subnet}</td>
-          <td>{subnetdata.ip}</td>
-          <td>{category}</td>
-          <td>{geodata}</td>
-          </tr>
-        );
-      }
-    });
-
-
-    var URLResultMessage = React.createClass({
-      render: function() {
-        var urldata = this.props.data;
-        var resultMessage;
-        var result;
-
-        if (urldata.Result == 0)
-        {
-          resultMessage = "URL address is found to be clean.";
-          return (<h3 className='success-text'>{resultMessage}</h3>)
-        }
-        else if (urldata.Result == 1)
-        {
-          resultMessage = "URL address is found to be malicious.";
-          return (<h3 className='danger-text'>{resultMessage}</h3>)
-        }
-        else
-        {
-          resultMessage = "Could not determine the URL reputation.";
-          return (<h3 className='warning-text'>{resultMessage}</h3>)
-        }
-        return resultMessage;
-
-      }
-    });
-
-    // URL Details Section
-    var UrlDiv = React.createClass({
-      render: function() {
-        var urldata = this.props.data.url;
-        if (!isurl) {
-          return (<div></div>);
-        } else return (
-          <div>
-          <h2>URL: {urldata.details}</h2>
-          <URLResultMessage data={urldata} />
-          <URLRiskScore data={urldata.xfe} />
-          <DetectedEngines urldata={urldata} />
-          <ARecord urldata={urldata} />
-          <AAAARecord urldata={urldata} />
-          <TXTRecord urldata={urldata} />
-          <MXRecord urldata={urldata} />
-          <URLCategory urldata={urldata} />
-          <hr></hr>
-          </div>
-        );
-      }
-    });
-
-    var ARecord = React.createClass({
-      render: function() {
-        var urldata = this.props.urldata;
-        var arecord = "";
-        if (urldata.xfe.resolve.A != null && urldata.xfe.resolve.A.length > 0) {
-          for (var i=0; i < urldata.xfe.resolve.A.length; i++) {
-            arecord = arecord + urldata.xfe.resolve.A[i] + " ";
-          }
+        var data = handleArr(this.props.arr, this.props.m);
+        if (data) {
           return(
-            <div>
-              <h3>A Record </h3>
-              {arecord}
-            </div>
-          );
-        } else {
-          return(
-            <div />
+            <tr><td>{this.props.t}</td><td>{data}</td></tr>
           );
         }
+        return null;
       }
-    });
-
-    var AAAARecord = React.createClass({
-      render: function() {
-        var urldata = this.props.urldata;
-        var aaaarecord = "";
-        if (urldata.xfe.resolve.AAAA != null && urldata.xfe.resolve.AAAA.length > 0) {
-          for (var i=0; i < urldata.xfe.resolve.AAAA.length; i++) {
-            aaaarecord = aaaarecord + urldata.xfe.resolve.AAAA[i] + " ";
-          }
-          return(
-            <div>
-              <h3>AAAA Record </h3>
-              {aaaarecord}
-            </div>
-          );
-        } else {
-          return(
-            <div />
-          );
-        }
-      }
-    });
-
-    var TXTRecord = React.createClass({
-      render: function() {
-        var urldata = this.props.urldata;
-        var txtrecord = "";
-        if (urldata.xfe.resolve.TXT != null && urldata.xfe.resolve.TXT.length > 0) {
-          for (var i=0; i < urldata.xfe.resolve.TXT.length; i++) {
-            txtrecord = txtrecord + urldata.xfe.resolve.TXT[i] + " ";
-          }
-          return(
-            <div>
-              <h3>TXT Record </h3>
-              {txtrecord}
-            </div>
-          );
-        } else {
-          return(
-            <div />
-          );
-        }
-      }
-    });
-
-    var MXRecord = React.createClass({
-      render: function() {
-        var urldata = this.props.urldata;
-        var mxrecord = "";
-        var rows =[];
-        if (urldata.xfe.resolve.MX != null && urldata.xfe.resolve.MX.length > 0) {
-          for (var i=0; i < urldata.xfe.resolve.MX.length; i++) {
-            rows.push(<MXRecordRow mxdata={urldata.xfe.resolve.MX[i]} />);
-          }
-
-          return(
-            <div>
-              <h3>MX Record </h3>
-              <table className="table">
-                <thead>
-                  <th>Exchange</th>
-                  <th>Priority</th>
-                </thead>
-                <tbody>
-                  {rows}
-                </tbody>
-              </table>
-            </div>
-          );
-        } else {
-          return(
-            <div />
-          );
-        }
-      }
-    });
-
-    var MXRecordRow = React.createClass({
-        render: function() {
-          var mxdata = this.props.mxdata;
-          return (
-            <tr>
-            <td>{mxdata.exchange}</td>
-            <td>{mxdata.priority}</td>
-            </tr>
-          );
-        }
     });
 
     var URLCategory = React.createClass({
       render: function() {
-        var urldata=this.props.urldata;
-        var cats = urldata.xfe.url_details.cats;
-        var catfound = false;
-        var category = "";
-        for (var k in cats) {
-          if (cats[k]) {
-            catfound = true;
-            // TODO what about multiple categories?
-            category = k;
+        var urldata = this.props.urldata;
+        if (!urldata.xfe.not_found) {
+          var categories = Object.keys(urldata.xfe.url_details.cats).join(', ');
+          if (categories) {
             return (
-              <div><h3>Category: {category}</h3></div>
+              <h3>Categories: {categories}</h3>
             );
           }
         }
-        return (<div/>);
+        return null;
+      }
+    });
+
+    var URLMalware = React.createClass({
+      render: function() {
+        var malware = this.props.urldata.xfe.url_malware;
+        if (malware && malware.count > 0) {
+          var sortf = function(a, b) {
+            return a.firstseen > b.firstseen ? -1 : b.firstseen > a.firstseen ? 1 : 0;
+          }
+          var sorted = malware.malware;
+          sorted.sort(sortf);
+          var rows = [];
+          for (var i=0; i < sorted.length && i < 10; i++) {
+            rows.push(<tr key={'mal_' + i}><td>{sorted[i].firstseen}</td><td>{sorted[i].type}</td><td>{sorted[i].md5}</td><td>{sorted[i].uri}</td><td>{sorted[i].family.join(',')}</td></tr>);
+          }
+          return (
+            <div>
+              <h3>Malware detected on URL</h3>
+              <table className="table">
+                <thead><th>First Seen</th><th>Type</th><th>MD5</th><th>URL</th><th>Family</th></thead>
+                <tbody>{rows}</tbody>
+              </table>
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+
+    var URLVT = React.createClass({
+      render: function() {
+        var urldata = this.props.urldata;
+        if (urldata && urldata.vt && urldata.vt.url_report && urldata.vt.url_report.response_code === 1) {
+          var xfeFound = urldata.xfe && (!urldata.xfe.not_found || urldata.xfe.resolve && urldata.xfe.resolve.A);
+          return (
+            <div className="panel panel-default">
+              <div className="panel-heading" role="tab" id="hurlvt">
+                <h4 className="panel-title">
+                  <a className={xfeFound ? 'collapsed' : ''} role="button" data-toggle="collapse" data-parent="#urlproviders" href="#urlvt" aria-expanded="true" aria-controls="urlvt">
+                    Virus Total Data
+                  </a>
+                </h4>
+              </div>
+              <div id="urlvt" className={xfeFound ? 'panel-collapse collapse' : 'panel-collapse collapse in'} role="tabpanel" aria-labelledby="hurlvt">
+                <div className="panel-body">
+                  <h4>
+                    Scan Date: {urldata.vt.url_report.scan_date}
+                    <br/>
+                    Positives: {urldata.vt.url_report.positives}
+                    <br/>
+                    Total: {urldata.vt.url_report.total}
+                  </h4>
+                  <DetectedEngines urldata={urldata} />
+                </div>
+              </div>
+            </div>
+          );
+        }
+        return null;
       }
     });
 
@@ -498,199 +520,319 @@
       render: function() {
         var urldata = this.props.urldata;
         var detected_engines = [];
-        // display the engines that convicted this URL
-        if (urldata.vt.url_report.positives > 0) {
-          var numEngines = urldata.vt.url_report.scans.length;
-          var scanMap = urldata.vt.url_report.scans;
-          for (var k in scanMap) {
-            if (scanMap[k].detected) {
-              detected_engines.push(k);
-            }
+        var scans = urldata.vt.url_report.scans;
+        for (var k in scans) {
+          if (scans.hasOwnProperty(k) && scans[k].detected) {
+            detected_engines.push(<tr key={'url_' + k}><td>{k}</td><td>{scans[k].result}</td></tr>);
           }
-          return(
+        }
+        if (detected_engines.length > 0) {
+          return (
             <div>
-              <h3> Detected Engines : </h3>
-              <h4> {detected_engines.join(', ')} </h4>
-
+              <h4>Positive Detections</h4>
+              <table>
+                <thead><th>Scan Engine</th><th>Result</th></thead>
+                <tbody>{detected_engines}</tbody>
+              </table>
             </div>
           );
         }
-        else {
-          return(
+        return null;
+      }
+    });
+    // ======================== END URL section ===========================
+
+    // ======================== File section ===========================
+    var FileDiv = React.createClass({
+      render: function() {
+        if (!isfile && !ismd5) {
+          return null;
+        } else {
+          var data = this.props.data;
+          return (
             <div>
+              <h2>File: {isfile ? data.file.details.name : data.md5.details}</h2>
+              <FileResultMessage data={data} />
+              <FileAV data={data} />
+              <FileDetails data={data.md5} />
             </div>
           );
-
         }
       }
     });
 
     var FileResultMessage = React.createClass({
       render: function() {
-        var resultMessage;
+        var resultMessage = 'Could not determine the File reputation.';
+        var color = 'warning-text';
         var filedata = null;
         var md5data = null;
         filedata = this.props.data.file;
         md5data = this.props.data.md5;
-        if ((isfile && (filedata.Result == 0)) || (md5data.Result == 0))
-        {
-          resultMessage = "File is found to be clean.";
-          return (<h3 className='success-text'>{resultMessage}</h3>)
+        if (isfile && filedata.Result == 0 || ismd5 && md5data.Result == 0) {
+          resultMessage = 'File is found to be clean.';
+          color = 'success-text';
+        } else if (isfile && filedata.Result == 1 || ismd5 && md5data.Result == 1) {
+          resultMessage = 'File is found to be malicious.';
+          color = 'danger-text';
         }
-        else if ((isfile && (filedata.Result == 1)) || (md5data.Result == 1))
-        {
-          resultMessage = "File is found to be malicious.";
-          return (<h3 className='danger-text'>{resultMessage}</h3>)
-        }
-        else
-        {
-          resultMessage = "Could not determine the File reputation.";
-          return (<h3 className='warning-text'>{resultMessage}</h3>)
-        }
+        return (<h3 className={color}>{resultMessage}</h3>);
       }
     });
 
-    var FileDiv = React.createClass({
+    var FileAV = React.createClass({
       render: function() {
         var data = this.props.data;
-        if (!isfile && !ismd5) {
-          return (<div></div>);
-        } else return (
-          <div>
-          <FileNameHeader data={this.props.data} />
-          <FileResultMessage data={this.props.data} />
-          <FileResult filedata={this.props.data.file} />
-          <MD5Result md5data={this.props.data.md5} />
-          <hr></hr>
-          </div>
-        );
+        if (data && data.file && data.file.virus) {
+          return (<h2> Malware Name: {data.file.virus} </h2>);
+        }
+        return null;
       }
     });
 
-    var FileNameHeader = React.createClass({
+    var FileDetails = React.createClass({
       render: function() {
         var data = this.props.data;
-        if (isfile)
-        {
+        if (data &&
+          (data.xfe && !data.xfe.not_found ||
+          data.vt.file_report && data.vt.file_report.response_code === 1)) {
           return (
-            <div>
-              <h2>File: {data.file.details.name}</h2>
+            <div className="panel-group" id="fileproviders" role="tablist" aria-multiselectable="true">
+              <FileXFE data={data} />
+              <FileVT data={data} />
             </div>
           );
         }
-        else if (ismd5) {
-          return (
-            <div>
-              <h2>File: {data.md5.details}</h2>
-            </div>
-          );
-        }
+        return null;
       }
     });
 
-    var FileResult = React.createClass({
+    var FileXFE = React.createClass({
       render: function() {
-        var filedata = this.props.filedata;
-        var outstring = "";
-        if (filedata.virus) {
+        var data = this.props.data;
+        if (data && data.xfe && !data.xfe.not_found) {
           return (
-            <div>
-              <h2> Malware Name: </h2> {filedata.virus}
+            <div className="panel panel-default">
+              <div className="panel-heading" role="tab" id="hfilexfe">
+                <h4 className="panel-title">
+                  <a role="button" data-toggle="collapse" data-parent="#fileproviders" href="#filexfe" aria-expanded="true" aria-controls="filexfe">
+                    IBM X-Force Exchange Data
+                  </a>
+                </h4>
+              </div>
+              <div id="filexfe" className="panel-collapse collapse in" role="tabpanel" aria-labelledby="hfilexfe">
+                <div className="panel-body">
+                  <table className="table">
+                    <tbody>
+                      <tr><td>Type</td><td>{data.xfe.malware.type}</td></tr>
+                      <tr><td>Mime Type</td><td>{data.xfe.malware.mimetype}</td></tr>
+                      <tr><td>MD5</td><td>{data.xfe.malware.md5}</td></tr>
+                      <tr><td>Family</td><td>{data.xfe.malware.family.join(',')}</td></tr>
+                      <tr><td>Created</td><td>{data.xfe.malware.created}</td></tr>
+                    </tbody>
+                  </table>
+                  <FileXFEOriginsEmail data={data.xfe.malware.origins.emails.rows} />
+                  <FileXFEOriginsSubject data={data.xfe.malware.origins.subjects.rows} />
+                  <FileXFEOriginsDown data={data.xfe.malware.origins.downloadServers.rows} />
+                  <FileXFEOriginsCNC data={data.xfe.malware.origins.CnCServers.rows} />
+                  <FileXFEOriginsExt data={data.xfe.malware.origins.external} />
+                </div>
+              </div>
             </div>
           );
         }
-        else return null;
+        return null;
       }
     });
 
-    var MD5Result = React.createClass ({
+    var FileXFEOriginsEmail = React.createClass({
       render: function() {
-        var md5data = this.props.md5data;
-        var numVTDetections = md5data.vt.file_report.positives;
-        var scan_row;
-        var malware_family_string = "";
-        if (md5data.xfe.malware.family) {
-          malware_family_string = "Malware Family: " + md5data.xfe.malware.family;
-        }
-        var detection_string = "";
-        if (numVTDetections > 0) {
-          detection_string = "Positive Detections: " + numVTDetections;
+        var rows = [];
+        var data = this.props.data;
+        if (data && data.length > 0) {
+          data.sort(sortByFirstSeen);
+          for (var i=0; i < data.length && i < 10; i++) {
+            rows.push(
+              <tr key={'file_email' + i}>
+                <td>{data[i].firstseen}</td><td>{data[i].lastseen}</td><td>{data[i].origin}</td><td>{data[i].md5}</td><td>{data[i].filepath}</td>
+              </tr>
+            )
+          }
           return (
             <div>
-            {malware_family_string}
-            <ScanResult detection_string={detection_string} data={md5data.vt.file_report} />
+              <h4>Email Origins</h4>
+              <table className="table">
+                <thead><th>First Seen</th><th>Last Seen</th><th>Origin</th><th>MD5</th><th>File Path</th></thead>
+                <tbody>{rows}</tbody>
+              </table>
             </div>
           );
-
         }
+        return null;
+      }
+    });
 
+    var FileXFEOriginsSubject = React.createClass({
+      render: function() {
+        var rows = [];
+        var data = this.props.data;
+        if (data && data.length > 0) {
+          data.sort(sortByFirstSeen);
+          for (var i=0; i < data.length && i < 10; i++) {
+            rows.push(
+              <tr key={'file_subject' + i}>
+                <td>{data[i].firstseen}</td><td>{data[i].lastseen}</td><td>{data[i].subject}</td><td>{data[i].ips ? data[i].ips.join(',') : ''}</td>
+              </tr>
+            )
+          }
+          return (
+            <div>
+              <h4>Subjects</h4>
+              <table className="table">
+                <thead><th>First Seen</th><th>Last Seen</th><th>Subject</th><th>IPs</th></thead>
+                <tbody>{rows}</tbody>
+              </table>
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+
+    var FileXFEOriginsDown = React.createClass({
+      render: function() {
+        var rows = [];
+        var data = this.props.data;
+        if (data && data.length > 0) {
+          data.sort(sortByFirstSeen);
+          for (var i=0; i < data.length && i < 10; i++) {
+            rows.push(
+              <tr key={'file_down' + i}>
+                <td>{data[i].firstseen}</td><td>{data[i].lastseen}</td><td>{data[i].host}</td><td>{data[i].uri}</td>
+              </tr>
+            )
+          }
+          return (
+            <div>
+              <h4>Download Servers</h4>
+              <table className="table">
+                <thead><th>First Seen</th><th>Last Seen</th><th>Host</th><th>URI</th></thead>
+                <tbody>{rows}</tbody>
+              </table>
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+
+    var FileXFEOriginsCNC = React.createClass({
+      render: function() {
+        var rows = [];
+        var data = this.props.data;
+        if (data && data.length > 0) {
+          data.sort(sortByFirstSeen);
+          for (var i=0; i < data.length && i < 10; i++) {
+            rows.push(
+              <tr key={'file_cnc' + i}>
+                <td>{data[i].firstseen}</td><td>{data[i].lastseen}</td><td>{data[i].ip}</td><td>{data[i].family.join(',')}</td>
+              </tr>
+            )
+          }
+          return (
+            <div>
+              <h4>Command & Control Servers</h4>
+              <table className="table">
+                <thead><th>First Seen</th><th>Last Seen</th><th>IP</th><th>Family</th></thead>
+                <tbody>{rows}</tbody>
+              </table>
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+
+    var FileXFEOriginsExt = React.createClass({
+      render: function() {
+        var rows = [];
+        var data = this.props.data;
+        if (data && data.family.length > 0) {
+          return (
+            <div>
+              <h4>External Detection</h4>
+              <h5>{data.family.join(',')}</h5>
+            </div>
+          );
+        }
+        return null;
+      }
+    });
+
+    var FileVT = React.createClass({
+      render: function() {
+        var data = this.props.data;
+        if (data && data.vt && data.vt.file_report && data.vt.file_report.response_code === 1) {
+          var xfeFound = data.xfe && !data.xfe.not_found;
+          return (
+            <div className="panel panel-default">
+              <div className="panel-heading" role="tab" id="hfilevt">
+                <h4 className="panel-title">
+                  <a className={xfeFound ? 'collapsed' : ''} role="button" data-toggle="collapse" data-parent="#fileproviders" href="#filevt" aria-expanded="true" aria-controls="filevt">
+                    Virus Total Data
+                  </a>
+                </h4>
+              </div>
+              <div id="filevt" className={xfeFound ? 'panel-collapse collapse' : 'panel-collapse collapse in'} role="tabpanel" aria-labelledby="hfilevt">
+                <div className="panel-body">
+                  <h4>
+                    Scan Date: {data.vt.file_report.scan_date}
+                    <br/>
+                    Positives: {data.vt.file_report.positives}
+                    <br/>
+                    Total: {data.vt.file_report.total}
+                  </h4>
+                  <table className="table"><tbody>
+                    <tr><td>MD5</td><td>{data.vt.file_report.md5}</td></tr>
+                    <tr><td>SHA1</td><td>{data.vt.file_report.sha1}</td></tr>
+                    <tr><td>SHA256</td><td>{data.vt.file_report.sha256}</td></tr>
+                  </tbody></table>
+                  <ScanResult data={data.vt.file_report} />
+                </div>
+              </div>
+            </div>
+          );
+        }
+        return null;
       }
     });
 
     var ScanResult = React.createClass ({
       render: function() {
-        var file_reports_map = this.props.data.scans;
-        var detection_string = this.props.detection_string;
-
+        var scans = this.props.data.scans;
         var rows = [];
-        for (var k in file_reports_map) {
-          rows.push(<ScanResultRow enginename={k} scandata={file_reports_map[k]} />);
-        }
-
-        if (rows.length > 0) {
-
-          return (
-            <div className="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
-              <div className="panel panel-default">
-                <div className="panel-heading" role="tab" id="scanresultheading">
-                <h4 className="panel-title">
-                  <a className="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#scanresult" aria-expanded="false" aria-controls="scanresult">
-                    {detection_string}
-                  </a>
-                </h4>
-              </div>
-              <div id="scanresult" className="panel-collapse collapse" role="tabpanel" aria-labelledby="scanresultheading">
-                <div className="panel-body">
-                  <div>
-                    <table className="table">
-                    <thead>
-                    <th>Engine Name</th>
-                    <th>Version</th>
-                    <th>Detected</th>
-                    <th>Result</th>
-                    <th>Update</th>
-                    </thead>
-                    <tbody>
-                    {rows}
-                    </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-            );
-          } else {
-            return (<div></div>);
+        for (var k in scans) {
+          if (scans.hasOwnProperty(k) && scans[k].detected) {
+            rows.push(<tr key={'fvt_scan_' + k}><td>{k}</td><td>{scans[k].result}</td><td>{scans[k].version}</td><td>{scans[k].update}</td></tr>);
           }
-
-      }
-
-    });
-
-    var ScanResultRow = React.createClass ({
-      render: function() {
-        var enginename = this.props.enginename;
-        var scandata = this.props.scandata;
-        return (
-          <tr>
-          <td>{enginename}</td>
-          <td>{scandata.version}</td>
-          <td>{scandata.detected?"True":"False"}</td>
-          <td>{scandata.result}</td>
-          <td>{scandata.update}</td>
-          </tr>
-        );
+        }
+        if (rows.length > 0) {
+          return (
+          <div>
+            <h4>Detection Engines</h4>
+            <table className="table">
+              <thead>
+                <th>Engine Name</th>
+                <th>Version</th>
+                <th>Result</th>
+                <th>Update</th>
+              </thead>
+              <tbody>{rows}</tbody>
+            </table>
+          </div>
+          );
+        }
+        return null;
       }
     });
 
@@ -752,37 +894,29 @@
             } else if (this.state.status == 1) {
               return (
                 <div>
-                  <center><h1>DBot Analysis Report</h1></center>
-                  <UrlDiv data={this.state.data} />
+                  <h1 className="text-center">DBot Analysis Report</h1>
+                  <URLDiv data={this.state.data} />
                   <FileDiv data={this.state.data} />
-                  <IpDiv data={this.state.data} />
+                  <IPDiv data={this.state.data} />
                 </div>
               );
             }
             else {
               return(
                 <div>
-                DBot encountered an error while trying to serve your request. The issues has been reported and will be analyzed.
-                Please try to click the link again from Slack interface.
-                <hr></hr>
-                {this.state.errmsg}
+                  DBot encountered an error while trying to serve your request. The issues has been reported and will be analyzed.
+                  Please try to click the link again from Slack interface.
+                  <hr></hr>
+                  {this.state.errmsg}
                 </div>
               );
             }
         }
-  });
+    });
 
-  //
-
-
-  React.render(
-    <DetailsDiv />,
-    document.getElementById('detailsdiv')
-  );
-
+    React.render(<DetailsDiv />, document.getElementById('detailsdiv'));
   }
+})(window.jQuery);
 
-    })(window.jQuery);
-
-// END Settings Handler
+// END Details Handler
 // -----------------------------------

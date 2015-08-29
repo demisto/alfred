@@ -363,6 +363,9 @@ func (r *repo) IsVerboseChannel(team, channel string) (bool, error) {
 // OpenUsers just returns all users without associating them with a bot since this is on dev system
 func (r *repo) OpenUsers(includeMine bool) ([]domain.UserBot, error) {
 	var users []domain.UserBot
+	if !includeMine {
+		return users, nil
+	}
 	err := r.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket([]byte("users")).Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {

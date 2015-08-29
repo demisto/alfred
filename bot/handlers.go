@@ -77,10 +77,10 @@ func (w *Worker) handle() {
 		switch msg.Type {
 		case "message":
 			if strings.Contains(msg.Text, "<http") {
-				w.handleURL(msg.Text, reply)
+				w.handleURL(msg.Text, msg.Online, reply)
 			}
 			if ip := ipReg.FindString(msg.Text); ip != "" {
-				w.handleIP(ip, reply)
+				w.handleIP(ip, msg.Online, reply)
 			}
 			if hash := md5Reg.FindString(msg.Text); hash != "" {
 				w.handleMD5(hash, reply)
@@ -135,7 +135,7 @@ func GetContext(context interface{}) (*domain.Context, error) {
 	}
 }
 
-func (w *Worker) handleURL(text string, reply *domain.WorkReply) {
+func (w *Worker) handleURL(text string, online bool, reply *domain.WorkReply) {
 	start := strings.Index(text, "<http")
 	end := strings.Index(text[start:], ">")
 	if end > 0 {
@@ -166,6 +166,12 @@ func (w *Worker) handleURL(text string, reply *domain.WorkReply) {
 			if err == nil {
 				reply.URL.XFE.Resolve = *resolve
 			}
+			if online {
+				malware, err := w.xfe.URLMalware(url)
+				if err == nil {
+					reply.URL.XFE.URLMalware = *malware
+				}
+			}
 			c <- 1
 		}()
 		go func() {
@@ -191,7 +197,7 @@ func (w *Worker) handleURL(text string, reply *domain.WorkReply) {
 	}
 }
 
-func (w *Worker) handleIP(ip string, reply *domain.WorkReply) {
+func (w *Worker) handleIP(ip string, online bool, reply *domain.WorkReply) {
 	reply.IP.Details = ip
 	reply.Type |= domain.ReplyTypeIP
 	// First, let's check if IP is globally unicast addressable and is public
@@ -221,6 +227,12 @@ func (w *Worker) handleIP(ip string, reply *domain.WorkReply) {
 			}
 		} else {
 			reply.IP.XFE.IPReputation = *ipResp
+			if online {
+				hist, err := w.xfe.IPRHistory(ip)
+				if err == nil {
+					reply.IP.XFE.IPHistory = *hist
+				}
+			}
 		}
 		c <- 1
 	}()

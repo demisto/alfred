@@ -40,6 +40,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 			File:       domain.File{URL: info.File.URL, Name: info.File.Name, Size: info.File.Size},
 			ReplyQueue: ac.replyQueue,
 			Context:    nil,
+			Online:     true,
 		}
 	} else {
 		resp, err := s.History(channel, message, message, true, 1)
@@ -53,6 +54,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		}
 		workReq = domain.WorkRequestFromMessage(&resp.Messages[0])
 		workReq.ReplyQueue = ac.replyQueue
+		workReq.Online = true
 	}
 	err = ac.q.PushWork(workReq)
 	if err != nil {

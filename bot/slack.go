@@ -286,6 +286,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 							slack.AttachmentField{Title: "Categories", Value: joinMap(reply.URL.XFE.URLDetails.Cats), Short: true},
 						},
 					})
+					if len(reply.URL.XFE.Resolve.AAAA) > 0 {
+						postMessage.Attachments[len(postMessage.Attachments)-1].Fields = append(postMessage.Attachments[len(postMessage.Attachments)-1].Fields,
+							slack.AttachmentField{Title: "A Records", Value: strings.Join(reply.URL.XFE.Resolve.AAAA, ","), Short: true})
+					}
 				}
 				if reply.URL.VT.URLReport.ResponseCode == 1 {
 					vtColor := "good"

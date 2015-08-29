@@ -31,6 +31,7 @@ type WorkRequest struct {
 	File       File        `json:"file"`
 	ReplyQueue string      `json:"reply_queue"`
 	Context    interface{} `json:"context"`
+	Online     bool        `json:"online"` // Are we running this request from online details page
 }
 
 // WorkRequestFromMessage converts a message to a work request
@@ -96,10 +97,11 @@ type WorkReply struct {
 		Details string `json:"details"`
 		Result  int
 		XFE     struct {
-			NotFound   bool                 `json:"not_found"`
-			Error      string               `json:"error"`
-			Resolve    goxforce.ResolveResp `json:"resolve"`
-			URLDetails goxforce.URL         `json:"url_details"`
+			NotFound   bool                    `json:"not_found"`
+			Error      string                  `json:"error"`
+			Resolve    goxforce.ResolveResp    `json:"resolve"`
+			URLDetails goxforce.URL            `json:"url_details"`
+			URLMalware goxforce.URLMalwareResp `json:"url_malware"`
 		} `json:"xfe"`
 		VT struct {
 			Error     string         `json:"error"`
@@ -113,11 +115,12 @@ type WorkReply struct {
 			NotFound     bool                  `json:"not_found"`
 			Error        string                `json:"error"`
 			IPReputation goxforce.IPReputation `json:"ip_reputation"`
+			IPHistory    goxforce.IPHistory    `json:"ip_history"`
 		} `json:"xfe"`
 		VT struct {
 			Error    string        `json:"error"`
 			IPReport govt.IpReport `json:"ip_report"`
-		}
+		} `json:"vt"`
 	} `json:"ip"`
 	File struct {
 		Result       int
