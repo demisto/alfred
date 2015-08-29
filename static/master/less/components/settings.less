@@ -147,13 +147,42 @@
 }
 
 .config-section .radio {
+
+  display:table-caption;
   margin-left: 35px;
+
+  @media @mobile {
+    display:table-caption;
+    margin-left: 35px;
+  }
+  @media @tablet {
+    display:block;
+    margin-left: 35px;
+  }
+  @media @ipad-landscape {
+    display:block;
+    margin-left: 35px;
+  }
+
+
 
 }
 
 .config-section label {
-  margin-right: 80px;
-  padding-left: 10px;
+
+  @media @mobile {
+
+  }
+
+  @media @tablet {
+    margin-right: 80px;
+    padding-left: 10px;
+  }
+  @media @ipad-landscape {
+    margin-right: 80px;
+    padding-left: 10px;
+  }
+
 }
 
 .slack_logo {
