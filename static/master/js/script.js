@@ -205,7 +205,11 @@
           dataType: 'json',
           contentType: 'application/json; charset=utf-8',
           success: function(){
-            $('#recaptcha').modal('hide');
+            $('#recaptchaLabel').html('Slack Channel Subscribed.');
+            $('#recaptchadiv').html('Your subscription is successful. See you on Slack channel.');
+            window.setTimeout(function() {
+              $('#recaptcha').modal('hide');
+            }, 5000);
           },
           error: function(xhr, status, error) {
             var err = error;
@@ -214,6 +218,7 @@
             }
             if (recaptcha_widget_id!=null) {
               grecaptcha.reset(recaptcha_widget_id);
+              $('#recaptchadiv').append('Error while validating. Please try again.');
             }
           }
         });
@@ -229,6 +234,8 @@
       $('#join').submit(function(event) {
         event.preventDefault();
         if ($('#emailaddress')[0].checkValidity()) {
+          $('#recaptchaLabel').html('Please confirm you are a human');
+          $('#recaptchadiv').html();
           $('#recaptcha').modal('show');
         }
       });
