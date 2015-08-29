@@ -13,23 +13,23 @@ section#details.config-page
           a.navbar-brand(href='https://www.demisto.com')
             img(src='img/logo.png', alt='')
         // MENU
-      #navbar-main.navbar-collapse.collapse
-        ul.nav.navbar-nav.navbar-right.main-navbar
-          li
-            a(href='/#') Home
-          li
-            a(href='/faq') FAQ
-          li.dropdown.dropdown-list
-            a(href="#", data-toggle="dropdown", aria-expanded="true")
-              span.navbar-name#realname
-            ul.dropdown-menu.dropdown-menu-right
-              li
-                #userrealname
-                #useremail
-                #teamname
-              li.divider
-              li
-                button.btn.btn-link(onclick='logout()', name='logout', type='button') LOGOUT
+        #navbar-main.navbar-collapse.collapse
+          ul.nav.navbar-nav.navbar-right.main-navbar
+            li
+              a(href='/#') Home
+            li
+              a(href='/faq') FAQ
+            li.dropdown.dropdown-list
+              a(href="#", data-toggle="dropdown", aria-expanded="true")
+                span.navbar-name#realname
+              ul.dropdown-menu.dropdown-menu-right
+                li
+                  #userrealname
+                  #useremail
+                  #teamname
+                li.divider
+                li
+                  button.btn.btn-link(onclick='logout()', name='logout', type='button') LOGOUT
 
     // END STICKY NAVBAR
 
