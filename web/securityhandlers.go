@@ -130,7 +130,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	log.Debugln("Finding the user...")
 	ourUser, err := ac.r.UserByExternalID(user.User.ID)
 	if err != nil {
-		log.Debugf("Got a new user registered - %s", user.User.Name)
+		log.Infof("Got a new user registered - %s", user.User.Name)
 		userID, err := random.New()
 		if err != nil {
 			panic(err)
