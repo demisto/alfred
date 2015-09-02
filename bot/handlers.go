@@ -205,14 +205,17 @@ func (w *Worker) handleIP(ip string, online bool, reply *domain.WorkReply) {
 	ipv4 := ipData.To4()
 	if ipv4 == nil {
 		// If not IPv4 then return - by default it will be marked clean
+		reply.IP.XFE.NotFound = true
 		return
 	}
 	if !ipv4.IsGlobalUnicast() {
 		// If not global unicast ignore
+		reply.IP.XFE.NotFound = true
 		return
 	}
 	// Private networks
 	if ipv4[0] == 10 || ipv4[0] == 172 && ipv4[1] >= 16 && ipv4[1] <= 31 || ipv4[0] == 192 && ipv4[1] == 168 {
+		reply.IP.XFE.NotFound = true
 		return
 	}
 	c := make(chan int, 2)

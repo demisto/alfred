@@ -94,7 +94,7 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 	if data.Channel != "" {
 		if verbose {
 			shouldPost = true
-			if !reply.MD5.XFE.NotFound {
+			if !reply.MD5.XFE.NotFound && reply.MD5.XFE.Error == "" {
 				xfeColor := "good"
 				if len(reply.MD5.XFE.Malware.Family) > 0 {
 					xfeColor = "danger"
@@ -267,7 +267,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				Color:    color,
 			})
 			if verbose {
-				if !reply.URL.XFE.NotFound {
+				if !reply.URL.XFE.NotFound && reply.URL.XFE.Error == "" {
 					xfeColor := "good"
 					if reply.URL.XFE.URLDetails.Score >= xfeScoreToConvict {
 						xfeColor = "danger"
@@ -327,7 +327,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				Color:    color,
 			})
 			if verbose {
-				if !reply.IP.XFE.NotFound {
+				if !reply.IP.XFE.NotFound && reply.MD5.XFE.Error == "" {
 					xfeColor := "good"
 					if reply.IP.XFE.IPReputation.Score >= xfeScoreToConvict {
 						xfeColor = "danger"
@@ -397,7 +397,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				Color:    color,
 			})
 			if verbose {
-				if !reply.MD5.XFE.NotFound {
+				if !reply.MD5.XFE.NotFound && reply.MD5.XFE.Error == "" {
 					xfeColor := "good"
 					if len(reply.MD5.XFE.Malware.Family) > 0 {
 						xfeColor = "danger"
