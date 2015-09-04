@@ -62,6 +62,20 @@
       return a.last_resolved > b.last_resolved ? -1 : a.last_resolved < b.last_resolved ? 1 : 0;
     }
 
+    var arrOrUnknown = function(arr) {
+      if (arr) {
+        return arr;
+      }
+      return ['Unknown'];
+    }
+
+    var mapOrUnknown = function(m) {
+      if (m) {
+        return m;
+      }
+      return {'Unknown': true};
+    }
+
     // ======================== IP section ===========================
 
     var IPDiv = React.createClass({
@@ -133,7 +147,7 @@
                 <div className="panel-body">
                   <h3> Risk Score: {data.xfe.ip_reputation.score}</h3>
                   <h3> Country: {data.xfe.ip_reputation.geo && data.xfe.ip_reputation.geo['country'] ? data.xfe.ip_reputation.geo['country'] : 'Unknown'} </h3>
-                  <h3> Categories: {Object.keys(data.xfe.ip_reputation.cats).join(', ')} </h3>
+                  <h3> Categories: {Object.keys(mapOrUnknown(data.xfe.ip_reputation.cats)).join(', ')} </h3>
                   <SubnetSection data={data.xfe.ip_reputation.subnets} />
                   <IPHistory data={data.xfe.ip_history.history} />
                 </div>
@@ -156,7 +170,7 @@
               <tr key={'ipr_subnet_' + i}>
                 <td>{subnets[i].subnet}</td>
                 <td>{subnets[i].score}</td>
-                <td>{Object.keys(subnets[i].cats).join(',')}</td>
+                <td>{Object.keys(mapOrUnknown(subnets[i].cats)).join(', ')}</td>
                 <td>{subnets[i].geo && subnets[i].geo['country'] ? subnets[i].geo['country'] : 'Unknown'}</td>
                 <td>{subnets[i].reason}</td>
                 <td>{subnets[i].created}</td>
@@ -197,7 +211,7 @@
               <tr key={'ipr_hist_' + i}>
                 <td>{history[i].ip}</td>
                 <td>{history[i].score}</td>
-                <td>{Object.keys(history[i].cats).join(',')}</td>
+                <td>{Object.keys(mapOrUnknown(history[i].cats)).join(', ')}</td>
                 <td>{history[i].geo && history[i].geo['country'] ? history[i].geo['country'] : 'Unknown'}</td>
                 <td>{history[i].reason}</td>
                 <td>{history[i].created}</td>
@@ -425,9 +439,9 @@
         var handleArr = function(arr, m) {
           if (arr && arr.length > 0) {
             if (m) {
-              return arr.map(m).join(',');
+              return arr.map(m).join(', ');
             }
-            return arr.join(',');
+            return arr.join(', ');
           }
           return '';
         }
@@ -445,7 +459,7 @@
       render: function() {
         var urldata = this.props.urldata;
         if (!urldata.xfe.not_found) {
-          var categories = Object.keys(urldata.xfe.url_details.cats).join(', ');
+          var categories = Object.keys(mapOrUnknown(urldata.xfe.url_details.cats)).join(', ');
           if (categories) {
             return (
               <h3>Categories: {categories}</h3>
@@ -467,7 +481,7 @@
           sorted.sort(sortf);
           var rows = [];
           for (var i=0; i < sorted.length && i < 10; i++) {
-            rows.push(<tr key={'mal_' + i}><td>{sorted[i].firstseen}</td><td>{sorted[i].type}</td><td>{sorted[i].md5}</td><td>{sorted[i].uri}</td><td>{sorted[i].family.join(',')}</td></tr>);
+            rows.push(<tr key={'mal_' + i}><td>{sorted[i].firstseen}</td><td>{sorted[i].type}</td><td>{sorted[i].md5}</td><td>{sorted[i].uri}</td><td>{arrOrUnknown(sorted[i].family).join(', ')}</td></tr>);
           }
           return (
             <div>
@@ -627,7 +641,7 @@
                       <tr><td>Type</td><td>{data.xfe.malware.type}</td></tr>
                       <tr><td>Mime Type</td><td>{data.xfe.malware.mimetype}</td></tr>
                       <tr><td>MD5</td><td>{data.xfe.malware.md5}</td></tr>
-                      <tr><td>Family</td><td>{data.xfe.malware.family? data.xfe.malware.family.join(',') : 'Unknown'}</td></tr>
+                      <tr><td>Family</td><td>{arrOrUnknown(data.xfe.malware.family).join(', ')}</td></tr>
                       <tr><td>Created</td><td>{data.xfe.malware.created}</td></tr>
                     </tbody>
                   </table>
@@ -681,7 +695,7 @@
           for (var i=0; i < data.length && i < 10; i++) {
             rows.push(
               <tr key={'file_subject' + i}>
-                <td>{data[i].firstseen}</td><td>{data[i].lastseen}</td><td>{data[i].subject}</td><td>{data[i].ips ? data[i].ips.join(',') : ''}</td>
+                <td>{data[i].firstseen}</td><td>{data[i].lastseen}</td><td>{data[i].subject}</td><td>{data[i].ips ? data[i].ips.join(', ') : ''}</td>
               </tr>
             )
           }
@@ -735,7 +749,7 @@
           for (var i=0; i < data.length && i < 10; i++) {
             rows.push(
               <tr key={'file_cnc' + i}>
-                <td>{data[i].firstseen}</td><td>{data[i].lastseen}</td><td>{data[i].ip}</td><td>{data[i].family? data[i].family.join(','): 'Unknown'}</td>
+                <td>{data[i].firstseen}</td><td>{data[i].lastseen}</td><td>{data[i].ip}</td><td>{arrOrUnknown(data[i].family).join(', ')}</td>
               </tr>
             )
           }
@@ -757,11 +771,11 @@
       render: function() {
         var rows = [];
         var data = this.props.data;
-        if (data && data.family.length > 0) {
+        if (data && data.family && data.family.length > 0) {
           return (
             <div>
               <h4>External Detection</h4>
-              <h5>{data.family? data.family.join(','):'Unknown'}</h5>
+              <h5>{data.family.join(', ')}</h5>
             </div>
           );
         }
@@ -874,7 +888,7 @@
             if (this.state.status == 0) {
               return(
                 <div>
-                  <h2><center>DBot is collecting security details for your query. It might take upto a minute!</center></h2>
+                  <h2><center>DBot is collecting security details for your query. It might take up to a minute!</center></h2>
                   <br/>
                   <br/>
                   <div className="ball-grid-pulse center-block">
