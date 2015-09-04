@@ -221,6 +221,13 @@ func (b *Bot) relevantUser(ctx *domain.Context) *subscription {
 	return subs.SubForUser(ctx.User)
 }
 
+func nilOrUnknown(v interface{}) string {
+	if v == nil {
+		return "Unknown"
+	}
+	return fmt.Sprintf("%v", v)
+}
+
 func (b *Bot) handleReply(reply *domain.WorkReply) {
 	logrus.Debugf("Handling reply - %s", reply.MessageID)
 	data, err := GetContext(reply.Context)
@@ -341,7 +348,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 						Fields: []slack.AttachmentField{
 							slack.AttachmentField{Title: "Score", Value: fmt.Sprintf("%v", reply.IP.XFE.IPReputation.Score), Short: true},
 							slack.AttachmentField{Title: "Categories", Value: joinMapInt(reply.IP.XFE.IPReputation.Cats), Short: true},
-							slack.AttachmentField{Title: "Geo", Value: fmt.Sprintf("%v", reply.IP.XFE.IPReputation.Geo["country"]), Short: true},
+							slack.AttachmentField{Title: "Geo", Value: nilOrUnknown(reply.IP.XFE.IPReputation.Geo["country"]), Short: true},
 						},
 					})
 				}
