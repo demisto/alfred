@@ -627,7 +627,7 @@
                       <tr><td>Type</td><td>{data.xfe.malware.type}</td></tr>
                       <tr><td>Mime Type</td><td>{data.xfe.malware.mimetype}</td></tr>
                       <tr><td>MD5</td><td>{data.xfe.malware.md5}</td></tr>
-                      <tr><td>Family</td><td>{data.xfe.malware.family.join(',')}</td></tr>
+                      <tr><td>Family</td><td>{data.xfe.malware.family? data.xfe.malware.family.join(',') : 'Unknown'}</td></tr>
                       <tr><td>Created</td><td>{data.xfe.malware.created}</td></tr>
                     </tbody>
                   </table>
@@ -735,7 +735,7 @@
           for (var i=0; i < data.length && i < 10; i++) {
             rows.push(
               <tr key={'file_cnc' + i}>
-                <td>{data[i].firstseen}</td><td>{data[i].lastseen}</td><td>{data[i].ip}</td><td>{data[i].family.join(',')}</td>
+                <td>{data[i].firstseen}</td><td>{data[i].lastseen}</td><td>{data[i].ip}</td><td>{data[i].family? data[i].family.join(','): 'Unknown'}</td>
               </tr>
             )
           }
@@ -761,7 +761,7 @@
           return (
             <div>
               <h4>External Detection</h4>
-              <h5>{data.family.join(',')}</h5>
+              <h5>{data.family? data.family.join(','):'Unknown'}</h5>
             </div>
           );
         }
