@@ -341,7 +341,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 					}
 					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
 						Fallback: fmt.Sprintf("Score: %v, Categories: %s, Geo: %v",
-							reply.IP.XFE.IPReputation.Score, joinMapInt(reply.IP.XFE.IPReputation.Cats), reply.IP.XFE.IPReputation.Geo["country"]),
+							reply.IP.XFE.IPReputation.Score, joinMapInt(reply.IP.XFE.IPReputation.Cats), nilOrUnknown(reply.IP.XFE.IPReputation.Geo["country"])),
 						Color:     xfeColor,
 						Title:     "IBM X-Force Exchange",
 						TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/ip/%s", reply.IP.Details),
