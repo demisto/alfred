@@ -28,11 +28,11 @@ RUN set -x \
 # Add ClamAV lib
 RUN apt-get update && apt-get install -y libclamav-dev --no-install-recommends
 
+COPY build-date /
 COPY Makefile /
 COPY demisto_git_rsa_clear /root/.ssh/id_rsa
 RUN chmod 400 /root/.ssh/id_rsa
 WORKDIR /
-COPY build-date /
 RUN make setup
 RUN make buildgo
 RUN make buildgoav
