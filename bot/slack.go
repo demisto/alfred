@@ -387,7 +387,8 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				}
 			}
 		}
-		if reply.Type&domain.ReplyTypeMD5 > 0 {
+		// We will handle hashes only for verbose channels
+		if reply.Type&domain.ReplyTypeMD5 > 0 && verbose {
 			color := "warning"
 			comment := md5CommentWarning
 			if reply.MD5.Result == domain.ResultDirty {
