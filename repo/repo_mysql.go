@@ -662,5 +662,14 @@ func (r *repoMySQL) WasMessageSentOnChannel(team, channel string) (bool, error) 
 
 func (r *repoMySQL) JoinSlackChannel(email string) error {
 	_, err := r.db.Exec("INSERT INTO slack_invites (email, ts, invited) VALUES (?, now(), 0)", email)
+	if err != nil {
+		switch err := err.(type) {
+		case *mysql.MySQLError:
+			// Duplicate key might happen but it's fine
+			if err.Number == 1062 {
+				return nil
+			}
+		}
+	}
 	return err
 }

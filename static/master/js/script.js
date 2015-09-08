@@ -207,6 +207,7 @@
           success: function(){
             $('#recaptchaLabel').html('Slack Channel Subscribed.');
             $('#recaptchadiv').html('Your subscription is successful. See you on Slack channel.');
+            $('#emailaddress').val('');
             window.setTimeout(function() {
               $('#recaptcha').modal('hide');
             }, 5000);
@@ -214,12 +215,17 @@
           error: function(xhr, status, error) {
             var err = error;
             if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
+              if (xhr.responseJSON.errors[0].status === 400 && xhr.responseJSON.errors[0].id === 'bad_captcha') {
+                if (recaptcha_widget_id != null) {
+                  grecaptcha.reset(recaptcha_widget_id);
+                  $('#recaptchadiv').append('Error while validating. Please try again.');
+                  return;
+                }
+              }
               err += " - " + xhr.responseJSON.errors[0].detail;
             }
-            if (recaptcha_widget_id!=null) {
-              grecaptcha.reset(recaptcha_widget_id);
-              $('#recaptchadiv').append('Error while validating. Please try again.');
-            }
+            $('#recaptchaLabel').html('Error While Subscribing');
+            $('#recaptchadiv').html(err + ' - this error has been logged and we are on it.');
           }
         });
       }
