@@ -206,7 +206,7 @@
           contentType: 'application/json; charset=utf-8',
           success: function(){
             $('#recaptchaLabel').html('Slack Channel Subscribed.');
-            $('#recaptchadiv').html('Your subscription is successful. See you on Slack channel.');
+            $('#recaptchadiv').html('Your subscription is successful. We will send you an invite soon, see you on Slack channel.');
             $('#emailaddress').val('');
             window.setTimeout(function() {
               $('#recaptcha').modal('hide');

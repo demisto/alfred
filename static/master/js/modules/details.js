@@ -888,7 +888,7 @@
             if (this.state.status == 0) {
               return(
                 <div>
-                  <h2><center>DBot is collecting security details for your query. It might take up to a minute!</center></h2>
+                  <h2><center>DBOT is collecting security details for your query. It might take up to a minute!</center></h2>
                   <br/>
                   <br/>
                   <div className="ball-grid-pulse center-block">
@@ -908,7 +908,7 @@
             } else if (this.state.status == 1) {
               return (
                 <div>
-                  <h1 className="text-center">DBot Analysis Report</h1>
+                  <h1 className="text-center">DBOT Analysis Report</h1>
                   <URLDiv data={this.state.data} />
                   <FileDiv data={this.state.data} />
                   <IPDiv data={this.state.data} />
@@ -918,7 +918,7 @@
             else {
               return(
                 <div>
-                  DBot encountered an error while trying to serve your request. The issues has been reported and will be analyzed.
+                  DBOT encountered an error while trying to serve your request. The issues has been reported and will be analyzed.
                   Please try to click the link again from Slack interface.
                   <hr></hr>
                   {this.state.errmsg}
