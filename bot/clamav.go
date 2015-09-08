@@ -97,7 +97,7 @@ func (ce *clamEngine) listenUpdate() {
 			continue
 		}
 		reload := b.String()
-		if reload != "RELOAD" {
+		if reload != "RELOAD\x00" {
 			logrus.Infof("Weird - got %s from freshclam\n", reload)
 		}
 		logrus.Debug("Writing RELOADING...")
