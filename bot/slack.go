@@ -268,11 +268,13 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				comment = urlCommentGood
 			}
 			urlMessage := fmt.Sprintf(comment, reply.URL.Details, fmt.Sprintf("<%s|Details>", link))
-			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-				Fallback: urlMessage,
-				Text:     urlMessage,
-				Color:    color,
-			})
+			if verbose || color != "good" {
+				postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
+					Fallback: urlMessage,
+					Text:     urlMessage,
+					Color:    color,
+				})
+			}
 			if verbose {
 				if !reply.URL.XFE.NotFound && reply.URL.XFE.Error == "" {
 					xfeColor := "good"
@@ -328,11 +330,13 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				comment = ipCommentGood
 			}
 			ipMessage := fmt.Sprintf(comment, reply.IP.Details, fmt.Sprintf("<%s|Details>", link))
-			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-				Fallback: ipMessage,
-				Text:     ipMessage,
-				Color:    color,
-			})
+			if verbose || color != "good" {
+				postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
+					Fallback: ipMessage,
+					Text:     ipMessage,
+					Color:    color,
+				})
+			}
 			if verbose {
 				if !reply.IP.XFE.NotFound && reply.MD5.XFE.Error == "" {
 					xfeColor := "good"
