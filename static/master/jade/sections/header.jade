@@ -20,7 +20,7 @@ header#header.header
             li
               a(href='/faq') FAQ
             li
-              a(href='#integrations') Users
+              a(href='#users') Users
             li
               a(href='#features') Features
             li
@@ -45,7 +45,7 @@ header#header.header
                   strong#slack-message Add to Slack
               br
               small(style="color:#000000")
-                | By clicking this button you are agreeing to our #[a.btn-link(data-toggle="modal", data-target="#privacyModal") Privacy Policy ] and #[a.btn-link(href='/terms') Legal Terms]
+                | By clicking this button you are agreeing to our #[a(href='#privacyModal', data-toggle="modal", data-target="#privacyModal") Privacy Policy ] and #[a(href='/terms') Legal Terms]
               br
 
           .visible-xs-block.visible-sm-block.col-xs-12
@@ -55,7 +55,7 @@ header#header.header
       .col-xs-12.bottom-bar
         span#bottom-bar.text-center
           h3
-            | Join Other Security Analysts on Slack. #[a.btn-link(data-toggle="modal", data-target="#slackmodal") Learn more >> ]
+            | Join Other Security Analysts on Slack. #[a(href='#slackmodal', data-toggle="modal", data-target="#slackmodal") Learn more >> ]
             form#join(name="join-channel")
               div.input.inline-input
                 input#emailaddress.inline-input(type="email", name="email", required="true", placeholder="Enter email")
@@ -63,7 +63,7 @@ header#header.header
                 strong Join
 
 
-    a(href='#integrations')
+    a(href='#users')
       i.fa.fa-5x.fa-angle-double-down.forward-section
 
 div#recaptcha.modal.fade(aria-labelledby="recaptchaLabel")
