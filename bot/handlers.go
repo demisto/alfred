@@ -216,6 +216,7 @@ func (w *Worker) handleIP(ip string, online bool, reply *domain.WorkReply) {
 	// Private networks
 	if ipv4[0] == 10 || ipv4[0] == 172 && ipv4[1] >= 16 && ipv4[1] <= 31 || ipv4[0] == 192 && ipv4[1] == 168 {
 		reply.IP.XFE.NotFound = true
+		reply.IP.Private = true
 		return
 	}
 	c := make(chan int, 2)

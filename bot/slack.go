@@ -30,6 +30,7 @@ const (
 	ipCommentGood      = "IP (%s) is clean: %s."
 	ipCommentBad       = "Warning: IP (%s) is malicious: %s."
 	ipCommentWarning   = "Unable to find details regarding this IP (%s): %s."
+	ipCommentPrivate   = "IP (%s) is a private (internal) IP so we cannot provide reputation information: %s."
 	md5CommentGood     = "MD5 hash (%s) is clean: %s."
 	md5CommentBad      = "Warning: MD5 hash (%s) is malicious: %s."
 	md5CommentWarning  = "Unable to find details regarding this MD5 hash (%s): %s."
@@ -100,12 +101,10 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 					xfeColor = "danger"
 				}
 				postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-					Fallback:   fmt.Sprintf("Mime Type: %s, Family: %s", reply.MD5.XFE.Malware.MimeType, strings.Join(reply.MD5.XFE.Malware.Family, ",")),
-					Color:      xfeColor,
-					AuthorName: "XFE",
-					AuthorLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.MD5.Details),
-					Title:      "IBM X-Force Exchange",
-					TitleLink:  fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.MD5.Details),
+					Fallback:  fmt.Sprintf("Mime Type: %s, Family: %s", reply.MD5.XFE.Malware.MimeType, strings.Join(reply.MD5.XFE.Malware.Family, ",")),
+					Color:     xfeColor,
+					Title:     "IBM X-Force Exchange",
+					TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.MD5.Details),
 					Fields: []slack.AttachmentField{
 						slack.AttachmentField{Title: "Family", Value: strings.Join(reply.MD5.XFE.Malware.Family, ","), Short: true},
 						slack.AttachmentField{Title: "MIME Type", Value: reply.MD5.XFE.Malware.MimeType, Short: true},
@@ -322,7 +321,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 		if reply.Type&domain.ReplyTypeIP > 0 {
 			color := "warning"
 			comment := ipCommentWarning
-			if reply.IP.Result == domain.ResultDirty {
+			if reply.IP.Private {
+				color = "good"
+				comment = ipCommentPrivate
+			} else if reply.IP.Result == domain.ResultDirty {
 				color = "danger"
 				comment = ipCommentBad
 			} else if reply.IP.Result == domain.ResultClean {
@@ -380,13 +382,11 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 						vtColor = "danger"
 					}
 					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-						Fallback:   listOfURLs,
-						Text:       listOfURLs,
-						Color:      vtColor,
-						AuthorName: "VirusTotal",
-						AuthorLink: "https://www.virustotal.com/en/search?query=" + reply.IP.Details,
-						Title:      "VirusTotal",
-						TitleLink:  "https://www.virustotal.com/en/search?query=" + reply.IP.Details,
+						Fallback:  listOfURLs,
+						Text:      listOfURLs,
+						Color:     vtColor,
+						Title:     "VirusTotal",
+						TitleLink: "https://www.virustotal.com/en/search?query=" + reply.IP.Details,
 					})
 				}
 			}
@@ -415,12 +415,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 						xfeColor = "danger"
 					}
 					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-						Fallback:   fmt.Sprintf("Mime Type: %s, Family: %s", reply.MD5.XFE.Malware.MimeType, strings.Join(reply.MD5.XFE.Malware.Family, ",")),
-						Color:      xfeColor,
-						AuthorName: "XFE",
-						AuthorLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.MD5.Details),
-						Title:      "IBM X-Force Exchange",
-						TitleLink:  fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.MD5.Details),
+						Fallback:  fmt.Sprintf("Mime Type: %s, Family: %s", reply.MD5.XFE.Malware.MimeType, strings.Join(reply.MD5.XFE.Malware.Family, ",")),
+						Color:     xfeColor,
+						Title:     "IBM X-Force Exchange",
+						TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.MD5.Details),
 						Fields: []slack.AttachmentField{
 							slack.AttachmentField{Title: "Family", Value: strings.Join(reply.MD5.XFE.Malware.Family, ","), Short: true},
 							slack.AttachmentField{Title: "MIME Type", Value: reply.MD5.XFE.Malware.MimeType, Short: true},
@@ -434,12 +432,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 						vtColor = "danger"
 					}
 					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-						Fallback:   fmt.Sprintf("Scan Date: %s, Positives: %v, Total: %v", reply.MD5.VT.FileReport.ScanDate, reply.MD5.VT.FileReport.Positives, reply.MD5.VT.FileReport.Total),
-						Color:      vtColor,
-						AuthorName: "VirusTotal",
-						AuthorLink: reply.MD5.VT.FileReport.Permalink,
-						Title:      "VirusTotal",
-						TitleLink:  reply.MD5.VT.FileReport.Permalink,
+						Fallback:  fmt.Sprintf("Scan Date: %s, Positives: %v, Total: %v", reply.MD5.VT.FileReport.ScanDate, reply.MD5.VT.FileReport.Positives, reply.MD5.VT.FileReport.Total),
+						Color:     vtColor,
+						Title:     "VirusTotal",
+						TitleLink: reply.MD5.VT.FileReport.Permalink,
 						Fields: []slack.AttachmentField{
 							slack.AttachmentField{Title: "Scan Date", Value: reply.MD5.VT.FileReport.ScanDate, Short: true},
 							slack.AttachmentField{Title: "Positives", Value: fmt.Sprintf("%v", reply.MD5.VT.FileReport.Positives), Short: true},

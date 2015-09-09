@@ -111,6 +111,7 @@ type WorkReply struct {
 	IP struct {
 		Details string `json:"details"`
 		Result  int
+		Private bool `json:"private"`
 		XFE     struct {
 			NotFound     bool                  `json:"not_found"`
 			Error        string                `json:"error"`

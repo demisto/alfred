@@ -102,7 +102,10 @@
         var resultMessage = 'Could not determine the IP address reputation.';
         var color = 'warning-text';
 
-        if (ipdata.Result == 0) {
+        if (ipdata.private) {
+          resultMessage = 'IP address is a private (internal) IP - no reputation found.';
+          color = 'success-text';
+        } else if (ipdata.Result == 0) {
           resultMessage = 'IP address is found to be clean.';
           color = 'success-text';
         } else if (ipdata.Result == 1) {
