@@ -13,7 +13,6 @@
   "bower_components/html5shiv/dist/html5shiv.js",
   "bower_components/respond/src/respond.js",
   "bower_components/retina.js/dist/retina.js",
-  "bower_components/smoothscroll/smoothscroll.js",
   "bower_components/jquery.scrollTo/jquery.scrollTo.js",
   "bower_components/wow/dist/wow.js",
   "bower_components/matchMedia/matchMedia.js",
