@@ -187,7 +187,7 @@ gulp.task('templates:pages', function() {
         .pipe(prettify({
             indent_char: ' ',
             indent_size: 3,
-            unformatted: ['a', 'sub', 'sup', 'b', 'i', 'u']
+            unformatted: ['a', 'sub', 'sup', 'b', 'i', 'u', 'small']
         }))
         .pipe(gulp.dest(build.templates.pages))
         ;

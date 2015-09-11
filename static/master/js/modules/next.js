@@ -34,7 +34,7 @@
         $('#channellist').html("<h2>Channels Monitored</h2>");
         $('#channellist').append(mergedArr.sort().join(", "));
       } else {
-        $('#channellist').html("<p class='warning-text'>DBOT is not monitoring any conversations. Please <b>select channels</b> to monitor below\
+        $('#channellist').html("<p class='warning-text'>D<small>BOT</small> is not monitoring any conversations. Please <b>select channels</b> to monitor below\
          or select <b>\'Monitor ALL conversations\'</b> above.</p>");
       }
 

@@ -190,7 +190,7 @@
     // If we are on the homepage
     if ($('#slack-message').length) {
       $.getJSON('/user', function(data) {
-        $('#slack-message').text('Configure DBOT');
+        $('#slack-message').html('Configure D<small>BOT</small>');
         $('#action').attr('href', '/conf')
       });
       var recaptcha_widget_id = null;
