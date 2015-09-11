@@ -32,5 +32,6 @@ COPY run.sh /
 COPY g-worker.conf /etc/g-worker.conf
 COPY ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY worker /
+COPY build-date /
 
 CMD ["/run.sh"]
