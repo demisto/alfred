@@ -15,7 +15,7 @@
     "threat intelligence"
   ],
   "license": "https://raw.github.com/demisto/alfred-web/master/LICENSE",
-  "homepage": "https://www.demisto.com",
+  "homepage": "http://www.demisto.com",
   "private": true,
   "dependencies": {
     "bootstrap": "3.3.4",
