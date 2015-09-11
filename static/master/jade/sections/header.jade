@@ -18,7 +18,7 @@ header#header.header
             li.current
               a(href='#header') Home
             li
-              a(href='/faq') FAQ
+              a.external(href='/faq') FAQ
             li
               a(href='#users') Users
             li
@@ -44,7 +44,7 @@ header#header.header
                 span
                   strong#slack-message Add to Slack
               br
-              small(style="color:#000000")
+              small
                 | By clicking this button you are agreeing to our #[a(href='#privacyModal', data-toggle="modal", data-target="#privacyModal") Privacy Policy ] and #[a(href='/terms') Legal Terms]
               br
 
@@ -100,4 +100,13 @@ div.modal.fade(id="slackmodal", aria-labelledby="slackModalLabel")
           | This channel is a public channel so we strongly advise to not share sensitive information on the channel. This channel is also monitored by D<small>BOT</small> 
           | for helping security analysts aggregate different type of security data. 
 
+div.modal.fade(id="contactmodal", aria-labelledby="contactModalLabel")
+  .modal-dialog
+    .modal-content
+      .modal-header
+          button(type="button", class="close", data-dismiss="modal", aria-label="Close")
+            span(aria-hidden="true") &times;
+          h4(id="slackModalLabel", class="modal-title") Contact us
+      .modal-body.
+        <script type="text/javascript"></script>
 // END HEADER

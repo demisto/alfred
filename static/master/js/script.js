@@ -135,29 +135,6 @@
     }
   });
 
-  // Smooth Scroll
-  // -----------------------------------
-  var scrollAnimationTime = 1200,
-      scrollAnimationFunc = 'easeInOutExpo',
-      $root               = $('html, body');
-
-  $(function(){
-    $('.scrollto').on('click.smoothscroll', function (event) {
-
-      event.preventDefault();
-
-      var target = this.hash;
-
-      // console.log($(target).offset().top)
-
-      $root.stop().animate({
-          'scrollTop': $(target).offset().top
-      }, scrollAnimationTime, scrollAnimationFunc, function () {
-          window.location.hash = target;
-      });
-    });
-
-  });
 
   // Self close navbar on mobile click
   // -----------------------------------
@@ -166,7 +143,7 @@
        var navToggle = $('.navbar-toggle');
 
        navMain.on('click', 'a', null, function () {
-         if (!(this.attr(id) == 'realname')) {
+         if (!($(this).attr('id') == 'namelink')) {
            if ( navToggle.is(':visible') )
              navMain.collapse('hide');
          }
@@ -189,6 +166,8 @@
   $(function () {
     // If we are on the homepage
     if ($('#slack-message').length) {
+
+
       $.getJSON('/user', function(data) {
         $('#slack-message').html('Configure D<small>BOT</small>');
         $('#action').attr('href', '/conf')
@@ -251,7 +230,6 @@
       });
     }
   });
-
 
   window.logout = function() {
     $.getJSON('/logout', function() {
