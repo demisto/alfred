@@ -47,3 +47,6 @@ etc/*rsa*
 etc/*.pem
 etc/*.yaml
 etc/*mysql*
+
+_analytics.jade
+_ze.jade
