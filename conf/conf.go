@@ -25,6 +25,8 @@ var Options struct {
 		SessionKey string
 		// Session timeout in minutes
 		Timeout int
+		// Recaptha secret
+		Recaptcha string
 	}
 	// SSL configuration
 	SSL struct {
@@ -98,14 +100,11 @@ func IsDev() bool {
 // If useDefault is provided then if there is an issue with the file we will use defaults.
 func Load(filename string, useDefault bool) error {
 	defOptions := []byte(`{
-      "Security" : {"SessionKey": "***REMOVED***", "Timeout": 525600},
       "Env": "DEV",
 			"Address": ":7070",
 			"HTTPAddress": ":80",
 			"ExternalAddress": "http://localhost:7070",
       "DB": {"ConnectString": "alfred.db"},
-			"VT": "***REMOVED***",
-      "Slack": {"ClientID": "***REMOVED***", "ClientSecret": "***REMOVED***"},
 			"AWS": {"ConfQueueName": "TestConf", "MessageQueueName": "TestMessage", "WorkQueueName": "TestWork"},
 			"G": {"ConfName": "conf", "MessageName": "msg", "WorkName": "work"},
 			"Web": true,

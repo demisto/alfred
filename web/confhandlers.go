@@ -10,6 +10,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/asaskevich/govalidator"
+	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/util"
 	"github.com/demisto/slack"
@@ -154,7 +155,7 @@ func (ac *AppContext) joinSlack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp, err := http.PostForm("https://www.google.com/recaptcha/api/siteverify",
-		url.Values{"secret": {"***REMOVED***"}, "response": {req.CaptchaResponse}})
+		url.Values{"secret": {conf.Options.Security.Recaptcha}, "response": {req.CaptchaResponse}})
 	if err != nil {
 		logrus.Debugf("Recaptcha error - %v", err)
 		panic(err)

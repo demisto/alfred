@@ -1,6 +1,6 @@
 # Alfred - Demisto Security Bot [![Circle CI](https://circleci.com/gh/demisto/alfred/tree/master.svg?style=svg&circle-token=298d2e89802eaed2e8972abe83baac50d9ee5224)](https://circleci.com/gh/demisto/alfred/tree/master)
 
-A Slack / Hipchat bot to add security info to messages containing URLs, hashes and IPs
+A Slack bot to add security info to messages containing URLs, hashes and IPs
 
 ## Quick Start
 
@@ -50,3 +50,5 @@ $ go run alfred.go [-loglevel debug] [-conf path/to/conf] [-logfile path/to/log]
 
 Please make sure to run esc again to embed the fully updated site into Go before release.
 While developing, you don't need to run esc unless adding new files to the site.
+
+Make sure to specify the Slack client ID and secret in a configuration file. To get VirusTotal reputation, you must specify the VirusTotal key. See conf/conf.go for details.

@@ -80,7 +80,7 @@ func (subs *subscriptions) FirstSubForChannel(channel string) *subscription {
 	return nil
 }
 
-func (subs subscriptions) SubForUser(user string) *subscription {
+func (subs *subscriptions) SubForUser(user string) *subscription {
 	for i := range subs.subscriptions {
 		if subs.subscriptions[i].user.ID == user {
 			return &subs.subscriptions[i]
@@ -133,7 +133,6 @@ func (b *Bot) loadSubscriptions(includingMine bool) error {
 	if cnt >= maxUsersPerBot {
 		return nil
 	}
-	cnt = 0
 	// Everything must run in separate transactions as it is written here
 	openUsers, err := b.r.OpenUsers(includingMine)
 	if err != nil {

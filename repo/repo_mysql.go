@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS oauth_state (
 	state VARCHAR(64) NOT NULL,
 	ts TIMESTAMP NOT NULL,
-	CONSTRAINT users_pk PRIMARY KEY (state)
+	CONSTRAINT oauth_state_pk PRIMARY KEY (state)
 );
 CREATE TABLE IF NOT EXISTS configurations (
 	user VARCHAR(64) NOT NULL,
@@ -117,7 +117,7 @@ type repoMySQL struct {
 //   mysql -u root (if password is set then add -p)
 //   mysql> CREATE DATABASE demisto CHARACTER SET = utf8;
 //   mysql> CREATE DATABASE demistot CHARACTER SET = utf8;
-//   mysql> CREATE USER demisto IDENTIFIED BY '***REMOVED***';
+//   mysql> CREATE USER demisto IDENTIFIED BY 'password';
 //   mysql> GRANT ALL on demisto.* TO demisto;
 //   mysql> GRANT ALL on demistot.* TO demisto;
 //   mysql> drop user ''@'localhost';
