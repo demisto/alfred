@@ -39,3 +39,11 @@ static/site/*.html
 
 # Web static embedded files
 static.go
+
+# Sensitive files
+Makefile
+etc/*.conf
+etc/*rsa*
+etc/*.pem
+etc/*.yaml
+etc/*mysql*

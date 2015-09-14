@@ -11,7 +11,7 @@ import (
 )
 
 func getTestDB(t *testing.T) Repo {
-	conf.Options.DB.ConnectString, conf.Options.DB.Username, conf.Options.DB.Password = "tcp/demistot?parseTime=true", "demisto", "***REMOVED***"
+	conf.Options.DB.ConnectString, conf.Options.DB.Username, conf.Options.DB.Password = "tcp/demistot?parseTime=true", "demisto", "demisto1999"
 	r, err := NewMySQL()
 	if err != nil {
 		t.Fatalf("%v", err)
