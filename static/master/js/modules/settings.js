@@ -12,6 +12,7 @@
     var verbosegroupsMatched = [];
     var allMonitored = false;
 
+    $('#unauthmodal').modal({ show: false})
 
     var updateChannelList = function() {
       // update the channels Monitored
@@ -252,6 +253,21 @@
 
 
 
+    })
+    .error(function(xhr, status, error) {
+      var err = error;
+      if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
+        err += " - " + xhr.responseJSON.errors[0].detail;
+        if (xhr.responseJSON.errors[0].status == 401) {
+          // unauthorized user - user not logged in
+          $('#unauthmodal').modal('show');
+          window.setTimeout(function() {
+            $('#unauthmodal').modal('hide');
+            window.location.replace("/");
+          }, 3000);
+        }
+      }
+
     });
   }
 
@@ -261,17 +277,33 @@
       // get the user information
       $.getJSON('/user', function(data) {
 
-        $('#realname').html(data.real_name);
-        $('#useremail').html(data.email);
-        $('#teamname').html('Team: ' + data.team_name);
+          $('#realname').html(data.real_name);
+          $('#useremail').html(data.email);
+          $('#teamname').html('Team: ' + data.team_name);
 
-        zE(function() {
-          zE.identify({
-            name: data.real_name,
-            email: data.email
+          zE(function() {
+            zE.identify({
+              name: data.real_name,
+              email: data.email
+            });
           });
+        })
+        .error( function(xhr, status, error) {
+          var err = error;
+          if (xhr && xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors[0]) {
+            err += " - " + xhr.responseJSON.errors[0].detail;
+            if (xhr.responseJSON.errors[0].status == 401) {
+              // unauthorized user - user not logged in
+              $('#unauthmodal').modal('show');
+              window.setTimeout(function() {
+                $('#unauthmodal').modal('hide');
+                window.location.replace("/");
+              }, 3000);
+
+            }
+          }
+
         });
-      });
 
     }
   });

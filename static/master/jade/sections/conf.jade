@@ -117,5 +117,16 @@ section#conf.config-page
                   | Channels Monitored (Verbose Mode)
                 hr
                 p#verbosechannellist
+  
+  div.modal.fade(id="unauthmodal", aria-labelledby="unauthModalLabel")
+    .modal-dialog
+      .modal-content
+        .modal-header
+            button(type="button", class="close", data-dismiss="modal", aria-label="Close")
+              span(aria-hidden="true") &times;
+            h4(id="unauthModalLabel", class="modal-title") User not logged in
+        .modal-body
+          p User not logged in. Redirecting to home page for authentication with Slack ... 
+
 
 // END CONFIGURATION
