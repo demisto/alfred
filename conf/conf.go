@@ -27,6 +27,8 @@ var Options struct {
 		Timeout int
 		// Recaptha secret
 		Recaptcha string
+		// Database encryption key used to encrypt the tokens
+		DBKey string
 	}
 	// SSL configuration
 	SSL struct {

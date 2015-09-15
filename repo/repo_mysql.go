@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS users (
 	is_restricted int(1) NOT NULL,
 	is_ultra_restricted int(1) NOT NULL,
 	external_id VARCHAR(64) NOT NULL,
-	token VARCHAR(64) NOT NULL,
+	token VARCHAR(256) NOT NULL,
 	created timestamp NOT NULL,
 	CONSTRAINT users_pk PRIMARY KEY (id),
 	CONSTRAINT users_team_fk FOREIGN KEY (team) REFERENCES teams (id),
@@ -201,16 +201,37 @@ func (r *repoMySQL) del(tableName, id string) error {
 	return err
 }
 
+func clearUserToken(u *domain.User) error {
+	clearToken, err := u.ClearToken()
+	if err != nil {
+		return err
+	}
+	u.Token = clearToken
+	return nil
+}
+
 func (r *repoMySQL) User(id string) (*domain.User, error) {
 	user := &domain.User{}
 	err := r.get("users", "id", id, user)
-	return user, err
+	if err != nil {
+		return nil, err
+	}
+	if err = clearUserToken(user); err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 func (r *repoMySQL) UserByExternalID(id string) (*domain.User, error) {
 	user := &domain.User{}
 	err := r.get("users", "external_id", id, user)
-	return user, err
+	if err != nil {
+		return nil, err
+	}
+	if err = clearUserToken(user); err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 func boolToInt(b bool) int {
@@ -221,7 +242,75 @@ func boolToInt(b bool) int {
 }
 
 func (r *repoMySQL) SetUser(user *domain.User) error {
-	_, err := r.db.Exec(`INSERT INTO users
+	return r.SetTeamAndUser(nil, user)
+}
+
+func (r *repoMySQL) Team(id string) (*domain.Team, error) {
+	team := &domain.Team{}
+	err := r.get("teams", "id", id, team)
+	return team, err
+}
+
+func (r *repoMySQL) TeamByExternalID(id string) (*domain.Team, error) {
+	team := &domain.Team{}
+	err := r.get("teams", "external_id", id, team)
+	return team, err
+}
+
+func (r *repoMySQL) SetTeam(team *domain.Team) error {
+	return r.SetTeamAndUser(team, nil)
+}
+
+func (r *repoMySQL) Teams() ([]domain.Team, error) {
+	var teams []domain.Team
+	err := r.db.Select(&teams, "SELECT * FROM teams")
+	return teams, err
+}
+
+func (r *repoMySQL) TeamMembers(team string) ([]domain.User, error) {
+	var users []domain.User
+	err := r.db.Select(&users, "SELECT * FROM users WHERE team = ?", team)
+	if err != nil {
+		return users, err
+	}
+	for i := range users {
+		err = clearUserToken(&users[i])
+		if err != nil {
+			logrus.Warnf("Unencrypted token found in DB - %v", err)
+		}
+	}
+	return users, nil
+}
+
+func (r *repoMySQL) SetTeamAndUser(team *domain.Team, user *domain.User) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if team != nil {
+		_, err = tx.Exec(`INSERT INTO teams (
+id, name, email_domain, domain, plan, external_id, created)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE
+name = ?,
+email_domain = ?,
+domain = ?,
+plan = ?,
+external_id = ?,
+created = ?`,
+			team.ID, team.Name, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created,
+			team.Name, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created)
+		if err != nil {
+			return err
+		}
+	}
+	if user != nil {
+		secureToken, err := user.SecureToken()
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(`INSERT INTO users
 (id, team, name, type, status, real_name, email, is_bot, is_admin, is_owner, is_primary_owner, is_restricted, is_ultra_restricted, external_id, token, created)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
@@ -240,61 +329,16 @@ is_ultra_restricted = ?,
 external_id = ?,
 token = ?,
 created = ?`, user.ID, user.Team, user.Name, user.Type, user.Status, user.RealName, user.Email,
-		boolToInt(user.IsBot), boolToInt(user.IsAdmin), boolToInt(user.IsOwner), boolToInt(user.IsPrimaryOwner),
-		boolToInt(user.IsRestricted), boolToInt(user.IsUltraRestricted), user.ExternalID, user.Token, user.Created,
-		user.Team, user.Name, user.Type, user.Status, user.RealName, user.Email, boolToInt(user.IsBot),
-		boolToInt(user.IsAdmin), boolToInt(user.IsOwner), boolToInt(user.IsPrimaryOwner), boolToInt(user.IsRestricted),
-		boolToInt(user.IsUltraRestricted), user.ExternalID, user.Token, user.Created)
-	return err
-}
-
-func (r *repoMySQL) Team(id string) (*domain.Team, error) {
-	team := &domain.Team{}
-	err := r.get("teams", "id", id, team)
-	return team, err
-}
-
-func (r *repoMySQL) TeamByExternalID(id string) (*domain.Team, error) {
-	team := &domain.Team{}
-	err := r.get("teams", "external_id", id, team)
-	return team, err
-}
-
-func (r *repoMySQL) SetTeam(team *domain.Team) error {
-	_, err := r.db.Exec(`INSERT INTO teams (
-id, name, email_domain, domain, plan, external_id, created)
-VALUES (?, ?, ?, ?, ?, ?, ?)
-ON DUPLICATE KEY UPDATE
-name = ?,
-email_domain = ?,
-domain = ?,
-plan = ?,
-external_id = ?,
-created = ?`,
-		team.ID, team.Name, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created,
-		team.Name, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created)
-	return err
-}
-
-func (r *repoMySQL) Teams() ([]domain.Team, error) {
-	var teams []domain.Team
-	err := r.db.Select(&teams, "SELECT * FROM teams")
-	return teams, err
-}
-
-func (r *repoMySQL) TeamMembers(team string) ([]domain.User, error) {
-	var users []domain.User
-	err := r.db.Select(&users, "SELECT * FROM users WHERE team = ?", team)
-	return users, err
-}
-
-func (r *repoMySQL) SetTeamAndUser(team *domain.Team, user *domain.User) error {
-	// TODO - too lazy right now to do transaction but this must be in transaction
-	err := r.SetTeam(team)
-	if err != nil {
-		return err
+			boolToInt(user.IsBot), boolToInt(user.IsAdmin), boolToInt(user.IsOwner), boolToInt(user.IsPrimaryOwner),
+			boolToInt(user.IsRestricted), boolToInt(user.IsUltraRestricted), user.ExternalID, user.Token, user.Created,
+			user.Team, user.Name, user.Type, user.Status, user.RealName, user.Email, boolToInt(user.IsBot),
+			boolToInt(user.IsAdmin), boolToInt(user.IsOwner), boolToInt(user.IsPrimaryOwner), boolToInt(user.IsRestricted),
+			boolToInt(user.IsUltraRestricted), user.ExternalID, secureToken, user.Created)
+		if err != nil {
+			return err
+		}
 	}
-	return r.SetUser(user)
+	return tx.Commit()
 }
 
 func (r *repoMySQL) OAuthState(id string) (*domain.OAuthState, error) {

@@ -1,6 +1,11 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"github.com/demisto/alfred/conf"
+	"github.com/demisto/alfred/util"
+)
 
 // UserType is the type of the user Hipchat or Slack
 type UserType int
@@ -64,6 +69,22 @@ type User struct {
 	ExternalID        string     `json:"external_id" db:"external_id"`
 	Token             string     `json:"token"`
 	Created           time.Time  `json:"created"`
+}
+
+// ClearToken is returned from the encrypted token
+func (u *User) ClearToken() (string, error) {
+	if u.Token != "" {
+		return util.Decrypt(u.Token, conf.Options.Security.DBKey)
+	}
+	return "", nil
+}
+
+// SecureToken is returned from the clear token
+func (u *User) SecureToken() (string, error) {
+	if u.Token != "" {
+		return util.Encrypt(u.Token, conf.Options.Security.DBKey)
+	}
+	return "", nil
 }
 
 // Team holds information about the team
