@@ -1,4 +1,4 @@
-# Alfred - Demisto Security Bot [![Circle CI](https://circleci.com/gh/demisto/alfred/tree/master.svg?style=svg&circle-token=298d2e89802eaed2e8972abe83baac50d9ee5224)](https://circleci.com/gh/demisto/alfred/tree/master)
+# DBOT - Demisto Security Bot [![Circle CI](https://circleci.com/gh/demisto/alfred/tree/master.svg?style=svg&circle-token=298d2e89802eaed2e8972abe83baac50d9ee5224)](https://circleci.com/gh/demisto/alfred/tree/master)
 
 A Slack bot to add security info to messages containing URLs, hashes and IPs
 
@@ -18,6 +18,12 @@ $ sudo npm -g install gulp karma bower
 $ npm install
 $ bower install
 $ gulp
+```
+
+Please note that there are some files missing from the repository as they contain our sensitive information or our analytics code. To make gulp work, create the following two empty files:
+```sh
+$GOPATH/src/github.com/demisto/alfred/static/master/jade/_analytics.jade
+$GOPATH/src/github.com/demisto/alfred/static/master/jade/_ze.jade
 ```
 
 Create the Go wrapper around the static files:
