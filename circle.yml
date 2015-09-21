@@ -1,8 +1,5 @@
-checkout:
-  post:
-    - go get -t -u -d github.com/demisto/alfred
 dependencies:
-  override:
+  pre:
     - npm install --global gulp
     - cd $HOME/alfred/static/master && npm install && bower install && gulp build
     - go get github.com/slavikm/esc
