@@ -11,6 +11,6 @@ checkout:
 dependencies:
   override:
     - npm install --global gulp
-    - cd $HOME/alfred/static/master && npm install && bower install && gulp build
+    - (cd $HOME/alfred/static/master; npm install; bower install; gulp build)
     - go get github.com/slavikm/esc
     - cd $HOME/alfred && esc -o web/static.go -pkg web -prefix static/site/ static/site/
