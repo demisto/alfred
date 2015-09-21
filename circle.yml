@@ -1,16 +1,16 @@
 ## Customize the test machine
 machine:
-  timezone:
-    America/Los_Angeles # Set the timezone
+#  timezone:
+#    America/Los_Angeles # Set the timezone
 #  pre:
 #    - bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
 #    - source $HOME/.gvm/scripts/gvm; gvm install go1.4.2 --binary
-
+checkout:
+  post:
+    - go get -t -u -d github.com/demisto/alfred
 dependencies:
-  pre:
+  override:
     - npm install --global gulp
-    - (cd $HOME/alfred/static/master; npm install)
-    - (cd $HOME/alfred/static/master; bower install)
-    - (cd $HOME/alfred/static/master; gulp build)
+    - cd $HOME/alfred/static/master && npm install && bower install && gulp build
     - go get github.com/slavikm/esc
-    - (cd $HOME/alfred; esc -o web/static.go -pkg web -prefix static/site/ static/site/)
+    - cd $HOME/alfred && esc -o web/static.go -pkg web -prefix static/site/ static/site/
