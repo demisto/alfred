@@ -29,7 +29,7 @@ func TestIsActive(t *testing.T) {
 
 func TestIsInterestedIn(t *testing.T) {
 	var c Configuration
-	if c.IsInterestedIn("Cx") || c.IsInterestedIn("Gx") || c.IsInterestedIn("Dx") {
+	if c.IsInterestedIn("Cx", "") || c.IsInterestedIn("Gx", "") || c.IsInterestedIn("Dx", "") {
 		t.Error("Configuration is empty but still interested")
 	}
 
@@ -37,7 +37,7 @@ func TestIsInterestedIn(t *testing.T) {
 	c.Groups = []string{"Gx"}
 	c.IM = true
 
-	if !c.IsInterestedIn("Cx") || !c.IsInterestedIn("Gx") || !c.IsInterestedIn("Dx") {
+	if !c.IsInterestedIn("Cx", "") || !c.IsInterestedIn("Gx", "") || !c.IsInterestedIn("Dx", "") {
 		t.Error("Configuration is not interested but it should")
 	}
 }

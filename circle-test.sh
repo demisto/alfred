@@ -40,6 +40,10 @@ exit_if_fail mv $HOME/alfred $GOPATH/src/github.com/demisto
 exit_if_fail cd $GOPATH/src/github.com/demisto/alfred
 exit_if_fail go get -t -d -v ./...
 
+# Touch missing private files
+exit_if_fail touch $GOPATH/src/github.com/demisto/alfred/static/master/jade/_ze.jade
+exit_if_fail touch $GOPATH/src/github.com/demisto/alfred/static/master/jade/_analytics.jade
+
 # Build all the web stuff
 exit_if_fail cd $GOPATH/src/github.com/demisto/alfred/static/master
 exit_if_fail npm install
