@@ -31,6 +31,7 @@ echo "Configuration"
 echo "========================================"
 echo "\$HOME: $HOME"
 echo "\$GOPATH: $GOPATH"
+echo "\$GO_VERSION: $GO_VERSION"
 
 # Move the checked-out source to a better location.
 exit_if_fail mv $HOME/alfred $GOPATH/src/github.com/demisto
