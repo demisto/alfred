@@ -1,6 +1,18 @@
+machine:
+  node:
+    version: 0.12.0
+  services:
+    - docker
+  pre:
+    - bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+    - source $HOME/.gvm/scripts/gvm; gvm install go1.5 --binary
+
 dependencies:
   pre:
     - npm install --global gulp
-    - cd $HOME/alfred/static/master && npm install && bower install && gulp build
-    - go get github.com/slavikm/esc
-    - cd $HOME/alfred && esc -o web/static.go -pkg web -prefix static/site/ static/site/
+  override:
+    - echo "Overriding default dependencies"
+
+test:
+  override:
+    - bash circle-test.sh:
