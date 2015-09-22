@@ -2,6 +2,9 @@
 
 A Slack bot to add security info to messages containing URLs, hashes and IPs. You can see it in action at [dbot.demisto.com](https://dbot.demisto.com).
 
+## Authors
+This project was built by the [Demisto](https://www.demisto.com) team
+
 ## Quick Start
 
 Make sure you have a Go environment set up (either using [GVM](https://github.com/moovweb/gvm/) or just native install)
