@@ -51,3 +51,6 @@ etc/*mysql*
 _analytics.jade
 _ze.jade
 .idea
+
+# Logs
+*.log
