@@ -8,14 +8,32 @@ TIMEOUT="-timeout 30s"
 
 # Executes the given statement, and exits if the command returns a non-zero code.
 function exit_if_fail {
-    command=$@
-    echo "Executing '$command'"
-    $command
-    rc=$?
-    if [ $rc -ne 0 ]; then
-        echo "'$command' returned $rc."
-        exit $rc
-    fi
+  command=$@
+  echo "Executing '$command'"
+  $command
+  rc=$?
+  if [ $rc -ne 0 ]; then
+    echo "'$command' returned $rc."
+    exit $rc
+  fi
+}
+
+# Check that go fmt has been run.
+function check_go_fmt {
+  fmtcount=`git ls-files | grep '.go$' | xargs gofmt -l 2>&1 | wc -l`
+  if [ $fmtcount -gt 0 ]; then
+    echo "run 'go fmt ./...' to format your source code."
+    exit 1
+  fi
+}
+
+# Check that go vet passes.
+function check_go_vet {
+  vetcount=`go vet ./... 2>&1 | wc -l`
+  if [ $vetcount -gt 0 ]; then
+    echo "run 'go vet ./...' to see the errors it flags and correct your source code."
+    exit 1
+  fi
 }
 
 source $HOME/.gvm/scripts/gvm
@@ -54,6 +72,8 @@ exit_if_fail gulp build
 exit_if_fail go get github.com/slavikm/esc
 exit_if_fail cd $GOPATH/src/github.com/demisto/alfred
 exit_if_fail $GOPATH/bin/esc -o web/static.go -pkg web -prefix static/site/ static/site/
+check_go_fmt
+check_go_vet
 exit_if_fail go build -v ./...
 
 # Finally, test
