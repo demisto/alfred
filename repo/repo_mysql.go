@@ -330,7 +330,7 @@ external_id = ?,
 token = ?,
 created = ?`, user.ID, user.Team, user.Name, user.Type, user.Status, user.RealName, user.Email,
 			boolToInt(user.IsBot), boolToInt(user.IsAdmin), boolToInt(user.IsOwner), boolToInt(user.IsPrimaryOwner),
-			boolToInt(user.IsRestricted), boolToInt(user.IsUltraRestricted), user.ExternalID, user.Token, user.Created,
+			boolToInt(user.IsRestricted), boolToInt(user.IsUltraRestricted), user.ExternalID, secureToken, user.Created,
 			user.Team, user.Name, user.Type, user.Status, user.RealName, user.Email, boolToInt(user.IsBot),
 			boolToInt(user.IsAdmin), boolToInt(user.IsOwner), boolToInt(user.IsPrimaryOwner), boolToInt(user.IsRestricted),
 			boolToInt(user.IsUltraRestricted), user.ExternalID, secureToken, user.Created)
