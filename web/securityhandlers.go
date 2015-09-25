@@ -11,7 +11,7 @@ import (
 	"github.com/demisto/alfred/util"
 	"github.com/demisto/slack"
 	"github.com/gorilla/context"
-	"github.com/wayn3h0/go-uuid/random"
+	"github.com/wayn3h0/go-uuid"
 	"golang.org/x/oauth2"
 )
 
@@ -39,7 +39,7 @@ func (ac *AppContext) initiateOAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Now, generate a random state
-	uuid, err := random.New()
+	uuid, err := uuid.NewRandom()
 	if err != nil {
 		panic(err)
 	}
@@ -108,7 +108,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	ourTeam, err := ac.r.TeamByExternalID(team.Team.ID)
 	if err != nil {
 		log.Debugf("Got a new team registered - %s", team.Team.Name)
-		teamID, err := random.New()
+		teamID, err := uuid.NewRandom()
 		if err != nil {
 			panic(err)
 		}
@@ -131,7 +131,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	ourUser, err := ac.r.UserByExternalID(user.User.ID)
 	if err != nil {
 		log.Infof("Got a new user registered - %s", user.User.Name)
-		userID, err := random.New()
+		userID, err := uuid.NewRandom()
 		if err != nil {
 			panic(err)
 		}
