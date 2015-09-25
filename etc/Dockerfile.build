@@ -32,8 +32,6 @@ COPY build-date /
 COPY Makefile /
 COPY _analytics.jade /
 COPY _ze.jade /
-COPY demisto_git_rsa_clear /root/.ssh/id_rsa
-RUN chmod 400 /root/.ssh/id_rsa
 WORKDIR /
 RUN make setup
 RUN make buildgo
