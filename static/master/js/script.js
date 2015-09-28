@@ -192,6 +192,28 @@
   $(function () {
     // If we are on the homepage
     if ($('#slack-message').length) {
+      var counter_timer;
+
+      // counter
+      $.getJSON('/messages', function(data) {
+        var s_count = data.counter - 100;
+        var st_count = data.counter;
+        refreshCounter(s_count. st_count, 30000);
+        counter_timer = setTimeout(function() {
+          $.getJSON('/messages', function(data) {
+            var s_count = last_stop_counter;
+            var st_count = data.counter;
+            refreshCounter(s_count. st_count, 30000);
+          });
+        }, 30000);
+      });
+
+      $(window).on('beforeunload', function() {
+        if (counter_timer) {
+          clearTimeout(counter_timer);
+        }
+      });
+
 
 
       $.getJSON('/user', function(data) {
