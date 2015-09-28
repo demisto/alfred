@@ -47,14 +47,14 @@
       if (allMonitored) {
         $('#channellist').html("D<small>BOT</small> is monitoring all conversations for your team. You can close the browser and get back to work.");
       } else if (mergedArr.length > 0) {
-        $('#channellist').append('<p>' + mergedArr.sort().join(", ")+'</p>');
+        $('#channellist').append($('<p>').text(mergedArr.sort().join(", ")));
       } else if (verbosemergedArr.length == 0){
         $('#channellist').html("<p class='warning-text'>D<small>BOT</small> is not monitoring any conversations. Please <b>select channels</b> to monitor below\
          or select <b>\'Monitor ALL conversations\'</b>.</p>");
       }
       if (verbosemergedArr.length > 0) {
         $('#verbosechannelsmonitored').show();
-        $('#verbosechannellist').append('<p>' + verbosemergedArr.sort().join(", ")+'</p>');
+        $('#verbosechannellist').append($('<p>').text(verbosemergedArr.sort().join(", ")));
       } else {
         $('#verbosechannelsmonitored').hide();
       }
@@ -102,8 +102,8 @@
 
       for (var i=0; data.channels && i<data.channels.length; i++) {
 
-        verbosechannels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].verbose ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
-        channels.push('<option value="' + data.channels[i].id + '" ' + (data.channels[i].selected ? 'selected' : '') + '>' + data.channels[i].name + '</option>');
+        verbosechannels.push(new Option(data.channels[i].name, data.channels[i].id, false, data.channels[i].verbose));
+        channels.push(new Option(data.channels[i].name, data.channels[i].id, false, data.channels[i].selected));
 
 
         if (data.channels[i].selected)
@@ -113,12 +113,12 @@
             verbosechannelsMatched.push(data.channels[i].name)
 
       }
-      $('#channels').append(channels.join(''));
-      $('#verbosechannels').append(verbosechannels.join(''));
+      $('#channels').append(channels);
+      $('#verbosechannels').append(verbosechannels);
 
       for (var i=0; data.groups && i<data.groups.length; i++) {
-        verbosegroups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].verbose ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
-        groups.push('<option value="' + data.groups[i].id + '" ' + (data.groups[i].selected ? 'selected' : '') + '>' + data.groups[i].name + '</option>');
+        verbosegroups.push(new Option(data.groups[i].name, data.groups[i].id, false, data.groups[i].verbose));
+        groups.push(new Option(data.groups[i].name, data.groups[i].id, false, data.groups[i].selected));
 
         if (data.groups[i].selected)
           groupsMatched.push(data.groups[i].name)
@@ -128,8 +128,8 @@
 
       }
 
-      $('#groups').append(groups.join(''));
-      $('#verbosegroups').append(verbosegroups.join(''));
+      $('#groups').append(groups);
+      $('#verbosegroups').append(verbosegroups);
 
       $('#im').prop('checked', data.im);
       $('#verboseim').prop('checked', data.verbose_im);
@@ -277,9 +277,9 @@
       // get the user information
       $.getJSON('/user', function(data) {
 
-          $('#realname').html(data.real_name);
-          $('#useremail').html(data.email);
-          $('#teamname').html('Team: ' + data.team_name);
+          $('#realname').text(data.real_name);
+          $('#useremail').text(data.email);
+          $('#teamname').text('Team: ' + data.team_name);
 
           zE(function() {
             zE.identify({
