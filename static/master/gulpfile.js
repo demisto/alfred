@@ -39,7 +39,8 @@ var vendor = {
 // SOURCES CONFIG
 var source = {
   scripts: {
-    site:  [ 'js/script.js',
+    site:  [ 'js/countUp.js',
+             'js/script.js',
              'js/modules/**/*.js',
              'js/custom/**/*.js',
               ignored_files

@@ -195,15 +195,31 @@
       var counter_timer;
 
       // counter
+      // var counter = new CountUp("counter", 500, 10000, 0, 30);
+      // counter.start();
+      //
+      var refreshCounter = function(start_count, stop_count, duration) {
+        var options = {
+          useEasing : false,
+          useGrouping : true,
+          separator : ',',
+          decimal : '.',
+          prefix : 'Messages Protected: ',
+          suffix : ''
+        };
+        var counter = new CountUp("counter", start_count, stop_count, 0, duration, options);
+        counter.start();
+      }
+
       $.getJSON('/messages', function(data) {
-        var s_count = data.counter - 100;
-        var st_count = data.counter;
-        refreshCounter(s_count. st_count, 30000);
+        var s_count = data.count - 100;
+        var st_count = data.count;
+        refreshCounter(s_count, st_count, 30);
         counter_timer = setTimeout(function() {
           $.getJSON('/messages', function(data) {
             var s_count = last_stop_counter;
-            var st_count = data.counter;
-            refreshCounter(s_count. st_count, 30000);
+            var st_count = data.count;
+            refreshCounter(s_count, st_count, 30);
           });
         }, 30000);
       });
