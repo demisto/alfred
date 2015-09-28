@@ -198,6 +198,7 @@
       // var counter = new CountUp("counter", 500, 10000, 0, 30);
       // counter.start();
       //
+      var last_stop_counter;
       var refreshCounter = function(start_count, stop_count, duration) {
         var options = {
           useEasing : false,
@@ -208,6 +209,7 @@
           suffix : ''
         };
         var counter = new CountUp("counter", start_count, stop_count, 0, duration, options);
+        last_stop_counter = stop_count;
         counter.start();
       }
 
