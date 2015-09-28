@@ -3,6 +3,7 @@ package bot
 import (
 	"log"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -191,6 +192,20 @@ func (b *Bot) startWSForUser(team string, teamSub *subscriptions, userSub *subsc
 	info, err := userSub.s.RTMStart("dbot.demisto.com", b.in, &domain.Context{Team: team, User: userSub.user.ID})
 	if err != nil {
 		logrus.Warnf("Unable to start WS for user %s (%s) - %v\n", userSub.user.ID, userSub.user.Name, err)
+		// For revoked tokens, the user is not active anymore
+		if strings.Contains(err.Error(), "token_revoked") {
+			userSub.user.Status = domain.UserStatusDeleted
+			logrus.Infof("Updating user status for %s (%s)", userSub.user.ID, userSub.user.Name)
+			dbErr := b.r.SetUser(userSub.user)
+			if dbErr != nil {
+				logrus.Warnf("Unable to change user status - %v", dbErr)
+			}
+			logrus.Infof("Unlocking user %s (%s)", userSub.user.ID, userSub.user.Name)
+			dbErr = b.r.UnlockUser(userSub.user.ID)
+			if dbErr != nil {
+				logrus.Warnf("Unable to unlock user - %v", dbErr)
+			}
+		}
 		return err
 	}
 	teamSub.info = info
@@ -203,10 +218,20 @@ func (b *Bot) startWS() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	for k, v := range b.subscriptions {
+		var subsToClean []int
 		for i := range v.subscriptions {
-			if !v.subscriptions[i].started && v.subscriptions[i].interest.IsActive() {
-				b.startWSForUser(k, v, &v.subscriptions[i])
+			if !v.subscriptions[i].started && v.subscriptions[i].user.Status == domain.UserStatusActive && v.subscriptions[i].interest.IsActive() {
+				err := b.startWSForUser(k, v, &v.subscriptions[i])
+				if err != nil && strings.Contains(err.Error(), "token_revoked") {
+					subsToClean = append(subsToClean, i)
+				}
 			}
+		}
+		// Remove all the ones that were rejected
+		sort.Sort(sort.Reverse(sort.IntSlice(subsToClean)))
+		for _, i := range subsToClean {
+			logrus.Debugf("Cleaning user %s (%s)", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
+			v.subscriptions = append(v.subscriptions[:i], v.subscriptions[i+1:]...)
 		}
 	}
 	return nil

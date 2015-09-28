@@ -36,11 +36,14 @@ type Repo interface {
 	OpenUsers(includeMine bool) ([]domain.UserBot, error)
 	// LockUser associates a user to us and locks it from other bots
 	LockUser(user *domain.UserBot) (bool, error)
+	// Unlock the user as it is being deleted
+	UnlockUser(id string) error
 	// BotHeartbeat updates the bot keep-alive timestamp
 	BotHeartbeat() error
 	UpdateStatistics(stats *domain.Statistics) error
 	Statistics(team string) (*domain.Statistics, error)
 	GlobalStatistics() (*domain.Statistics, error)
+	TotalMessages() (int, error)
 	JoinSlackChannel(email string) error
 	Close() error
 }

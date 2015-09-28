@@ -389,6 +389,10 @@ func (r *repo) LockUser(user *domain.UserBot) (bool, error) {
 	return true, nil
 }
 
+func (r *repo) UnlockUser(id string) error {
+	return nil
+}
+
 func (r *repo) BotHeartbeat() error {
 	return nil
 }
@@ -404,6 +408,10 @@ func (r *repo) Statistics(team string) (*domain.Statistics, error) {
 
 func (r *repo) GlobalStatistics() (*domain.Statistics, error) {
 	return &domain.Statistics{Team: "Global"}, nil
+}
+
+func (r *repo) TotalMessages() (int, error) {
+	return 1001, nil
 }
 
 func (r *repo) MessageSentOnChannel(team, channel string) error {

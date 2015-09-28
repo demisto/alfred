@@ -535,10 +535,10 @@ func (r *repoMySQL) IsVerboseChannel(team, channel string) (bool, error) {
 
 func (r *repoMySQL) OpenUsers(includeMine bool) ([]domain.UserBot, error) {
 	var users []domain.UserBot
-	query := "SELECT u.id as user, ub.bot, ub.ts FROM users u LEFT OUTER JOIN bot_for_user ub ON u.id = ub.user LEFT OUTER JOIN bots b ON ub.bot = b.bot WHERE ub.bot IS NULL OR b.ts + interval ? minute < now() LIMIT 1000"
+	query := "SELECT u.id as user, ub.bot, ub.ts FROM users u LEFT OUTER JOIN bot_for_user ub ON u.id = ub.user LEFT OUTER JOIN bots b ON ub.bot = b.bot WHERE u.status = 0 AND (ub.bot IS NULL OR b.ts + interval ? minute < now()) LIMIT 1000"
 	args := []interface{}{3}
 	if includeMine {
-		query = "SELECT u.id as user, ub.bot, ub.ts FROM users u LEFT OUTER JOIN bot_for_user ub ON u.id = ub.user LEFT OUTER JOIN bots b ON ub.bot = b.bot WHERE ub.bot IS NULL OR b.ts + interval ? minute < now() or ub.bot = ? LIMIT 1000"
+		query = "SELECT u.id as user, ub.bot, ub.ts FROM users u LEFT OUTER JOIN bot_for_user ub ON u.id = ub.user LEFT OUTER JOIN bots b ON ub.bot = b.bot WHERE u.status = 0 AND (ub.bot IS NULL OR b.ts + interval ? minute < now() or ub.bot = ?) LIMIT 1000"
 		args = append(args, r.hostname)
 	}
 	rows, err := r.db.Query(query, args...)
@@ -587,6 +587,11 @@ func (r *repoMySQL) LockUser(user *domain.UserBot) (bool, error) {
 	}
 	rows, err := result.RowsAffected()
 	return rows > 0, err
+}
+
+func (r *repoMySQL) UnlockUser(id string) error {
+	_, err := r.db.Exec("DELETE FROM bot_for_user WHERE user = ? AND bot = ?", id, r.hostname)
+	return err
 }
 
 func (r *repoMySQL) BotHeartbeat() error {
@@ -685,6 +690,12 @@ sum(urls_clean) as urls_clean, sum(urls_dirty) as urls_dirty, sum(urls_unknown) 
 sum(hashes_clean) as hashes_clean, sum(hashes_dirty) as hashes_dirty, sum(hashes_unknown) as hashes_unknown,
 sum(ips_clean) as ips_clean, sum(ips_dirty) as ips_dirty, sum(ips_unknown) as ips_unknown FROM team_statistics`)
 	return stats, err
+}
+
+func (r *repoMySQL) TotalMessages() (int, error) {
+	var sum int
+	err := r.db.Get(&sum, `SELECT sum(messages) FROM team_statistics`)
+	return sum, err
 }
 
 func (r *repoMySQL) MessageSentOnChannel(team, channel string) error {

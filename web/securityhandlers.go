@@ -155,8 +155,8 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 		}
 		newUser = true
 	} else {
-		ourUser.Name, ourUser.RealName, ourUser.Email, ourUser.Token =
-			user.User.Name, user.User.RealName, user.User.Profile.Email, token.AccessToken
+		ourUser.Name, ourUser.RealName, ourUser.Email, ourUser.Token, ourUser.Status =
+			user.User.Name, user.User.RealName, user.User.Profile.Email, token.AccessToken, domain.UserStatusActive
 	}
 	log.Debugln("Saving to the DB...")
 	err = ac.r.SetTeamAndUser(ourTeam, ourUser)

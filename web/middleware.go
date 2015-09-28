@@ -10,6 +10,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
+	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/util"
 	"github.com/gorilla/context"
 )
@@ -233,6 +234,11 @@ func (ac *AppContext) authHandler(next http.Handler) http.Handler {
 		if err != nil {
 			log.WithFields(log.Fields{"username": sess.User, "id": sess.UserID, "error": err}).Warn("Unable to load user from repository")
 			panic(err)
+		}
+		if u.Status != domain.UserStatusActive {
+			log.Debugf("User %s (%s) tried to login but revoked the token", u.ID, u.Name)
+			WriteError(w, ErrAuth)
+			return
 		}
 		context.Set(r, "user", u)
 		// Set the new cookie for the user with the new timeout

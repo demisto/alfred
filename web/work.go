@@ -65,3 +65,16 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 	workReply, err := ac.q.PopWorkReply(ac.replyQueue, 0)
 	json.NewEncoder(w).Encode(workReply)
 }
+
+type messageCount struct {
+	Count int `json:"count"`
+}
+
+// totalMessages we ever saw and handled
+func (ac *AppContext) totalMessages(w http.ResponseWriter, r *http.Request) {
+	cnt, err := ac.r.TotalMessages()
+	if err != nil {
+		panic(err)
+	}
+	json.NewEncoder(w).Encode(messageCount{cnt})
+}
