@@ -216,14 +216,14 @@
       $.getJSON('/messages', function(data) {
         var s_count = data.count - 100;
         var st_count = data.count;
-        refreshCounter(s_count, st_count, 30);
+        refreshCounter(s_count, st_count, 60);
         counter_timer = setInterval(function() {
           $.getJSON('/messages', function(data) {
             var s_count = last_stop_counter;
             var st_count = data.count;
-            refreshCounter(s_count, st_count, 30);
+            refreshCounter(s_count, st_count, 60);
           });
-        }, 30000);
+        }, 60000);
       });
 
       $(window).on('beforeunload', function() {
