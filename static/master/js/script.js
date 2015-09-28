@@ -217,7 +217,7 @@
         var s_count = data.count - 100;
         var st_count = data.count;
         refreshCounter(s_count, st_count, 30);
-        counter_timer = setTimeout(function() {
+        counter_timer = setInterval(function() {
           $.getJSON('/messages', function(data) {
             var s_count = last_stop_counter;
             var st_count = data.count;
@@ -228,7 +228,7 @@
 
       $(window).on('beforeunload', function() {
         if (counter_timer) {
-          clearTimeout(counter_timer);
+          clearInterval(counter_timer);
         }
       });
 
