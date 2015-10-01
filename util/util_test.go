@@ -58,3 +58,19 @@ func TestCannoncialize(t *testing.T) {
 		t.Error(res)
 	}
 }
+
+func TestSubstr(t *testing.T) {
+	s := "僤凘墈 葎萻萶 銈 磑禠"
+	if Substr(s, 13, 14) != "" {
+		t.Error("From is bigger than length so should have returned empty")
+	}
+	if Substr(s, 11, 15) != "禠" {
+		t.Error("Did not return last char")
+	}
+	if Substr(s, 10, 10) != "" {
+		t.Error("Should return empty if from and to are equal")
+	}
+	if s1 := Substr(s, 0, 2); s1 != "僤凘" {
+		t.Error("Substr is wrong - " + s1)
+	}
+}

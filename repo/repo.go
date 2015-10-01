@@ -44,6 +44,8 @@ type Repo interface {
 	Statistics(team string) (*domain.Statistics, error)
 	GlobalStatistics() (*domain.Statistics, error)
 	TotalMessages() (int, error)
+	// StoreMaliciousContent in the DB
+	StoreMaliciousContent(convicted *domain.MaliciousContent) error
 	JoinSlackChannel(email string) error
 	Close() error
 }

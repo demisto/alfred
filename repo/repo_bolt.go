@@ -54,6 +54,10 @@ func New() (Repo, error) {
 		if err != nil {
 			return err
 		}
+		_, err = tx.CreateBucketIfNotExists([]byte("convicted"))
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {
@@ -412,6 +416,10 @@ func (r *repo) GlobalStatistics() (*domain.Statistics, error) {
 
 func (r *repo) TotalMessages() (int, error) {
 	return 1001, nil
+}
+
+func (r *repo) StoreMaliciousContent(convicted *domain.MaliciousContent) error {
+	return r.set("convicted", convicted.UniqueID(), convicted)
 }
 
 func (r *repo) MessageSentOnChannel(team, channel string) error {

@@ -13,6 +13,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
+	"github.com/demisto/alfred/util"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
@@ -104,6 +105,20 @@ CREATE TABLE IF NOT EXISTS slack_invites (
 	ts TIMESTAMP NOT NULL,
 	invited INT(1) NOT NULL,
 	CONSTRAINT slack_invites_pk PRIMARY KEY (email)
+);
+CREATE TABLE IF NOT EXISTS convicted (
+	user VARCHAR(64) NOT NULL,
+	channel VARCHAR(64) NOT NULL,
+	message_id VARCHAR(64) NOT NULL,
+	ts TIMESTAMP NOT NULL,
+	content_type INT NOT NULL,
+	content VARCHAR(128) NOT NULL,
+	file_name VARCHAR(128),
+	vt VARCHAR(128),
+	xfe VARCHAR(128),
+	clamav VARCHAR(128),
+	CONSTRAINT convicted_pk PRIMARY KEY (user, channel, message_id),
+	CONSTRAINT convicted_user_fk FOREIGN KEY (user) REFERENCES users (id)
 )`
 
 type repoMySQL struct {
@@ -696,6 +711,13 @@ func (r *repoMySQL) TotalMessages() (int, error) {
 	var sum int
 	err := r.db.Get(&sum, `SELECT sum(messages) FROM team_statistics`)
 	return sum, err
+}
+
+func (r *repoMySQL) StoreMaliciousContent(convicted *domain.MaliciousContent) error {
+	_, err := r.db.Exec("INSERT INTO convicted (user, channel, message_id, ts, content_type, content, file_name, vt, xfe, clamav) VALUES (?, ?, ?, now(), ?, ?, ?, ?, ?, ?)",
+		convicted.User, convicted.Channel, convicted.MessageID, convicted.ContentType, util.Substr(convicted.Content, 0, 128), util.Substr(convicted.FileName, 0, 128),
+		util.Substr(convicted.VT, 0, 128), util.Substr(convicted.XFE, 0, 128), util.Substr(convicted.ClamAV, 0, 128))
+	return err
 }
 
 func (r *repoMySQL) MessageSentOnChannel(team, channel string) error {

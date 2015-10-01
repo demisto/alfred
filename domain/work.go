@@ -132,3 +132,21 @@ type WorkReply struct {
 	} `json:"file"`
 	Context interface{} `json:"context"`
 }
+
+// MaliciousContent holds info about convicted content
+type MaliciousContent struct {
+	User        string `json:"user"`
+	Channel     string `json:"channel"`
+	MessageID   string `json:"message_id" db:"message_id"`
+	ContentType int    `json:"content_type" db:"content_type"`
+	Content     string `json:"content"`
+	FileName    string `json:"file_name" db:"file_name"`
+	VT          string `json:"vt"`
+	XFE         string `json:"xfe"`
+	ClamAV      string `json:"clamav"`
+}
+
+// UniqueID of the message
+func (mc *MaliciousContent) UniqueID() string {
+	return mc.User + "," + mc.Channel + "," + mc.MessageID
+}

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"math/rand"
 	"net/url"
 	"reflect"
@@ -78,4 +79,20 @@ func Canonicalize(rawurls ...string) []string {
 		}
 	}
 	return canonicalized
+}
+
+// Substr of string based on runes and not bytes
+func Substr(s string, from int, to int) string {
+	if from < 0 || to < from {
+		panic(fmt.Sprintf("Must specify valid from and to [%d %d]", from, to))
+	}
+	r := []rune(s)
+	l := len(r)
+	if from >= l {
+		return ""
+	}
+	if to > l {
+		to = l
+	}
+	return string(r[from:to])
 }

@@ -199,6 +199,60 @@ func (b *Bot) handleReplyStats(reply *domain.WorkReply, ctx *domain.Context) {
 	}
 }
 
+func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context) {
+	if reply.Type&domain.ReplyTypeFile > 0 && reply.File.Result == domain.ResultDirty {
+		vtScore := fmt.Sprintf("%v / %v", reply.MD5.VT.FileReport.Positives, reply.MD5.VT.FileReport.Total)
+		xfeScore := strings.Join(reply.MD5.XFE.Malware.Family, ",")
+		b.r.StoreMaliciousContent(&domain.MaliciousContent{
+			User:        ctx.User,
+			Channel:     ctx.Channel,
+			MessageID:   reply.File.Details.ID,
+			ContentType: domain.ReplyTypeFile,
+			Content:     reply.MD5.Details,
+			FileName:    reply.File.Details.Name,
+			VT:          vtScore,
+			XFE:         xfeScore,
+			ClamAV:      reply.File.Virus})
+	} else {
+		if reply.Type&domain.ReplyTypeMD5 > 0 && reply.MD5.Result == domain.ResultDirty {
+			vtScore := fmt.Sprintf("%v / %v", reply.MD5.VT.FileReport.Positives, reply.MD5.VT.FileReport.Total)
+			xfeScore := strings.Join(reply.MD5.XFE.Malware.Family, ",")
+			b.r.StoreMaliciousContent(&domain.MaliciousContent{
+				User:        ctx.User,
+				Channel:     ctx.Channel,
+				MessageID:   reply.MessageID,
+				ContentType: domain.ReplyTypeMD5,
+				Content:     reply.MD5.Details,
+				VT:          vtScore,
+				XFE:         xfeScore})
+		}
+		if reply.Type&domain.ReplyTypeURL > 0 && reply.URL.Result == domain.ResultDirty {
+			vtScore := fmt.Sprintf("%v / %v", reply.URL.VT.URLReport.Positives, reply.URL.VT.URLReport.Total)
+			xfeScore := fmt.Sprintf("%v", reply.URL.XFE.URLDetails.Score)
+			b.r.StoreMaliciousContent(&domain.MaliciousContent{
+				User:        ctx.User,
+				Channel:     ctx.Channel,
+				MessageID:   reply.MessageID,
+				ContentType: domain.ReplyTypeURL,
+				Content:     reply.URL.Details,
+				VT:          vtScore,
+				XFE:         xfeScore})
+		}
+		if reply.Type&domain.ReplyTypeIP > 0 && reply.IP.Result == domain.ResultDirty {
+			vtScore := fmt.Sprintf("%v", len(reply.IP.VT.IPReport.DetectedUrls))
+			xfeScore := fmt.Sprintf("%v", reply.IP.XFE.IPReputation.Score)
+			b.r.StoreMaliciousContent(&domain.MaliciousContent{
+				User:        ctx.User,
+				Channel:     ctx.Channel,
+				MessageID:   reply.MessageID,
+				ContentType: domain.ReplyTypeIP,
+				Content:     reply.IP.Details,
+				VT:          vtScore,
+				XFE:         xfeScore})
+		}
+	}
+}
+
 // IPByDate sorting
 type IPByDate []govt.DetectedUrl
 
@@ -235,6 +289,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 		return
 	}
 	b.handleReplyStats(reply, data)
+	b.handleConvicted(reply, data)
 	sub := b.relevantUser(data)
 	if sub == nil {
 		logrus.Warnf("User not found in subscriptions for message %s", reply.MessageID)
