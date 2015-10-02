@@ -29,9 +29,9 @@
       contentType: 'application/json; charset=utf-8',
       success: function(data) {
 
-        $('#realname').html(data.real_name);
-        $('#useremail').html(data.email);
-        $('#teamname').html('Team: ' + data.team_name);
+        $('#realname').text(data.real_name);
+        $('#useremail').text(data.email);
+        $('#teamname').text('Team: ' + data.team_name);
 
         zE(function() {
           zE.identify({
