@@ -41,7 +41,9 @@ type Worker struct {
 
 // NewWorker that loads work messages from the queue
 func NewWorker(r repo.Repo, q queue.Queue) (*Worker, error) {
-	xfe, err := goxforce.New(goxforce.SetErrorLog(log.New(conf.LogWriter, "XFE:", log.Lshortfile)))
+	xfe, err := goxforce.New(
+		goxforce.SetCredentials(conf.Options.XFE.Key, conf.Options.XFE.Password),
+		goxforce.SetErrorLog(log.New(conf.LogWriter, "XFE:", log.Lshortfile)))
 	if err != nil {
 		return nil, err
 	}

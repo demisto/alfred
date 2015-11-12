@@ -44,7 +44,15 @@ var Options struct {
 		// ClientSecret is used to verify Slack reply
 		ClientSecret string
 	}
+	// VT token
 	VT string
+	// XFE credentials
+	XFE struct {
+		// Key to access the service
+		Key string
+		// Password to access the service
+		Password string
+	}
 	// DB properties
 	DB struct {
 		// ConnectString how to connect to DB
