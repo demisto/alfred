@@ -9,13 +9,12 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
-	"github.com/demisto/alfred/repo"
+	"github.com/demisto/alfred/util"
 	"github.com/demisto/slack"
 	"github.com/slavikm/govt"
 )
 
 const (
-	poweredBy          = "\t-\tPowered by <http://slack.demisto.com|Demisto>"
 	botName            = "DBot"
 	reactionTooBig     = "warning"
 	reactionGood       = "+1"
@@ -67,17 +66,14 @@ func mainMessageFormatted() string {
 }
 
 func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub *subscription, verbose bool) {
-	link := fmt.Sprintf("%s/details?f=%s&u=%s", conf.Options.ExternalAddress, reply.File.Details.ID, data.User)
-	if reply.File.FileTooLarge {
-		err := b.fileComment(fmt.Sprintf(fileCommentBig, reply.File.Details.Name, link), reactionTooBig, reply)
-		if err != nil {
-			logrus.Warnf("Error commenting on file - %v\n", err)
-		}
-		return
-	}
+	link := fmt.Sprintf("%s/details?f=%s&t=%s", conf.Options.ExternalAddress, reply.File.Details.ID, data.Team)
 	color := "warning"
 	comment := fileCommentWarning
-	if reply.File.Result == domain.ResultDirty {
+	shouldPost := false
+	if reply.File.FileTooLarge {
+		comment = fileCommentBig
+		shouldPost = true
+	} else if reply.File.Result == domain.ResultDirty {
 		color = "danger"
 		comment = fileCommentBad
 	} else if reply.File.Result == domain.ResultClean {
@@ -86,7 +82,6 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 		color = "good"
 		comment = fileCommentGood
 	}
-	shouldPost := false
 	fileMessage := fmt.Sprintf(comment, reply.File.Details.Name, fmt.Sprintf("<%s|Details>", link))
 	postMessage := &slack.PostMessageRequest{
 		Channel:     data.Channel,
@@ -204,7 +199,7 @@ func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context) {
 		vtScore := fmt.Sprintf("%v / %v", reply.MD5.VT.FileReport.Positives, reply.MD5.VT.FileReport.Total)
 		xfeScore := strings.Join(reply.MD5.XFE.Malware.Family, ",")
 		b.r.StoreMaliciousContent(&domain.MaliciousContent{
-			User:        ctx.User,
+			Team:        ctx.Team,
 			Channel:     ctx.Channel,
 			MessageID:   reply.File.Details.ID,
 			ContentType: domain.ReplyTypeFile,
@@ -218,7 +213,7 @@ func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context) {
 			vtScore := fmt.Sprintf("%v / %v", reply.MD5.VT.FileReport.Positives, reply.MD5.VT.FileReport.Total)
 			xfeScore := strings.Join(reply.MD5.XFE.Malware.Family, ",")
 			b.r.StoreMaliciousContent(&domain.MaliciousContent{
-				User:        ctx.User,
+				Team:        ctx.Team,
 				Channel:     ctx.Channel,
 				MessageID:   reply.MessageID,
 				ContentType: domain.ReplyTypeMD5,
@@ -230,7 +225,7 @@ func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context) {
 			vtScore := fmt.Sprintf("%v / %v", reply.URL.VT.URLReport.Positives, reply.URL.VT.URLReport.Total)
 			xfeScore := fmt.Sprintf("%v", reply.URL.XFE.URLDetails.Score)
 			b.r.StoreMaliciousContent(&domain.MaliciousContent{
-				User:        ctx.User,
+				Team:        ctx.Team,
 				Channel:     ctx.Channel,
 				MessageID:   reply.MessageID,
 				ContentType: domain.ReplyTypeURL,
@@ -242,7 +237,7 @@ func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context) {
 			vtScore := fmt.Sprintf("%v", len(reply.IP.VT.IPReport.DetectedUrls))
 			xfeScore := fmt.Sprintf("%v", reply.IP.XFE.IPReputation.Score)
 			b.r.StoreMaliciousContent(&domain.MaliciousContent{
-				User:        ctx.User,
+				Team:        ctx.Team,
 				Channel:     ctx.Channel,
 				MessageID:   reply.MessageID,
 				ContentType: domain.ReplyTypeIP,
@@ -263,15 +258,7 @@ func (a IPByDate) Less(i, j int) bool { return a[i].ScanDate < a[j].ScanDate }
 func (b *Bot) relevantUser(ctx *domain.Context) *subscription {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	subs := b.subscriptions[ctx.Team]
-	if subs == nil {
-		return nil
-	}
-	sub := subs.SubForUser(ctx.OriginalUser)
-	if sub != nil {
-		return sub
-	}
-	return subs.SubForUser(ctx.User)
+	return b.subscriptions[ctx.Team]
 }
 
 func nilOrUnknown(v interface{}) string {
@@ -292,24 +279,21 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 	b.handleConvicted(reply, data)
 	sub := b.relevantUser(data)
 	if sub == nil {
-		logrus.Warnf("User not found in subscriptions for message %s", reply.MessageID)
+		logrus.Warnf("Team not found in subscriptions for message %s", reply.MessageID)
 	}
 	verbose := false
 	if data.Channel != "" {
 		if data.Channel[0] == 'D' {
-			verbose = sub.interest.VerboseIM
+			// Since it's a direct message to me, I need to reply verbose
+			verbose = true
 		} else {
-			verbose, err = b.r.IsVerboseChannel(data.Team, data.Channel)
-			if err != nil {
-				logrus.Warnf("Error reading verbose channel status %v", err)
-				verbose = false
-			}
+			verbose = sub.configuration.IsVerbose(data.Channel, "")
 		}
 	}
 	if reply.Type&domain.ReplyTypeFile > 0 {
 		b.handleFileReply(reply, data, sub, verbose)
 	} else {
-		link := fmt.Sprintf("%s/details?c=%s&m=%s&u=%s", conf.Options.ExternalAddress, data.Channel, reply.MessageID, data.User)
+		link := fmt.Sprintf("%s/details?c=%s&m=%s&t=%s", conf.Options.ExternalAddress, data.Channel, reply.MessageID, data.Team)
 		postMessage := &slack.PostMessageRequest{Channel: data.Channel}
 		if reply.Type&domain.ReplyTypeURL > 0 {
 			color := "warning"
@@ -521,104 +505,171 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 	}
 }
 
-func (b *Bot) maybeSendFirstMessage(u *domain.User, s *slack.Slack, data *domain.Context) error {
-	if data.Channel != "" && !strings.HasPrefix(data.Channel, "D") {
-		if b.firstMessages[data.Channel+"@"+data.Team] {
-			return nil
-		}
-		sent, err := b.r.WasMessageSentOnChannel(data.Team, data.Channel)
-		if err != nil {
-			logrus.Infof("Error reading first message info - %v", err)
-			return err
-		}
-		if !sent {
-			// If there is an error here, it might happen because someone did this in parallel
-			err = b.r.MessageSentOnChannel(data.Team, data.Channel)
-			if err != nil {
-				return nil
-			}
-			b.firstMessages[data.Channel+"@"+data.Team] = true
-			postMessage := &slack.PostMessageRequest{
-				Channel:  data.Channel,
-				Text:     fmt.Sprintf(firstMessage, u.ExternalID, u.Name, conf.Options.ExternalAddress),
-				Username: botName,
-			}
-			_, err = s.PostMessage(postMessage, false)
-			if err != nil {
-				logrus.Infof("Unable to send first message to Slack - %v\n", err)
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // post uses the correct client to post to the channel
 // See if the original message poster is subscribed and if so use him.
 // If not, use the first user we have that is subscribed to the channel.
 func (b *Bot) post(message *slack.PostMessageRequest, reply *domain.WorkReply, data *domain.Context, sub *subscription) error {
-	u := sub.user
 	message.IconURL = conf.Options.ExternalAddress + "/img/favicon/D%20icon%205757.png"
 	message.Text = mainMessageFormatted()
 	message.Username = botName
-
-	s, err := slack.New(slack.SetToken(u.Token))
-	if err != nil {
-		return err
-	}
-	err = b.maybeSendFirstMessage(u, s, data)
-	if err != nil {
-		return err
-	}
-	_, err = s.PostMessage(message, false)
+	var err error
+	_, err = sub.s.PostMessage(message, false)
 	return err
 }
 
-func (b *Bot) fileComment(comment, reaction string, reply *domain.WorkReply) error {
-	var u *domain.User
-	data, err := GetContext(reply.Context)
-	if err != nil {
-		return err
+func (b *Bot) joinAllChannels(team, channel string) {
+	postMessage := &slack.PostMessageRequest{
+		Channel:  channel,
+		IconURL:  conf.Options.ExternalAddress + "/img/favicon/D%20icon%205757.png",
+		Username: botName,
 	}
-	// If the context did not have any channel, it is a file_created event
-	if data.Channel == "" {
-		u, err = b.r.User(data.User)
-		if err != nil {
-			return err
+	sub := b.subscriptions[team]
+	if sub == nil {
+		logrus.Warnf("Got message but do not have subsciption for team %s", team)
+		return
+	}
+	users, err := b.r.TeamMembers(team)
+	if err != nil {
+		logrus.Warnf("Unable to retrieve team members - %v", err)
+		return
+	}
+	ch, err := sub.s.ChannelList(true)
+	if err != nil {
+		logrus.Warnf("Error retrieving my channels - %v", err)
+		postMessage.Text = "Error retrieving current configuration. Rest assured we are looking into the issue."
+	} else {
+		var channels []string
+	users_loop:
+		for i := range users {
+			if users[i].Status == domain.UserStatusActive {
+				s, err := slack.New(slack.SetToken(users[i].Token))
+				if err != nil {
+					logrus.Infof("Error creating Slack client for user %s (%s) - %v\n", users[i].ID, users[i].Name, err)
+					continue
+				}
+				for i := range ch.Channels {
+					if !ch.Channels[i].IsMember && !util.In(channels, ch.Channels[i].Name) {
+						_, err = s.ChannelInvite(ch.Channels[i].ID, sub.team.BotUserID)
+						if err != nil {
+							logrus.Infof("Error inviting us - %v\n", err)
+							continue users_loop
+						}
+						channels = append(channels, ch.Channels[i].Name)
+					}
+				}
+				break
+			}
+		}
+		if len(channels) > 0 {
+			text := fmt.Sprintf("I've started monitoring the following channels: %s", strings.Join(channels, ", "))
+			postMessage.Text = text
+		} else {
+			postMessage.Text = "I could not invite myself to the public channels, rest assured we are looking into the issue."
+		}
+	}
+	_, err = sub.s.PostMessage(postMessage, false)
+	if err != nil {
+		logrus.Warnf("Error posting config message - %v", err)
+	}
+}
+
+func (b *Bot) handleVerbose(team, text, channel string) {
+	postMessage := &slack.PostMessageRequest{
+		Channel:  channel,
+		IconURL:  conf.Options.ExternalAddress + "/img/favicon/D%20icon%205757.png",
+		Username: botName,
+	}
+	sub := b.subscriptions[team]
+	if sub == nil {
+		logrus.Warnf("Got message but do not have subsciption for team %s", team)
+		return
+	}
+	changed := false
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	parts := strings.Split(text, " ")
+	if len(parts) > 2 && strings.ToLower(parts[0]) == "verbose" {
+		for i := 2; i < len(parts); i++ {
+			subparts := strings.Split(parts[i], ",")
+			for j := range subparts {
+				subpart := strings.TrimSpace(subparts[j])
+				if subpart != "" {
+					var ch string
+					if strings.Contains(subpart, "<#") { // if this is #channel
+						ch = subpart[2 : len(subpart)-1]
+						logrus.Debugf("Channel %s", ch)
+					} else {
+						ch = sub.ChannelID(subpart)
+					}
+					if ch != "" {
+						if strings.ToLower(parts[1]) == "on" && !util.In(sub.configuration.VerboseChannels, ch) {
+							sub.configuration.VerboseChannels = append(sub.configuration.VerboseChannels, ch)
+							changed = true
+						} else if strings.ToLower(parts[1]) == "off" && util.In(sub.configuration.VerboseChannels, ch) {
+							index := util.Index(sub.configuration.VerboseChannels, ch)
+							if index >= 0 {
+								sub.configuration.VerboseChannels = sub.configuration.VerboseChannels[:index+copy(sub.configuration.VerboseChannels[index:], sub.configuration.VerboseChannels[index+1:])]
+							}
+							changed = true
+						}
+					}
+				}
+			}
 		}
 	} else {
-		var err error
-		u, err = b.r.UserByExternalID(data.OriginalUser)
-		if err != nil && err != repo.ErrNotFound {
-			return err
-		}
-		// If the user creating the file is our user than don't comment because we already did the comment on file create event
-		if err == nil {
-			return nil
-		}
-		u, err = b.r.User(data.User)
+		postMessage.Text = "I could not understand your command. Verbose command is:\nverbose on #channel1,#channel2 - to turn on verbose mode on for a list of channels.\nverbose off #channel1,#channel2 - to turn off verbose mode on for a list of channels."
+	}
+	if changed {
+		err := b.r.SetChannelsAndGroups(team, sub.configuration)
 		if err != nil {
-			return err
+			logrus.Warnf("Error storing verbose configuration for team %s - %v", team, err)
+			postMessage.Text = "I had an issue saving the verbose state."
+		} else {
+			postMessage.Text = "Verbose state was changed."
 		}
 	}
-	s, err := slack.New(slack.SetToken(u.Token))
+	var err error
+	_, err = sub.s.PostMessage(postMessage, false)
 	if err != nil {
-		return err
+		logrus.Warnf("Error posting config message - %v", err)
 	}
-	info, err := s.FileInfo(reply.File.Details.ID, 0, 0)
+}
+
+func (b *Bot) handleConfig(team, channel string) {
+	postMessage := &slack.PostMessageRequest{
+		Channel:  channel,
+		IconURL:  conf.Options.ExternalAddress + "/img/favicon/D%20icon%205757.png",
+		Username: botName,
+	}
+	sub := b.subscriptions[team]
+	if sub == nil {
+		logrus.Warnf("Got message but do not have subsciption for team %s", team)
+		return
+	}
+	ch, err := sub.s.ChannelList(true)
 	if err != nil {
-		return err
-	}
-	for i := range info.Comments {
-		if strings.HasPrefix(info.Comments[i].Comment, botName) {
-			return nil
+		logrus.Warnf("Error retrieving my channels - %v", err)
+		postMessage.Text = "Error retrieving configuration. Rest assured we are looking into the issue."
+	} else {
+		var channels []string
+		var verboseChannels []string
+		for i := range ch.Channels {
+			if ch.Channels[i].IsMember {
+				if sub.configuration.IsVerbose(ch.Channels[i].ID, "") {
+					verboseChannels = append(verboseChannels, ch.Channels[i].Name)
+				} else {
+					channels = append(channels, ch.Channels[i].Name)
+				}
+			}
 		}
+		text := fmt.Sprintf("Channels I'm monitoring: %s", strings.Join(channels, ", "))
+		if len(verboseChannels) > 0 {
+			text = text + fmt.Sprintf("\nChannels I'm monitoring and providing extra info: %s", strings.Join(verboseChannels, ", "))
+		}
+		postMessage.Text = text
 	}
-	// We got here - means we do not have comment
-	_, err = s.FileAddComment(reply.File.Details.ID, comment, false)
+	_, err = sub.s.PostMessage(postMessage, false)
 	if err != nil {
-		return err
+		logrus.Warnf("Error posting config message - %v", err)
 	}
-	_, err = s.ReactionsAdd(reaction, reply.File.Details.ID, "", "", "")
-	return err
 }

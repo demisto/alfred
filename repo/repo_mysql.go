@@ -22,11 +22,14 @@ const schema = `
 CREATE TABLE IF NOT EXISTS teams (
     id VARCHAR(64) NOT NULL,
     name VARCHAR(128) NOT NULL,
+		status int NOT NULL,
     email_domain VARCHAR(128),
 		domain VARCHAR(128),
 		plan VARCHAR(128),
 		external_id VARCHAR(64) NOT NULL,
 		created timestamp NOT NULL,
+		bot_user_id VARCHAR(64) NOT NULL,
+		bot_token VARCHAR(512) NOT NULL,
 		CONSTRAINT teams_pk PRIMARY KEY (id)
 );
 CREATE TABLE IF NOT EXISTS users (
@@ -44,7 +47,7 @@ CREATE TABLE IF NOT EXISTS users (
 	is_restricted int(1) NOT NULL,
 	is_ultra_restricted int(1) NOT NULL,
 	external_id VARCHAR(64) NOT NULL,
-	token VARCHAR(256) NOT NULL,
+	token VARCHAR(512) NOT NULL,
 	created timestamp NOT NULL,
 	CONSTRAINT users_pk PRIMARY KEY (id),
 	CONSTRAINT users_team_fk FOREIGN KEY (team) REFERENCES teams (id),
@@ -56,23 +59,23 @@ CREATE TABLE IF NOT EXISTS oauth_state (
 	CONSTRAINT oauth_state_pk PRIMARY KEY (state)
 );
 CREATE TABLE IF NOT EXISTS configurations (
-	user VARCHAR(64) NOT NULL,
+	team VARCHAR(64) NOT NULL,
 	channel VARCHAR(64) NOT NULL,
-	CONSTRAINT configurations_pk PRIMARY KEY (user, channel),
-	CONSTRAINT configurations_user_fk FOREIGN KEY (user) REFERENCES users (id)
+	CONSTRAINT configurations_pk PRIMARY KEY (team, channel),
+	CONSTRAINT configurations_team_fk FOREIGN KEY (team) REFERENCES teams (id)
 );
 CREATE TABLE IF NOT EXISTS bots (
 	bot VARCHAR(64) NOT NULL,
 	ts TIMESTAMP NOT NULL,
 	CONSTRAINT bots_pk PRIMARY KEY (bot)
 );
-CREATE TABLE IF NOT EXISTS bot_for_user (
-	user VARCHAR(64) NOT NULL,
+CREATE TABLE IF NOT EXISTS bot_for_team (
+	team VARCHAR(64) NOT NULL,
 	bot VARCHAR(64) NOT NULL,
 	ts TIMESTAMP NOT NULL,
-	CONSTRAINT bot_for_user_pk PRIMARY KEY (user),
-	CONSTRAINT bot_for_user_u_fk FOREIGN KEY (user) REFERENCES users(id),
-	CONSTRAINT bot_for_user_b_fk FOREIGN KEY (bot) REFERENCES bots(bot)
+	CONSTRAINT bot_for_team_pk PRIMARY KEY (team),
+	CONSTRAINT bot_for_team_u_fk FOREIGN KEY (team) REFERENCES teams(id),
+	CONSTRAINT bot_for_team_b_fk FOREIGN KEY (bot) REFERENCES bots(bot)
 );
 CREATE TABLE IF NOT EXISTS team_statistics (
 	team VARCHAR(64) NOT NULL,
@@ -93,13 +96,6 @@ CREATE TABLE IF NOT EXISTS team_statistics (
 	CONSTRAINT team_statistics_pk PRIMARY KEY (team),
 	CONSTRAINT team_statistics_team_fk FOREIGN KEY (team) REFERENCES teams (id)
 );
-CREATE TABLE IF NOT EXISTS first_messages (
-	team VARCHAR(64) NOT NULL,
-	channel VARCHAR(64) NOT NULL,
-	ts TIMESTAMP NOT NULL,
-	CONSTRAINT first_messages_pk PRIMARY KEY (team, channel),
-	CONSTRAINT first_messages_team_fk FOREIGN KEY (team) REFERENCES teams (id)
-);
 CREATE TABLE IF NOT EXISTS slack_invites (
 	email VARCHAR(128) NOT NULL,
 	ts TIMESTAMP NOT NULL,
@@ -107,7 +103,7 @@ CREATE TABLE IF NOT EXISTS slack_invites (
 	CONSTRAINT slack_invites_pk PRIMARY KEY (email)
 );
 CREATE TABLE IF NOT EXISTS convicted (
-	user VARCHAR(64) NOT NULL,
+	team VARCHAR(64) NOT NULL,
 	channel VARCHAR(64) NOT NULL,
 	message_id VARCHAR(64) NOT NULL,
 	ts TIMESTAMP NOT NULL,
@@ -117,8 +113,8 @@ CREATE TABLE IF NOT EXISTS convicted (
 	vt VARCHAR(128),
 	xfe VARCHAR(128),
 	clamav VARCHAR(128),
-	CONSTRAINT convicted_pk PRIMARY KEY (user, channel, message_id),
-	CONSTRAINT convicted_user_fk FOREIGN KEY (user) REFERENCES users (id)
+	CONSTRAINT convicted_pk PRIMARY KEY (team, channel, message_id),
+	CONSTRAINT convicted_team_fk FOREIGN KEY (team) REFERENCES teams (id)
 )`
 
 type repoMySQL struct {
@@ -225,6 +221,15 @@ func clearUserToken(u *domain.User) error {
 	return nil
 }
 
+func clearTeamToken(t *domain.Team) error {
+	clearToken, err := t.ClearToken()
+	if err != nil {
+		return err
+	}
+	t.BotToken = clearToken
+	return nil
+}
+
 func (r *repoMySQL) User(id string) (*domain.User, error) {
 	user := &domain.User{}
 	err := r.get("users", "id", id, user)
@@ -263,13 +268,25 @@ func (r *repoMySQL) SetUser(user *domain.User) error {
 func (r *repoMySQL) Team(id string) (*domain.Team, error) {
 	team := &domain.Team{}
 	err := r.get("teams", "id", id, team)
-	return team, err
+	if err != nil {
+		return nil, err
+	}
+	if err = clearTeamToken(team); err != nil {
+		return nil, err
+	}
+	return team, nil
 }
 
 func (r *repoMySQL) TeamByExternalID(id string) (*domain.Team, error) {
 	team := &domain.Team{}
 	err := r.get("teams", "external_id", id, team)
-	return team, err
+	if err != nil {
+		return nil, err
+	}
+	if err = clearTeamToken(team); err != nil {
+		return nil, err
+	}
+	return team, nil
 }
 
 func (r *repoMySQL) SetTeam(team *domain.Team) error {
@@ -279,6 +296,15 @@ func (r *repoMySQL) SetTeam(team *domain.Team) error {
 func (r *repoMySQL) Teams() ([]domain.Team, error) {
 	var teams []domain.Team
 	err := r.db.Select(&teams, "SELECT * FROM teams")
+	if err != nil {
+		return teams, err
+	}
+	for i := range teams {
+		err = clearTeamToken(&teams[i])
+		if err != nil {
+			logrus.Warnf("Unencrypted token found in DB - %v", err)
+		}
+	}
 	return teams, err
 }
 
@@ -304,18 +330,25 @@ func (r *repoMySQL) SetTeamAndUser(team *domain.Team, user *domain.User) error {
 	}
 	defer tx.Rollback()
 	if team != nil {
+		secureToken, err := team.SecureToken()
+		if err != nil {
+			return err
+		}
 		_, err = tx.Exec(`INSERT INTO teams (
-id, name, email_domain, domain, plan, external_id, created)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+id, name, status, email_domain, domain, plan, external_id, created, bot_user_id, bot_token)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 name = ?,
+status = ?,
 email_domain = ?,
 domain = ?,
 plan = ?,
 external_id = ?,
-created = ?`,
-			team.ID, team.Name, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created,
-			team.Name, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created)
+created = ?,
+bot_user_id = ?,
+bot_token = ?`,
+			team.ID, team.Name, team.Status, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created, team.BotUserID, secureToken,
+			team.Name, team.Status, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created, team.BotUserID, secureToken)
 		if err != nil {
 			return err
 		}
@@ -398,10 +431,10 @@ func (r *repoMySQL) cleanOAuthState() {
 	}
 }
 
-func (r *repoMySQL) ChannelsAndGroups(user string) (*domain.Configuration, error) {
+func (r *repoMySQL) ChannelsAndGroups(team string) (*domain.Configuration, error) {
 	res := &domain.Configuration{}
 	var all []string
-	err := r.db.Select(&all, "SELECT channel FROM configurations WHERE user = ?", user)
+	err := r.db.Select(&all, "SELECT channel FROM configurations WHERE team = ?", team)
 	for _, s := range all {
 		switch s[0] {
 		case 'C':
@@ -425,8 +458,8 @@ func (r *repoMySQL) ChannelsAndGroups(user string) (*domain.Configuration, error
 	return res, err
 }
 
-func (r *repoMySQL) SetChannelsAndGroups(user string, configuration *domain.Configuration) error {
-	logrus.Debugf("Saving configuration for user %s - %+v\n", user, configuration)
+func (r *repoMySQL) SetChannelsAndGroups(team string, configuration *domain.Configuration) error {
+	logrus.Debugf("Saving configuration for team %s - %+v\n", team, configuration)
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -436,98 +469,58 @@ func (r *repoMySQL) SetChannelsAndGroups(user string, configuration *domain.Conf
 	all = append(all, configuration.Channels...)
 	all = append(all, configuration.Groups...)
 	// First, delete the configuration for the user
-	_, err = tx.Exec("DELETE FROM configurations WHERE user = ?", user)
+	_, err = tx.Exec("DELETE FROM configurations WHERE team = ?", team)
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("INSERT INTO configurations (user, channel) VALUES (?, ?)")
+	stmt, err := tx.Prepare("INSERT INTO configurations (team, channel) VALUES (?, ?)")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, s := range all {
-		_, err = stmt.Exec(user, s)
+		_, err = stmt.Exec(team, s)
 		if err != nil {
 			return err
 		}
 	}
 	if configuration.IM {
-		_, err = stmt.Exec(user, "D")
+		_, err = stmt.Exec(team, "D")
 		if err != nil {
 			return err
 		}
 	}
 	if configuration.Regexp != "" {
-		_, err = stmt.Exec(user, "R"+configuration.Regexp)
+		_, err = stmt.Exec(team, "R"+configuration.Regexp)
 		if err != nil {
 			return err
 		}
 	}
 	if configuration.All {
-		_, err = stmt.Exec(user, "A")
+		_, err = stmt.Exec(team, "A")
 		if err != nil {
 			return err
 		}
 	}
 	for i := range configuration.VerboseChannels {
-		_, err = stmt.Exec(user, "X"+configuration.VerboseChannels[i])
+		_, err = stmt.Exec(team, "X"+configuration.VerboseChannels[i])
 		if err != nil {
 			return err
 		}
 	}
 	for i := range configuration.VerboseGroups {
-		_, err = stmt.Exec(user, "Y"+configuration.VerboseGroups[i])
+		_, err = stmt.Exec(team, "Y"+configuration.VerboseGroups[i])
 		if err != nil {
 			return err
 		}
 	}
 	if configuration.VerboseIM {
-		_, err = stmt.Exec(user, "Z")
+		_, err = stmt.Exec(team, "Z")
 		if err != nil {
 			return err
 		}
 	}
 	return tx.Commit()
-}
-
-func (r *repoMySQL) TeamSubscriptions(team string) (map[string]*domain.Configuration, error) {
-	subscriptions := make(map[string]*domain.Configuration)
-	rows, err := r.db.Query("SELECT user, channel FROM configurations WHERE user IN (SELECT id FROM users WHERE team = ?)", team)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var user, channel string
-		if err = rows.Scan(&user, &channel); err != nil {
-			return nil, err
-		}
-		if len(channel) == 0 {
-			continue
-		}
-		if _, ok := subscriptions[user]; !ok {
-			subscriptions[user] = &domain.Configuration{}
-		}
-		switch channel[0] {
-		case 'C':
-			subscriptions[user].Channels = append(subscriptions[user].Channels, channel)
-		case 'G':
-			subscriptions[user].Groups = append(subscriptions[user].Groups, channel)
-		case 'D':
-			subscriptions[user].IM = true
-		case 'R':
-			subscriptions[user].Regexp = channel[1:]
-		case 'A':
-			subscriptions[user].All = true
-		case 'X':
-			subscriptions[user].VerboseChannels = append(subscriptions[user].VerboseChannels, channel[1:])
-		case 'Y':
-			subscriptions[user].VerboseGroups = append(subscriptions[user].VerboseGroups, channel[1:])
-		case 'Z':
-			subscriptions[user].VerboseIM = true
-		}
-	}
-	return subscriptions, err
 }
 
 func (r *repoMySQL) IsVerboseChannel(team, channel string) (bool, error) {
@@ -541,19 +534,19 @@ func (r *repoMySQL) IsVerboseChannel(team, channel string) (bool, error) {
 	case 'G':
 		channel = "Y" + channel
 	}
-	err := r.db.Get(&count, "SELECT count(*) FROM configurations WHERE user IN (SELECT id FROM users WHERE team = ?) AND channel = ?", team, channel)
+	err := r.db.Get(&count, "SELECT count(*) FROM configurations WHERE team = ? AND channel = ?", team, channel)
 	if err != nil {
 		return false, err
 	}
 	return count > 0, nil
 }
 
-func (r *repoMySQL) OpenUsers(includeMine bool) ([]domain.UserBot, error) {
-	var users []domain.UserBot
-	query := "SELECT u.id as user, ub.bot, ub.ts FROM users u LEFT OUTER JOIN bot_for_user ub ON u.id = ub.user LEFT OUTER JOIN bots b ON ub.bot = b.bot WHERE u.status = 0 AND (ub.bot IS NULL OR b.ts + interval ? minute < now()) LIMIT 1000"
+func (r *repoMySQL) OpenTeams(includeMine bool) ([]domain.TeamBot, error) {
+	var teams []domain.TeamBot
+	query := "SELECT t.id as team, tb.bot, tb.ts FROM teams t LEFT OUTER JOIN bot_for_team tb ON t.id = tb.team LEFT OUTER JOIN bots b ON tb.bot = b.bot WHERE t.status = 0 AND (tb.bot IS NULL OR b.ts + interval ? minute < now()) LIMIT 1000"
 	args := []interface{}{3}
 	if includeMine {
-		query = "SELECT u.id as user, ub.bot, ub.ts FROM users u LEFT OUTER JOIN bot_for_user ub ON u.id = ub.user LEFT OUTER JOIN bots b ON ub.bot = b.bot WHERE u.status = 0 AND (ub.bot IS NULL OR b.ts + interval ? minute < now() or ub.bot = ?) LIMIT 1000"
+		query = "SELECT t.id as team, tb.bot, tb.ts FROM teams t LEFT OUTER JOIN bot_for_team tb ON t.id = tb.team LEFT OUTER JOIN bots b ON tb.bot = b.bot WHERE t.status = 0 AND (tb.bot IS NULL OR b.ts + interval ? minute < now() OR tb.bot = ?) LIMIT 1000"
 		args = append(args, r.hostname)
 	}
 	rows, err := r.db.Query(query, args...)
@@ -562,28 +555,28 @@ func (r *repoMySQL) OpenUsers(includeMine bool) ([]domain.UserBot, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var user string
+		var team string
 		var bot sql.NullString
 		var ts mysql.NullTime
-		if err = rows.Scan(&user, &bot, &ts); err != nil {
+		if err = rows.Scan(&team, &bot, &ts); err != nil {
 			return nil, err
 		}
-		u := domain.UserBot{User: user}
+		t := domain.TeamBot{Team: team}
 		if bot.Valid {
-			u.Bot = bot.String
+			t.Bot = bot.String
 		}
 		if ts.Valid {
-			u.Timestamp = ts.Time
+			t.Timestamp = ts.Time
 		}
-		users = append(users, u)
+		teams = append(teams, t)
 	}
-	return users, err
+	return teams, err
 }
 
-func (r *repoMySQL) LockUser(user *domain.UserBot) (bool, error) {
+func (r *repoMySQL) LockTeam(team *domain.TeamBot) (bool, error) {
 	// This line does not exist
-	if user.Bot == "" {
-		_, err := r.db.Exec("INSERT INTO bot_for_user (user, bot, ts) VALUES (?, ?, now())", user.User, r.hostname)
+	if team.Bot == "" {
+		_, err := r.db.Exec("INSERT INTO bot_for_team (team, bot, ts) VALUES (?, ?, now())", team.Team, r.hostname)
 		if err != nil {
 			switch err := err.(type) {
 			case *mysql.MySQLError:
@@ -596,7 +589,7 @@ func (r *repoMySQL) LockUser(user *domain.UserBot) (bool, error) {
 		}
 		return true, nil
 	}
-	result, err := r.db.Exec("UPDATE bot_for_user SET bot = ?, ts = now() WHERE user = ? AND bot = ? AND ts = ?", r.hostname, user.User, user.Bot, user.Timestamp)
+	result, err := r.db.Exec("UPDATE bot_for_team SET bot = ?, ts = now() WHERE team = ? AND bot = ? AND ts = ?", r.hostname, team.Team, team.Bot, team.Timestamp)
 	if err != nil {
 		return false, err
 	}
@@ -604,8 +597,8 @@ func (r *repoMySQL) LockUser(user *domain.UserBot) (bool, error) {
 	return rows > 0, err
 }
 
-func (r *repoMySQL) UnlockUser(id string) error {
-	_, err := r.db.Exec("DELETE FROM bot_for_user WHERE user = ? AND bot = ?", id, r.hostname)
+func (r *repoMySQL) UnlockTeam(id string) error {
+	_, err := r.db.Exec("DELETE FROM bot_for_team WHERE team = ? AND bot = ?", id, r.hostname)
 	return err
 }
 
@@ -714,27 +707,10 @@ func (r *repoMySQL) TotalMessages() (int, error) {
 }
 
 func (r *repoMySQL) StoreMaliciousContent(convicted *domain.MaliciousContent) error {
-	_, err := r.db.Exec("INSERT INTO convicted (user, channel, message_id, ts, content_type, content, file_name, vt, xfe, clamav) VALUES (?, ?, ?, now(), ?, ?, ?, ?, ?, ?)",
-		convicted.User, convicted.Channel, convicted.MessageID, convicted.ContentType, util.Substr(convicted.Content, 0, 128), util.Substr(convicted.FileName, 0, 128),
+	_, err := r.db.Exec("INSERT INTO convicted (team, channel, message_id, ts, content_type, content, file_name, vt, xfe, clamav) VALUES (?, ?, ?, now(), ?, ?, ?, ?, ?, ?)",
+		convicted.Team, convicted.Channel, convicted.MessageID, convicted.ContentType, util.Substr(convicted.Content, 0, 128), util.Substr(convicted.FileName, 0, 128),
 		util.Substr(convicted.VT, 0, 128), util.Substr(convicted.XFE, 0, 128), util.Substr(convicted.ClamAV, 0, 128))
 	return err
-}
-
-func (r *repoMySQL) MessageSentOnChannel(team, channel string) error {
-	_, err := r.db.Exec(`INSERT INTO first_messages (team, channel, ts) VALUES (?, ?, now())`, team, channel)
-	return err
-}
-
-func (r *repoMySQL) WasMessageSentOnChannel(team, channel string) (bool, error) {
-	var data int
-	err := r.db.Get(&data, "SELECT 1 FROM first_messages WHERE team = ? AND channel = ?", team, channel)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, err
 }
 
 func (r *repoMySQL) JoinSlackChannel(email string) error {

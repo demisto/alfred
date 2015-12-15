@@ -50,7 +50,7 @@ func newPubSub() (*queuePubSub, error) {
 		return nil, err
 	}
 	var host string
-	names := []string{conf.Options.G.ConfName, conf.Options.G.MessageName, conf.Options.G.WorkName}
+	names := []string{conf.Options.G.ConfName, conf.Options.G.WorkName}
 	// If we are a bot or a web tier, create a reply queue for us
 	if conf.Options.Bot || conf.Options.Web {
 		host, err = ReplyQueueName()
@@ -146,31 +146,18 @@ func (q *queuePubSub) pop(qname string, timeout time.Duration, body interface{})
 	return nil
 }
 
-func (q *queuePubSub) PushConf(u *domain.User, c *domain.Configuration) error {
-	confMessage := ConfigurationMessage{User: *u, Configuration: *c}
+func (q *queuePubSub) PushConf(t string, c *domain.Configuration) error {
+	confMessage := ConfigurationMessage{Team: t, Configuration: *c}
 	return q.push(conf.Options.G.ConfName, &confMessage)
 }
 
-func (q *queuePubSub) PopConf(timeout time.Duration) (*domain.User, *domain.Configuration, error) {
+func (q *queuePubSub) PopConf(timeout time.Duration) (string, *domain.Configuration, error) {
 	var msg ConfigurationMessage
 	err := q.pop(conf.Options.G.ConfName+"-"+q.host, timeout, &msg)
 	if err != nil {
-		return nil, nil, err
+		return "", nil, err
 	}
-	return &msg.User, &msg.Configuration, nil
-}
-
-func (q *queuePubSub) PushMessage(data *domain.WorkRequest) error {
-	return q.push(conf.Options.G.MessageName, data)
-}
-
-func (q *queuePubSub) PopMessage(timeout time.Duration) (*domain.WorkRequest, error) {
-	data := &domain.WorkRequest{}
-	err := q.pop(conf.Options.G.MessageName, timeout, data)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
+	return msg.Team, &msg.Configuration, nil
 }
 
 func (q *queuePubSub) PushWork(data *domain.WorkRequest) error {

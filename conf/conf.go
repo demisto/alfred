@@ -93,7 +93,6 @@ var Options struct {
 	}
 	Web     bool
 	Bot     bool
-	Dedup   bool
 	Worker  bool
 	ClamCtl string
 }
@@ -119,7 +118,6 @@ func Load(filename string, useDefault bool) error {
 			"G": {"ConfName": "conf", "MessageName": "msg", "WorkName": "work"},
 			"Web": true,
 			"Bot": true,
-			"Dedup": true,
 			"Worker": true,
 			"ClamCtl": "/var/run/clamav/clamd.ctl"
     }`)

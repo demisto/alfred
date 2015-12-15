@@ -4,7 +4,6 @@ import (
 	"flag"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 	"time"
 
@@ -71,14 +70,6 @@ func run(signalCh chan os.Signal) {
 			serviceChannel <- true
 		}()
 		closers = append(closers, &botCloser{b})
-	}
-
-	if conf.Options.Dedup {
-		dd := bot.NewDedup(q)
-		go func() {
-			dd.Start()
-			serviceChannel <- true
-		}()
 	}
 
 	if conf.Options.Worker {
@@ -149,8 +140,6 @@ func main() {
 	conf.LogWriter = logrus.StandardLogger().Writer()
 	defer conf.LogWriter.Close()
 
-	// Let's use all the logical CPUs
-	runtime.GOMAXPROCS(runtime.NumCPU())
 	// Handle OS signals to gracefully shutdown
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)

@@ -20,16 +20,14 @@ var (
 
 // ConfigurationMessage including the user and configuration
 type ConfigurationMessage struct {
-	User          domain.User
+	Team          string
 	Configuration domain.Configuration
 }
 
 // Queue abstracts the external / internal queues
 type Queue interface {
-	PushConf(u *domain.User, c *domain.Configuration) error
-	PopConf(timeout time.Duration) (*domain.User, *domain.Configuration, error)
-	PushMessage(msg *domain.WorkRequest) error
-	PopMessage(timeout time.Duration) (*domain.WorkRequest, error)
+	PushConf(t string, c *domain.Configuration) error
+	PopConf(timeout time.Duration) (string, *domain.Configuration, error)
 	PushWork(work *domain.WorkRequest) error
 	PopWork(timeout time.Duration) (*domain.WorkRequest, error)
 	PushWorkReply(replyQueue string, reply *domain.WorkReply) error
@@ -50,7 +48,6 @@ func New() (Queue, error) {
 	default:
 		q = &queueChannel{
 			Conf:         make(chan *ConfigurationMessage, 100),
-			Dedup:        make(chan *domain.WorkRequest, 100),
 			Work:         make(chan *domain.WorkRequest, 100),
 			WorkReply:    make(chan *domain.WorkReply, 100),
 			WebWorkReply: make(chan *domain.WorkReply, 100),
@@ -61,36 +58,25 @@ func New() (Queue, error) {
 
 type queueChannel struct {
 	Conf         chan *ConfigurationMessage
-	Dedup        chan *domain.WorkRequest
 	Work         chan *domain.WorkRequest
 	WorkReply    chan *domain.WorkReply
 	WebWorkReply chan *domain.WorkReply
 	closed       bool
 }
 
-func (q *queueChannel) PushConf(u *domain.User, c *domain.Configuration) error {
-	q.Conf <- &ConfigurationMessage{User: *u, Configuration: *c}
+func (q *queueChannel) PushConf(t string, c *domain.Configuration) error {
+	q.Conf <- &ConfigurationMessage{Team: t, Configuration: *c}
 	return nil
 }
 
 // Pop a value from the queue - the simple channl implementation ignores timeout
-func (q *queueChannel) PopConf(timeout time.Duration) (*domain.User, *domain.Configuration, error) {
+func (q *queueChannel) PopConf(timeout time.Duration) (string, *domain.Configuration, error) {
 	conf := <-q.Conf
 	// If someone closed the channel
 	if conf == nil {
-		return nil, nil, errors.New("Closed")
+		return "", nil, errors.New("Closed")
 	}
-	return &conf.User, &conf.Configuration, nil
-}
-
-func (q *queueChannel) PushMessage(data *domain.WorkRequest) error {
-	q.Dedup <- data
-	return nil
-}
-
-func (q *queueChannel) PopMessage(timeout time.Duration) (*domain.WorkRequest, error) {
-	msg := <-q.Dedup
-	return msg, nil
+	return conf.Team, &conf.Configuration, nil
 }
 
 func (q *queueChannel) PushWork(data *domain.WorkRequest) error {
@@ -134,7 +120,6 @@ func ReplyQueueName() (string, error) {
 func (q *queueChannel) Close() error {
 	if !q.closed {
 		close(q.Conf)
-		close(q.Dedup)
 		close(q.Work)
 		close(q.WorkReply)
 		close(q.WebWorkReply)
