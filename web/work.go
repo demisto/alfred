@@ -18,29 +18,23 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, ErrBadRequest)
 		return
 	}
-	t, err := ac.r.Team(team)
+	// Bot scope does not have file info and history permissions so we need to iterate users
+	users, err := ac.r.TeamMembers(team)
 	if err != nil {
-		logrus.Infof("Error retrieving team %s - %v\n", team, err)
-		WriteError(w, ErrBadRequest)
+		logrus.Warnf("Error loading team members - %v\n", err)
+		WriteError(w, ErrInternalServer)
 		return
 	}
 	var workReq *domain.WorkRequest
-	if file != "" {
-		// Bot scope does not have file info permissions so we need to iterate users
-		users, err := ac.r.TeamMembers(team)
-		if err != nil {
-			logrus.Warnf("Error loading team members - %v\n", err)
-			WriteError(w, ErrInternalServer)
-			return
-		}
-		// The first one that can retrieve the info...
-		for i := range users {
-			if users[i].Status == domain.UserStatusActive {
-				s, err := slack.New(slack.SetToken(users[i].Token))
-				if err != nil {
-					logrus.Infof("Error creating Slack client for user %s (%s) - %v\n", users[i].ID, users[i].Name, err)
-					continue
-				}
+	for i := range users {
+		if users[i].Status == domain.UserStatusActive {
+			// The first one that can retrieve the info...
+			s, err := slack.New(slack.SetToken(users[i].Token))
+			if err != nil {
+				logrus.Infof("Error creating Slack client for user %s (%s) - %v\n", users[i].ID, users[i].Name, err)
+				continue
+			}
+			if file != "" {
 				info, err := s.FileInfo(file, 0, 0)
 				if err != nil {
 					logrus.Infof("Error retrieving file info - %v\n", err)
@@ -54,34 +48,28 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 					Online:     true,
 				}
 				break
+			} else {
+				resp, err := s.History(channel, message, message, true, 1)
+				if err != nil {
+					logrus.Infof("Error retrieving message history - %v\n", err)
+					continue
+				}
+				if len(resp.Messages) == 0 {
+					logrus.Infof("Error retrieving message history - message %s not found on channel %s\n", message, channel)
+					WriteError(w, ErrInternalServer)
+					return
+				}
+				workReq = domain.WorkRequestFromMessage(&resp.Messages[0])
+				workReq.ReplyQueue = ac.replyQueue
+				workReq.Online = true
+				break
 			}
 		}
-		if workReq == nil {
-			logrus.Infof("Unable to find a suitable user with file credentials for team %s\n", team)
-			WriteError(w, ErrInternalServer)
-			return
-		}
-	} else {
-		s, err := slack.New(slack.SetToken(t.BotToken))
-		if err != nil {
-			logrus.Infof("Error creating Slack client - %v\n", err)
-			WriteError(w, ErrInternalServer)
-			return
-		}
-		resp, err := s.History(channel, message, message, true, 1)
-		if err != nil {
-			logrus.Infof("Error retrieving message history - %v\n", err)
-			WriteError(w, ErrInternalServer)
-			return
-		}
-		if len(resp.Messages) == 0 {
-			logrus.Infof("Error retrieving message history - message %s not found on channel %s\n", message, channel)
-			WriteError(w, ErrInternalServer)
-			return
-		}
-		workReq = domain.WorkRequestFromMessage(&resp.Messages[0])
-		workReq.ReplyQueue = ac.replyQueue
-		workReq.Online = true
+	}
+	if workReq == nil {
+		logrus.Infof("Unable to find a suitable user with credentials for team %s\n", team)
+		WriteError(w, ErrInternalServer)
+		return
 	}
 	err = ac.q.PushWork(workReq)
 	if err != nil {

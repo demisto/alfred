@@ -509,19 +509,43 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 // See if the original message poster is subscribed and if so use him.
 // If not, use the first user we have that is subscribed to the channel.
 func (b *Bot) post(message *slack.PostMessageRequest, reply *domain.WorkReply, data *domain.Context, sub *subscription) error {
-	message.IconURL = conf.Options.ExternalAddress + "/img/favicon/D%20icon%205757.png"
 	message.Text = mainMessageFormatted()
-	message.Username = botName
+	message.AsUser = true
 	var err error
 	_, err = sub.s.PostMessage(message, false)
 	return err
 }
 
-func (b *Bot) joinAllChannels(team, channel string) {
+func parseChannels(sub *subscription, text string, pos int) ([]string, []string, error) {
+	parts := strings.Split(text, " ")
+	if len(parts) <= pos {
+		return nil, nil, fmt.Errorf("Not enough parameters in '%s'", text)
+	}
+	var channels []string
+	for i := pos; i < len(parts); i++ {
+		subparts := strings.Split(parts[i], ",")
+		for j := range subparts {
+			subpart := strings.TrimSpace(subparts[j])
+			if subpart != "" {
+				var ch string
+				if strings.Contains(subpart, "<#") { // if this is #channel
+					ch = subpart[2 : len(subpart)-1]
+				} else {
+					ch = sub.ChannelID(subpart)
+				}
+				if ch != "" {
+					channels = append(channels, ch)
+				}
+			}
+		}
+	}
+	return parts, channels, nil
+}
+
+func (b *Bot) joinChannels(team, text, channel string) {
 	postMessage := &slack.PostMessageRequest{
-		Channel:  channel,
-		IconURL:  conf.Options.ExternalAddress + "/img/favicon/D%20icon%205757.png",
-		Username: botName,
+		Channel: channel,
+		AsUser:  true,
 	}
 	sub := b.subscriptions[team]
 	if sub == nil {
@@ -533,12 +557,14 @@ func (b *Bot) joinAllChannels(team, channel string) {
 		logrus.Warnf("Unable to retrieve team members - %v", err)
 		return
 	}
+	parts, incomingChannels, err := parseChannels(sub, text, 1)
 	ch, err := sub.s.ChannelList(true)
 	if err != nil {
 		logrus.Warnf("Error retrieving my channels - %v", err)
 		postMessage.Text = "Error retrieving current configuration. Rest assured we are looking into the issue."
 	} else {
 		var channels []string
+		var channelFound bool
 	users_loop:
 		for i := range users {
 			if users[i].Status == domain.UserStatusActive {
@@ -548,7 +574,9 @@ func (b *Bot) joinAllChannels(team, channel string) {
 					continue
 				}
 				for i := range ch.Channels {
-					if !ch.Channels[i].IsMember && !util.In(channels, ch.Channels[i].Name) {
+					if !ch.Channels[i].IsMember && !util.In(channels, ch.Channels[i].Name) &&
+						(strings.ToLower(parts[1]) == "all" || util.In(incomingChannels, ch.Channels[i].ID)) {
+						channelFound = true
 						_, err = s.ChannelInvite(ch.Channels[i].ID, sub.team.BotUserID)
 						if err != nil {
 							logrus.Infof("Error inviting us - %v\n", err)
@@ -564,7 +592,11 @@ func (b *Bot) joinAllChannels(team, channel string) {
 			text := fmt.Sprintf("I've started monitoring the following channels: %s", strings.Join(channels, ", "))
 			postMessage.Text = text
 		} else {
-			postMessage.Text = "I could not invite myself to the public channels, rest assured we are looking into the issue."
+			if channelFound {
+				postMessage.Text = "I could not invite myself to the public channels, rest assured we are looking into the issue."
+			} else {
+				postMessage.Text = "I was already monitoring all public channels but thanks for thinking of me."
+			}
 		}
 	}
 	_, err = sub.s.PostMessage(postMessage, false)
@@ -575,9 +607,8 @@ func (b *Bot) joinAllChannels(team, channel string) {
 
 func (b *Bot) handleVerbose(team, text, channel string) {
 	postMessage := &slack.PostMessageRequest{
-		Channel:  channel,
-		IconURL:  conf.Options.ExternalAddress + "/img/favicon/D%20icon%205757.png",
-		Username: botName,
+		Channel: channel,
+		AsUser:  true,
 	}
 	sub := b.subscriptions[team]
 	if sub == nil {
@@ -587,37 +618,22 @@ func (b *Bot) handleVerbose(team, text, channel string) {
 	changed := false
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	parts := strings.Split(text, " ")
-	if len(parts) > 2 && strings.ToLower(parts[0]) == "verbose" {
-		for i := 2; i < len(parts); i++ {
-			subparts := strings.Split(parts[i], ",")
-			for j := range subparts {
-				subpart := strings.TrimSpace(subparts[j])
-				if subpart != "" {
-					var ch string
-					if strings.Contains(subpart, "<#") { // if this is #channel
-						ch = subpart[2 : len(subpart)-1]
-						logrus.Debugf("Channel %s", ch)
-					} else {
-						ch = sub.ChannelID(subpart)
-					}
-					if ch != "" {
-						if strings.ToLower(parts[1]) == "on" && !util.In(sub.configuration.VerboseChannels, ch) {
-							sub.configuration.VerboseChannels = append(sub.configuration.VerboseChannels, ch)
-							changed = true
-						} else if strings.ToLower(parts[1]) == "off" && util.In(sub.configuration.VerboseChannels, ch) {
-							index := util.Index(sub.configuration.VerboseChannels, ch)
-							if index >= 0 {
-								sub.configuration.VerboseChannels = sub.configuration.VerboseChannels[:index+copy(sub.configuration.VerboseChannels[index:], sub.configuration.VerboseChannels[index+1:])]
-							}
-							changed = true
-						}
-					}
+	parts, channels, err := parseChannels(sub, text, 2)
+	if err != nil {
+		postMessage.Text = "I could not understand your command. Verbose command is:\nverbose on #channel1,#channel2 - to turn on verbose mode on for a list of channels.\nverbose off #channel1,#channel2 - to turn off verbose mode on for a list of channels."
+	} else {
+		for _, ch := range channels {
+			if strings.ToLower(parts[1]) == "on" && !util.In(sub.configuration.VerboseChannels, ch) {
+				sub.configuration.VerboseChannels = append(sub.configuration.VerboseChannels, ch)
+				changed = true
+			} else if strings.ToLower(parts[1]) == "off" && util.In(sub.configuration.VerboseChannels, ch) {
+				index := util.Index(sub.configuration.VerboseChannels, ch)
+				if index >= 0 {
+					sub.configuration.VerboseChannels = sub.configuration.VerboseChannels[:index+copy(sub.configuration.VerboseChannels[index:], sub.configuration.VerboseChannels[index+1:])]
 				}
+				changed = true
 			}
 		}
-	} else {
-		postMessage.Text = "I could not understand your command. Verbose command is:\nverbose on #channel1,#channel2 - to turn on verbose mode on for a list of channels.\nverbose off #channel1,#channel2 - to turn off verbose mode on for a list of channels."
 	}
 	if changed {
 		err := b.r.SetChannelsAndGroups(team, sub.configuration)
@@ -628,7 +644,6 @@ func (b *Bot) handleVerbose(team, text, channel string) {
 			postMessage.Text = "Verbose state was changed."
 		}
 	}
-	var err error
 	_, err = sub.s.PostMessage(postMessage, false)
 	if err != nil {
 		logrus.Warnf("Error posting config message - %v", err)
@@ -637,9 +652,8 @@ func (b *Bot) handleVerbose(team, text, channel string) {
 
 func (b *Bot) handleConfig(team, channel string) {
 	postMessage := &slack.PostMessageRequest{
-		Channel:  channel,
-		IconURL:  conf.Options.ExternalAddress + "/img/favicon/D%20icon%205757.png",
-		Username: botName,
+		Channel: channel,
+		AsUser:  true,
 	}
 	sub := b.subscriptions[team]
 	if sub == nil {
@@ -668,6 +682,23 @@ func (b *Bot) handleConfig(team, channel string) {
 		}
 		postMessage.Text = text
 	}
+	_, err = sub.s.PostMessage(postMessage, false)
+	if err != nil {
+		logrus.Warnf("Error posting config message - %v", err)
+	}
+}
+
+func (b *Bot) showHelp(team, channel string) {
+	postMessage := &slack.PostMessageRequest{
+		Channel: channel,
+		AsUser:  true,
+		Text: `Here are the commands I understand:
+config: list the current channels I'm listening on
+join all/#channel1,#channel2...: I will join all/specified public channels and start monitoring them.
+verbose on/off #channel1,#channel2... - turn on verbose mode on the specified channels`,
+	}
+	sub := b.subscriptions[team]
+	var err error
 	_, err = sub.s.PostMessage(postMessage, false)
 	if err != nil {
 		logrus.Warnf("Error posting config message - %v", err)

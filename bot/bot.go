@@ -248,9 +248,20 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 	if msg == nil {
 		return
 	}
+	ctx, err := GetContext(msg.Context)
+	if err != nil {
+		logrus.Warnf("Unable to get context from message - %+v\n", msg)
+		return
+	}
+	sub := b.subscriptions[ctx.Team]
+	if sub == nil {
+		logrus.Warnf("Unable to find team %s in subscriptions", ctx.Team)
+		return
+	}
 	switch msg.Type {
 	case "message":
-		if msg.Subtype == "bot_message" {
+		// If it's our message - no need to do anything
+		if msg.User == sub.team.BotUserID {
 			return
 		}
 		push := false
@@ -266,11 +277,6 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 		case "file_mention":
 			push = true
 		}
-		ctx, err := GetContext(msg.Context)
-		if err != nil {
-			logrus.Warnf("Unable to get context from message - %+v\n", msg)
-			return
-		}
 		// If we need to handle the message, pass it to the queue
 		if push {
 			logrus.Debugf("Handling message - %+v\n", msg)
@@ -278,11 +284,6 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 			t, err := slack.TimestampToTime(workReq.MessageID)
 			if err != nil {
 				logrus.Warnf("Unable to get message timestamp %s - %v", workReq.MessageID, err)
-				return
-			}
-			sub := b.subscriptions[ctx.Team]
-			if sub == nil {
-				logrus.Warnf("Unable to find team %s in subscriptions", ctx.Team)
 				return
 			}
 			if sub.started && sub.ts.Before(t) {
@@ -300,12 +301,14 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 			if msg.Channel != "" && msg.Channel[0] == 'D' {
 				text := strings.ToLower(msg.Text)
 				switch {
-				case text == "join all":
-					b.joinAllChannels(ctx.Team, msg.Channel)
-				case strings.HasPrefix(text, "verbose"):
+				case strings.HasPrefix(text, "join "):
+					b.joinChannels(ctx.Team, msg.Text, msg.Channel)
+				case strings.HasPrefix(text, "verbose "):
 					b.handleVerbose(ctx.Team, msg.Text, msg.Channel) // Need the actual channel IDs
 				case text == "config":
 					b.handleConfig(ctx.Team, msg.Channel)
+				case text == "?" || strings.HasPrefix(text, "help"):
+					b.showHelp(ctx.Team, msg.Channel)
 				}
 			}
 			stats := b.stats[ctx.Team]
