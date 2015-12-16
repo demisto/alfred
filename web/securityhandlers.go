@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -59,6 +60,47 @@ func (ac *AppContext) initiateOAuth(w http.ResponseWriter, r *http.Request) {
 	url := conf.AuthCodeURL(uuid.String())
 	logrus.Debugf("Redirecting to URL - %s", url)
 	http.Redirect(w, r, url, http.StatusFound)
+}
+
+func sendThanks(team *domain.Team, user *domain.User) {
+	s, err := slack.New(
+		slack.SetToken(team.BotToken),
+		slack.SetErrorLog(log.New(conf.LogWriter, "", log.Lshortfile)),
+	)
+	if err != nil {
+		logrus.Warnf("Unable to create client for first message - %v", err)
+		return
+	}
+	imList, err := s.IMList()
+	if err != nil {
+		logrus.Warnf("Unable to retrieve im list for first message - %v", err)
+		return
+	}
+	var ch string
+	for i := range imList.IMs {
+		if user.ExternalID == imList.IMs[i].User {
+			ch = imList.IMs[i].ID
+			break
+		}
+	}
+	if ch == "" {
+		logrus.Warn("Unable to user channel")
+		return
+	}
+	postMessage := &slack.PostMessageRequest{
+		Channel: ch,
+		AsUser:  true,
+		Text: fmt.Sprintf(`Hi %s, thanks for inviting me to this team.
+If you want me to monitor conversations, please add me to the relevant channels and groups.
+Here are the commands I understand:
+config: list the current channels I'm listening on
+join all/#channel1,#channel2...: I will join all/specified public channels and start monitoring them.
+verbose on/off #channel1,#channel2... - turn on verbose mode on the specified channels`, user.Name),
+	}
+	_, err = s.PostMessage(postMessage, false)
+	if err != nil {
+		logrus.Warnf("Error posting welcome message - %v", err)
+	}
 }
 
 func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
@@ -185,6 +227,8 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 			logrus.Warnf("Unable to store initial configuration for user %s - %v\n", ourUser.ID, err)
 		}
 	}
+	// Send the first DM message to the user
+	sendThanks(ourTeam, ourUser)
 	sess := session{ourUser.Name, ourUser.ID, time.Now()}
 	secure := conf.Options.SSL.Key != ""
 	val, _ := util.EncryptJSON(&sess, conf.Options.Security.SessionKey)
