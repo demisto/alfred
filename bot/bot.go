@@ -365,6 +365,10 @@ func (b *Bot) Start() error {
 					logrus.Fatal("Message channel from Slack closed - should never happen")
 				} else {
 					logrus.Infof("Got error message from channel %+v\n", msg)
+					// If this is an unmarshall error just ignore the message
+					if msg.Error.Unmarshall {
+						continue
+					}
 					// Check if we need to restart the channel
 					ctx, err := GetContext(msg.Context)
 					if err != nil {
