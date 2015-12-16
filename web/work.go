@@ -49,7 +49,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 				}
 				break
 			} else {
-				resp, err := s.History(channel, message, message, true, 1)
+				resp, err := s.History(channel, message, message, true, false, 1)
 				if err != nil {
 					logrus.Infof("Error retrieving message history - %v\n", err)
 					continue
