@@ -9,7 +9,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -47,7 +46,9 @@ func NewWorker(r repo.Repo, q queue.Queue) (*Worker, error) {
 	if err != nil {
 		return nil, err
 	}
-	vt, err := govt.New(govt.SetApikey(conf.Options.VT), govt.SetErrorLog(log.New(os.Stderr, "VT:", log.Lshortfile)))
+	vt, err := govt.New(
+		govt.SetApikey(conf.Options.VT),
+		govt.SetErrorLog(log.New(conf.LogWriter, "VT:", log.Lshortfile)))
 	if err != nil {
 		return nil, err
 	}
@@ -120,6 +121,7 @@ func contextFromMap(c map[string]interface{}) *domain.Context {
 		User:         c["user"].(string),
 		OriginalUser: c["original_user"].(string),
 		Channel:      c["channel"].(string),
+		Type:         c["type"].(string),
 	}
 }
 

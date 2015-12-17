@@ -7,86 +7,16 @@ section#conf.config-page
         // INTRO MESSAGE
         .config-section
           .col-lg-12
-            h1.text-center Configure D<small>BOT</small>
-            .ball-grid-pulse.center-block
-              div
-              div
-              div
-              div
-              div
-              div
-              div
-              div
-              div
-            #configdiv(style="display: none")
+            h1.text-center Thanks for installing D<small>BOT</small>
+            #configdiv
               hr
-              h3
-                b What communication do you want monitor?
-              form.configform                
-                .radio.config-entry
-                  input#all(type='radio', name='conversation', value='all')
-                  label(for='all') Monitor ALL conversations
-                  input#selectconv(type='radio', name='conversation', value='select')
-                  label(for='selectedconv') Selected Channels
-              br
-              .col-lg-9
-                  #accordion.panel-group(role="tablist", aria-multiselectable="true")
-                    .panel.panel-default
-                      #headingConf.panel-heading(role="tab")
-                        h4.panel-title
-                          a(role="button", data-toggle="collapse", data-parent="#accordion", href="#configpanel", aria-expanded="false", aria-controls="configpanel")
-                            | Select Channels and Groups
-                      #configpanel.panel-collapse.in.collapse(role="tabpanel", aria-labelledby="headingConf")
-                        .panel-body
-                          .form-group.config-entry
-                            label(for='channels') Select "Slack channels" that D<small>BOT</small> will monitor
-                            select.form-control.chosen-select#channels(data-placeholder='Please choose channels to monitor', multiple)
-                          .form-group.config-entry
-                            label(for='groups') Select "Private groups" that D<small>BOT</small> will monitor
-                            select.form-control.chosen-select#groups(data-placeholder='Please choose groups to monitor', multiple)
-                          .checkbox.config-entry
-                            label
-                              input#im(type='checkbox')
-                              | Monitor Direct Messages (includes slackbot)
+              h3 To configure D<small>BOT</small>, you can send direct messages to @dbot on Slack.
+              | @dbot understands the following commands:
+              ul
+                li config - list the current channels @dbot is listening on
+                li join all/#channel1,#channel2,... - @dbot will join all/specified public channels and start monitoring them
+                li verbose on/off #channel1,#channel2,... - turn on verbose mode on the specified channels
 
-                  #verboseaccordion.panel-group(role="tablist", aria-multiselectable="true")
-                    .panel.panel-default
-                      #verboseheadingConf.panel-heading(role="tab")
-                        h4.panel-title
-                          a(role="button", data-toggle="collapse", data-parent="#verboseaccordion", href="#verboseconfigpanel", aria-expanded="false", aria-controls="verboseconfigpanel")
-                            | Advanced Configuration - for Security Analysts (Verbose Mode)
-                      #verboseconfigpanel.panel-collapse.collapse.in(role="tabpanel", aria-labelledby="verboseheadingConf")
-                        .panel-body
-                          | Verbose Mode alerts users on all results (including clean queries) and includes detailed messages for each check.
-                          .form-group.config-entry
-                            label(for='verbosechannels') Select "Slack channels" that D<small>BOT</small> will monitor (verbose mode)
-                            select.form-control.chosen-select#verbosechannels(data-placeholder='Please choose channels to monitor', multiple)
-                          .form-group.config-entry
-                            label(for='verbosegroups') Select "Private groups" that D<small>BOT</small> will monitor (verbose mode)
-                            select.form-control.chosen-select#verbosegroups(data-placeholder='Please choose groups to monitor', multiple)
-                          .checkbox.config-entry
-                            label
-                              input#verboseim(type='checkbox')
-                              | Monitor Direct Messages (verbose mode including slackbot)
-
-
-                  .text-center
-                    a#action.btn.btn-xlarge.btn-theme(href='/next')
-                      strong Done
-                  br
-            .col-lg-3
-              #channelsmonitored.channelsmonitored(style="display: none")
-                h3.text-center
-                  | Channels Monitored
-                hr
-                p#channellist
-              br
-              #verbosechannelsmonitored.channelsmonitored(style="display: none")
-                h3.text-center
-                  | Channels Monitored (Verbose Mode)
-                hr
-                p#verbosechannellist
-  
   div.modal.fade(id="unauthmodal", aria-labelledby="unauthModalLabel")
     .modal-dialog
       .modal-content
@@ -95,7 +25,4 @@ section#conf.config-page
               span(aria-hidden="true") &times;
             h4(id="unauthModalLabel", class="modal-title") User not logged in
         .modal-body
-          p User not logged in. Redirecting to home page for authentication with Slack ... 
-
-
-// END CONFIGURATION
+          p User not logged in. Redirecting to home page for authentication with Slack ...

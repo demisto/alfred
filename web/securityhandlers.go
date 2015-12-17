@@ -2,10 +2,12 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/util"
@@ -46,7 +48,8 @@ func (ac *AppContext) initiateOAuth(w http.ResponseWriter, r *http.Request) {
 	conf := &oauth2.Config{
 		ClientID:     conf.Options.Slack.ClientID,
 		ClientSecret: conf.Options.Slack.ClientSecret,
-		Scopes:       []string{"client"},
+		Scopes: []string{
+			"bot", "mpim:history", "im:history", "groups:history", "files:read", "channels:history", "channels:write"},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  slackOAuthEndpoint,
 			TokenURL: slackOAuthExchange,
@@ -55,7 +58,49 @@ func (ac *AppContext) initiateOAuth(w http.ResponseWriter, r *http.Request) {
 	// Store state
 	ac.r.SetOAuthState(&domain.OAuthState{State: uuid.String(), Timestamp: time.Now()})
 	url := conf.AuthCodeURL(uuid.String())
+	logrus.Debugf("Redirecting to URL - %s", url)
 	http.Redirect(w, r, url, http.StatusFound)
+}
+
+func sendThanks(team *domain.Team, user *domain.User) {
+	s, err := slack.New(
+		slack.SetToken(team.BotToken),
+		slack.SetErrorLog(log.New(conf.LogWriter, "", log.Lshortfile)),
+	)
+	if err != nil {
+		logrus.Warnf("Unable to create client for first message - %v", err)
+		return
+	}
+	imList, err := s.IMList()
+	if err != nil {
+		logrus.Warnf("Unable to retrieve im list for first message - %v", err)
+		return
+	}
+	var ch string
+	for i := range imList.IMs {
+		if user.ExternalID == imList.IMs[i].User {
+			ch = imList.IMs[i].ID
+			break
+		}
+	}
+	if ch == "" {
+		logrus.Warn("Unable to user channel")
+		return
+	}
+	postMessage := &slack.PostMessageRequest{
+		Channel: ch,
+		AsUser:  true,
+		Text: fmt.Sprintf(`Hi %s, thanks for inviting me to this team.
+If you want me to monitor conversations, please add me to the relevant channels and groups.
+Here are the commands I understand:
+config: list the current channels I'm listening on
+join all/#channel1,#channel2...: I will join all/specified public channels and start monitoring them.
+verbose on/off #channel1,#channel2... - turn on verbose mode on the specified channels`, user.Name),
+	}
+	_, err = s.PostMessage(postMessage, false)
+	if err != nil {
+		logrus.Warnf("Error posting welcome message - %v", err)
+	}
 }
 
 func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
@@ -64,6 +109,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	errStr := r.FormValue("error")
 	if errStr != "" {
 		WriteError(w, &Error{"oauth_err", 401, "Slack OAuth Error", errStr})
+		logrus.Warnf("Got an error from Slack - %s", errStr)
 		return
 	}
 	if state == "" || code == "" {
@@ -83,14 +129,21 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 		conf.Options.Slack.ClientSecret, code, "")
 	if err != nil {
 		WriteError(w, &Error{"oauth_err", 401, "Slack OAuth Error", err.Error()})
+		logrus.Warnf("Got an error exchanging code for token - %v", err)
 		return
 	}
-	log.Debugln("OAuth successful, creating Slack client")
-	s, err := slack.New(slack.SetToken(token.AccessToken))
+	logrus.Debugln("OAuth successful, creating Slack client")
+	s, err := slack.New(
+		slack.SetToken(token.AccessToken),
+		slack.SetErrorLog(log.New(conf.LogWriter, "", log.Lshortfile)),
+	)
 	if err != nil {
 		panic(err)
 	}
-	log.Debugln("Slack client created")
+	if logrus.GetLevel() == logrus.DebugLevel {
+		slack.SetTraceLog(log.New(conf.LogWriter, "", log.Lshortfile))(s)
+	}
+	logrus.Debugln("Slack client created")
 	// Get our own user id
 	test, err := s.AuthTest()
 	if err != nil {
@@ -104,10 +157,10 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	log.Debugln("Got all details about myself from Slack")
+	logrus.Debugln("Got all details about myself from Slack")
 	ourTeam, err := ac.r.TeamByExternalID(team.Team.ID)
 	if err != nil {
-		log.Debugf("Got a new team registered - %s", team.Team.Name)
+		logrus.Debugf("Got a new team registered - %s", team.Team.Name)
 		teamID, err := uuid.NewRandom()
 		if err != nil {
 			panic(err)
@@ -120,17 +173,19 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 			Plan:        team.Team.Plan,
 			ExternalID:  team.Team.ID,
 			Created:     time.Now(),
+			BotUserID:   token.Bot.BotUserID,
+			BotToken:    token.Bot.BotAccessToken,
 		}
 	} else {
-		log.Debugf("Got an existing team - %s", team.Team.Name)
-		ourTeam.Name, ourTeam.EmailDomain, ourTeam.Domain, ourTeam.Plan =
-			team.Team.Name, team.Team.EmailDomain, team.Team.Domain, team.Team.Plan
+		logrus.Debugf("Got an existing team - %s", team.Team.Name)
+		ourTeam.Name, ourTeam.EmailDomain, ourTeam.Domain, ourTeam.Plan, ourTeam.BotUserID, ourTeam.BotToken =
+			team.Team.Name, team.Team.EmailDomain, team.Team.Domain, team.Team.Plan, token.Bot.BotUserID, token.Bot.BotAccessToken
 	}
 	newUser := false
-	log.Debugln("Finding the user...")
+	logrus.Debugln("Finding the user...")
 	ourUser, err := ac.r.UserByExternalID(user.User.ID)
 	if err != nil {
-		log.Infof("Got a new user registered - %s", user.User.Name)
+		logrus.Infof("Got a new user registered - %s", user.User.Name)
 		userID, err := uuid.NewRandom()
 		if err != nil {
 			panic(err)
@@ -158,20 +213,22 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 		ourUser.Name, ourUser.RealName, ourUser.Email, ourUser.Token, ourUser.Status =
 			user.User.Name, user.User.RealName, user.User.Profile.Email, token.AccessToken, domain.UserStatusActive
 	}
-	log.Debugln("Saving to the DB...")
+	logrus.Debugln("Saving to the DB...")
 	err = ac.r.SetTeamAndUser(ourTeam, ourUser)
 	if err != nil {
 		panic(err)
 	}
-	log.Infof("User %v logged in\n", ourUser.Name)
+	logrus.Infof("User %v logged in\n", ourUser.Name)
 	if newUser {
 		newConf := &domain.Configuration{All: true}
-		err = ac.r.SetChannelsAndGroups(ourUser.ID, newConf)
+		err = ac.r.SetChannelsAndGroups(ourTeam.ID, newConf)
 		if err != nil {
 			// If we got here, allow empty configuration
-			log.Warnf("Unable to store initial configuration for user %s - %v\n", ourUser.ID, err)
+			logrus.Warnf("Unable to store initial configuration for user %s - %v\n", ourUser.ID, err)
 		}
 	}
+	// Send the first DM message to the user
+	sendThanks(ourTeam, ourUser)
 	sess := session{ourUser.Name, ourUser.ID, time.Now()}
 	secure := conf.Options.SSL.Key != ""
 	val, _ := util.EncryptJSON(&sess, conf.Options.Security.SessionKey)

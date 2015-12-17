@@ -42,7 +42,7 @@ func (ac *AppContext) info(w http.ResponseWriter, r *http.Request) {
 	u := context.Get(r, "user").(*domain.User)
 	var res infoResponse
 	// First, get the current selection (if at all)
-	savedChannels, err := ac.r.ChannelsAndGroups(u.ID)
+	savedChannels, err := ac.r.ChannelsAndGroups(u.Team)
 	if err != nil {
 		panic(err)
 	}
@@ -133,11 +133,11 @@ func (ac *AppContext) save(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	err := ac.r.SetChannelsAndGroups(u.ID, req)
+	err := ac.r.SetChannelsAndGroups(u.Team, req)
 	if err != nil {
 		panic(err)
 	}
-	ac.q.PushConf(u, req)
+	ac.q.PushConf(u.Team, req)
 	w.WriteHeader(http.StatusNoContent)
 	w.Write([]byte("\n"))
 }

@@ -23,6 +23,18 @@ func TestIn(t *testing.T) {
 	}
 }
 
+func TestIndex(t *testing.T) {
+	s := []string{"foo", "bar", "kuku", "kiki"}
+	for i, v := range s {
+		if Index(s, v) != i {
+			t.Error("Should be indexed")
+		}
+	}
+	if Index(s, "foobar") != -1 {
+		t.Error("Should not be in")
+	}
+}
+
 func TestToLower(t *testing.T) {
 	s := []string{"MyString12Str"}
 	res := ToLower(s)

@@ -89,13 +89,32 @@ func (u *User) SecureToken() (string, error) {
 
 // Team holds information about the team
 type Team struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	EmailDomain string    `json:"email_domain" db:"email_domain"`
-	Domain      string    `json:"domain"`
-	Plan        string    `json:"plan"`
-	ExternalID  string    `json:"external_id" db:"external_id"`
-	Created     time.Time `json:"created"`
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Status      UserStatus `json:"status"`
+	EmailDomain string     `json:"email_domain" db:"email_domain"`
+	Domain      string     `json:"domain"`
+	Plan        string     `json:"plan"`
+	ExternalID  string     `json:"external_id" db:"external_id"`
+	Created     time.Time  `json:"created"`
+	BotUserID   string     `json:"bot_user_id" db:"bot_user_id"`
+	BotToken    string     `json:"bot_token" db:"bot_token"`
+}
+
+// ClearToken is returned from the encrypted token
+func (t *Team) ClearToken() (string, error) {
+	if t.BotToken != "" {
+		return util.Decrypt(t.BotToken, conf.Options.Security.DBKey)
+	}
+	return "", nil
+}
+
+// SecureToken is returned from the clear token
+func (t *Team) SecureToken() (string, error) {
+	if t.BotToken != "" {
+		return util.Encrypt(t.BotToken, conf.Options.Security.DBKey)
+	}
+	return "", nil
 }
 
 // OAuthState holds oauth validation state
@@ -104,9 +123,9 @@ type OAuthState struct {
 	Timestamp time.Time `json:"ts" db:"ts"`
 }
 
-// UserBot holds allocation of bot for user
-type UserBot struct {
-	User      string    `json:"user"`
+// TeamBot holds allocation of bot for team
+type TeamBot struct {
+	Team      string    `json:"team"`
 	Bot       string    `json:"bot"`
 	Timestamp time.Time `json:"ts" db:"ts"`
 }

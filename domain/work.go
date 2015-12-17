@@ -135,7 +135,7 @@ type WorkReply struct {
 
 // MaliciousContent holds info about convicted content
 type MaliciousContent struct {
-	User        string `json:"user"`
+	Team        string `json:"team"`
 	Channel     string `json:"channel"`
 	MessageID   string `json:"message_id" db:"message_id"`
 	ContentType int    `json:"content_type" db:"content_type"`
@@ -148,5 +148,5 @@ type MaliciousContent struct {
 
 // UniqueID of the message
 func (mc *MaliciousContent) UniqueID() string {
-	return mc.User + "," + mc.Channel + "," + mc.MessageID
+	return mc.Team + "," + mc.Channel + "," + mc.MessageID
 }

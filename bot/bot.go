@@ -3,7 +3,6 @@ package bot
 import (
 	"log"
 	"regexp"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -17,77 +16,71 @@ import (
 )
 
 const (
-	maxUsersPerBot = 1000
+	maxUsersPerBot = 500
 )
 
 // subscription holds the interest we have for each team
 type subscription struct {
-	user     *domain.User // the users for the team
-	interest *domain.Configuration
-	s        *slack.Slack // the slack client
-	started  bool         // did we start subscription for this guy
-	ts       time.Time    // When did we start the WS
+	team          *domain.Team          // the team we are subscribed to
+	users         []domain.User         // The list of users that added us to the team (can be several)
+	configuration *domain.Configuration // The configuration of channels, mainly for verbose
+	s             *slack.Slack          // the slack client on the bot token
+	started       bool                  // did we start subscription for this guy
+	ts            time.Time             // When did we start the WS
+	info          *slack.RTMStartReply  // The team info from Slack
 }
 
-type subscriptions struct {
-	subscriptions []subscription
-	info          *slack.RTMStartReply
-}
-
-func (subs *subscriptions) ChannelName(channel string, subscriber int) string {
+func (sub *subscription) ChannelName(channel string) string {
 	if channel == "" {
 		return ""
 	}
 	// if not found, it might be a new channel or group
 	switch channel[0] {
 	case 'C':
-		for i := range subs.info.Channels {
-			if channel == subs.info.Channels[i].ID {
-				return subs.info.Channels[i].Name
+		for i := range sub.info.Channels {
+			if channel == sub.info.Channels[i].ID {
+				return sub.info.Channels[i].Name
 			}
 		}
-		info, err := subs.subscriptions[subscriber].s.ChannelInfo(channel)
+		info, err := sub.s.ChannelInfo(channel)
 		if err != nil {
 			logrus.WithField("error", err).Warn("Unable to get channel info\n")
 			return ""
 		}
-		subs.info.Channels = append(subs.info.Channels, info.Channel)
+		sub.info.Channels = append(sub.info.Channels, info.Channel)
 		return info.Channel.Name
 	case 'G':
-		for i := range subs.info.Groups {
-			if channel == subs.info.Groups[i].ID {
-				return subs.info.Groups[i].Name
+		for i := range sub.info.Groups {
+			if channel == sub.info.Groups[i].ID {
+				return sub.info.Groups[i].Name
 			}
 		}
-		info, err := subs.subscriptions[subscriber].s.GroupInfo(channel)
+		info, err := sub.s.GroupInfo(channel)
 		if err != nil {
 			logrus.WithField("error", err).Warn("Unable to get group info\n")
 			return ""
 		}
-		subs.info.Groups = append(subs.info.Groups, info.Group)
+		sub.info.Groups = append(sub.info.Groups, info.Group)
 		return info.Group.Name
 	}
 	return ""
 }
 
-func (subs *subscriptions) FirstSubForChannel(channel string) *subscription {
-	for i := range subs.subscriptions {
-		// channelName := subs.ChannelName(channel, i)
-		// logrus.Debugf("Channel %s (%s)\n", channel, channelName)
-		if subs.subscriptions[i].interest.IsInterestedIn(channel, "") {
-			return &subs.subscriptions[i]
+func (sub *subscription) ChannelID(channel string) string {
+	if channel == "" {
+		return ""
+	}
+	for i := range sub.info.Channels {
+		if strings.ToLower(channel) == strings.ToLower(sub.info.Channels[i].Name) {
+			return sub.info.Channels[i].ID
 		}
 	}
-	return nil
-}
-
-func (subs *subscriptions) SubForUser(user string) *subscription {
-	for i := range subs.subscriptions {
-		if subs.subscriptions[i].user.ID == user {
-			return &subs.subscriptions[i]
+	for i := range sub.info.Groups {
+		if strings.ToLower(channel) == strings.ToLower(sub.info.Groups[i].Name) {
+			return sub.info.Groups[i].ID
 		}
 	}
-	return nil
+	return ""
 }
 
 // Bot iterates on all subscriptions and listens / responds to messages
@@ -96,7 +89,7 @@ type Bot struct {
 	stop          chan bool
 	r             repo.Repo
 	mu            sync.RWMutex // Guards the subscriptions
-	subscriptions map[string]*subscriptions
+	subscriptions map[string]*subscription
 	q             queue.Queue // Message queue for configuration updates
 	replyQueue    string
 	smu           sync.Mutex // Guards the statistics
@@ -114,7 +107,7 @@ func New(r repo.Repo, q queue.Queue) (*Bot, error) {
 		in:            make(chan *slack.Message),
 		stop:          make(chan bool, 1),
 		r:             r,
-		subscriptions: make(map[string]*subscriptions),
+		subscriptions: make(map[string]*subscription),
 		q:             q,
 		replyQueue:    host,
 		stats:         make(map[string]*domain.Statistics),
@@ -126,59 +119,57 @@ func New(r repo.Repo, q queue.Queue) (*Bot, error) {
 func (b *Bot) loadSubscriptions(includingMine bool) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	cnt := 0
-	for _, v := range b.subscriptions {
-		cnt += len(v.subscriptions)
-	}
+	cnt := len(b.subscriptions)
 	// Fully loaded, no room for others
 	if cnt >= maxUsersPerBot {
 		return nil
 	}
 	// Everything must run in separate transactions as it is written here
-	openUsers, err := b.r.OpenUsers(includingMine)
+	openTeams, err := b.r.OpenTeams(includingMine)
 	if err != nil {
 		return err
 	}
-	for i := range openUsers {
+	for i := range openTeams {
 		// Don't lock our own users
-		if !includingMine || openUsers[i].Bot != b.r.BotName() {
-			logrus.Debugf("Trying to lock user %s", openUsers[i].User)
-			locked, err := b.r.LockUser(&openUsers[i])
+		if !includingMine || openTeams[i].Bot != b.r.BotName() {
+			logrus.Debugf("Trying to lock team %s", openTeams[i].Team)
+			locked, err := b.r.LockTeam(&openTeams[i])
 			if err != nil || !locked {
-				logrus.Debugf("Unable to lock user %v", err)
+				logrus.Debugf("Unable to lock team %v", err)
 				continue
 			}
 		} else {
-			logrus.Debugf("User %s is mine", openUsers[i].User)
+			logrus.Debugf("Team %s is mine", openTeams[i].Team)
 		}
-		u, err := b.r.User(openUsers[i].User)
+		t, err := b.r.Team(openTeams[i].Team)
 		if err != nil {
-			logrus.Warnf("Error loading user %s - %v\n", openUsers[i].User, err)
+			logrus.Warnf("Error loading team %s - %v\n", openTeams[i].Team, err)
 			continue
 		}
-		teamSubs := b.subscriptions[u.Team]
-		if teamSubs == nil {
-			teamSubs = &subscriptions{}
-			b.subscriptions[u.Team] = teamSubs
-		}
-		// Just precaution, if we already have the user just skip this
+		// Just precaution, if we already have the team just skip this
 		// This is required for bolt repo implementation
-		if teamSubs.SubForUser(u.ID) != nil {
+		teamSub := b.subscriptions[t.ID]
+		if teamSub != nil {
 			continue
 		}
-		subs, err := b.r.ChannelsAndGroups(u.ID)
+		teamSub = &subscription{team: t}
+		teamSub.configuration, err = b.r.ChannelsAndGroups(t.ID)
 		if err != nil {
-			logrus.Warnf("Error loading user configuration - %v\n", err)
+			logrus.Warnf("Error loading team configuration - %v\n", err)
 			continue
 		}
-		s, err := slack.New(slack.SetToken(u.Token),
+		teamSub.users, err = b.r.TeamMembers(t.ID)
+		if err != nil {
+			logrus.Warnf("Error loading team members - %v\n", err)
+			continue
+		}
+		teamSub.s, err = slack.New(slack.SetToken(t.BotToken),
 			slack.SetErrorLog(log.New(conf.LogWriter, "SLACK:", log.Lshortfile)))
 		if err != nil {
-			logrus.Warnf("Error opening Slack for user %s (%s) - %v\n", u.ID, u.Name, err)
+			logrus.Warnf("Error opening Slack for team %s (%s) - %v\n", t.ID, t.Name, err)
 			continue
 		}
-		teamSub := subscription{user: u, interest: subs, s: s}
-		teamSubs.subscriptions = append(teamSubs.subscriptions, teamSub)
+		b.subscriptions[t.ID] = teamSub
 		cnt++
 		if cnt >= maxUsersPerBot {
 			break
@@ -187,52 +178,49 @@ func (b *Bot) loadSubscriptions(includingMine bool) error {
 	return nil
 }
 
-func (b *Bot) startWSForUser(team string, teamSub *subscriptions, userSub *subscription) error {
-	logrus.Infof("Starting WS for team %s, user - %s (%s)\n", team, userSub.user.ID, userSub.user.Name)
-	info, err := userSub.s.RTMStart("dbot.demisto.com", b.in, &domain.Context{Team: team, User: userSub.user.ID})
+func (b *Bot) startWSForTeam(team string, teamSub *subscription) error {
+	logrus.Infof("Starting WS for team %s (%s)\n", team, teamSub.team.Name)
+	info, err := teamSub.s.RTMStart("dbot.demisto.com", b.in, &domain.Context{Team: team})
 	if err != nil {
-		logrus.Warnf("Unable to start WS for user %s (%s) - %v\n", userSub.user.ID, userSub.user.Name, err)
+		logrus.Warnf("Unable to start WS for team %s (%s) - %v\n", team, teamSub.team.Name, err)
 		// For revoked tokens, the user is not active anymore
 		if strings.Contains(err.Error(), "token_revoked") {
-			userSub.user.Status = domain.UserStatusDeleted
-			logrus.Infof("Updating user status for %s (%s)", userSub.user.ID, userSub.user.Name)
-			dbErr := b.r.SetUser(userSub.user)
+			teamSub.team.Status = domain.UserStatusDeleted
+			logrus.Infof("Updating team status for %s (%s)", team, teamSub.team.Name)
+			dbErr := b.r.SetTeam(teamSub.team)
 			if dbErr != nil {
-				logrus.Warnf("Unable to change user status - %v", dbErr)
+				logrus.Warnf("Unable to change team status - %v", dbErr)
 			}
-			logrus.Infof("Unlocking user %s (%s)", userSub.user.ID, userSub.user.Name)
-			dbErr = b.r.UnlockUser(userSub.user.ID)
+			logrus.Infof("Unlocking team %s (%s)", team, teamSub.team.Name)
+			dbErr = b.r.UnlockTeam(team)
 			if dbErr != nil {
-				logrus.Warnf("Unable to unlock user - %v", dbErr)
+				logrus.Warnf("Unable to unlock team - %v", dbErr)
 			}
 		}
 		return err
 	}
 	teamSub.info = info
-	userSub.started = true
-	userSub.ts = time.Now()
+	teamSub.started = true
+	teamSub.ts = time.Now()
 	return nil
 }
 
 func (b *Bot) startWS() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	var subsToClean []string
 	for k, v := range b.subscriptions {
-		var subsToClean []int
-		for i := range v.subscriptions {
-			if !v.subscriptions[i].started && v.subscriptions[i].user.Status == domain.UserStatusActive && v.subscriptions[i].interest.IsActive() {
-				err := b.startWSForUser(k, v, &v.subscriptions[i])
-				if err != nil && strings.Contains(err.Error(), "token_revoked") {
-					subsToClean = append(subsToClean, i)
-				}
+		if !v.started && v.team.Status == domain.UserStatusActive {
+			err := b.startWSForTeam(k, v)
+			if err != nil && strings.Contains(err.Error(), "token_revoked") {
+				subsToClean = append(subsToClean, k)
 			}
 		}
-		// Remove all the ones that were rejected
-		sort.Sort(sort.Reverse(sort.IntSlice(subsToClean)))
-		for _, i := range subsToClean {
-			logrus.Debugf("Cleaning user %s (%s)", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
-			v.subscriptions = append(v.subscriptions[:i], v.subscriptions[i+1:]...)
-		}
+	}
+	// Remove all the ones that were rejected
+	for _, s := range subsToClean {
+		logrus.Debugf("Cleaning team %s", s)
+		delete(b.subscriptions, s)
 	}
 	return nil
 }
@@ -242,14 +230,12 @@ func (b *Bot) stopWS() {
 	defer b.mu.Unlock()
 	for k, v := range b.subscriptions {
 		logrus.Infof("Stoping subscription for team - %s\n", k)
-		for i := range v.subscriptions {
-			logrus.Infof("Stoping WS for user - %s (%s)\n", v.subscriptions[i].user.ID, v.subscriptions[i].user.Name)
-			err := v.subscriptions[i].s.RTMStop()
-			if err != nil {
-				logrus.Warnf("Unable to stop subscription for user %s - %v\n", v.subscriptions[i].user.ID, err)
-			}
-			v.subscriptions[i].started = false
+		logrus.Infof("Stoping WS for team - %s (%s)\n", k, v.team.Name)
+		err := v.s.RTMStop()
+		if err != nil {
+			logrus.Warnf("Unable to stop subscription for team %s - %v\n", k, err)
 		}
+		v.started = false
 	}
 }
 
@@ -258,31 +244,24 @@ var (
 	md5Reg = regexp.MustCompile("\\b[a-fA-F\\d]{32}\\b")
 )
 
-func (b *Bot) isThereInterestIn(original *slack.Message) bool {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	data := original.Context.(*domain.Context)
-	subs := b.subscriptions[data.Team]
-	if subs == nil {
-		return false
-	}
-	if sub := subs.FirstSubForChannel(original.Channel); sub != nil {
-		return true
-	}
-	return false
-}
-
 func (b *Bot) handleMessage(msg *slack.Message) {
 	if msg == nil {
 		return
 	}
+	ctx, err := GetContext(msg.Context)
+	if err != nil {
+		logrus.Warnf("Unable to get context from message - %+v\n", msg)
+		return
+	}
+	sub := b.subscriptions[ctx.Team]
+	if sub == nil {
+		logrus.Warnf("Unable to find team %s in subscriptions", ctx.Team)
+		return
+	}
 	switch msg.Type {
 	case "message":
-		if msg.Subtype == "bot_message" {
-			return
-		}
-		if !b.isThereInterestIn(msg) {
-			logrus.Debugf("No one is interested in the channel %s\n", msg.Channel)
+		// If it's our message - no need to do anything
+		if msg.User == sub.team.BotUserID {
 			return
 		}
 		push := false
@@ -298,11 +277,6 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 		case "file_mention":
 			push = true
 		}
-		ctx, err := GetContext(msg.Context)
-		if err != nil {
-			logrus.Warnf("Unable to get context from message - %+v\n", msg)
-			return
-		}
 		// If we need to handle the message, pass it to the queue
 		if push {
 			logrus.Debugf("Handling message - %+v\n", msg)
@@ -312,27 +286,31 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 				logrus.Warnf("Unable to get message timestamp %s - %v", workReq.MessageID, err)
 				return
 			}
-			subs := b.subscriptions[ctx.Team]
-			if subs == nil {
-				logrus.Warnf("Unable to find team %s in subscriptions", ctx.Team)
-				return
-			}
-			sub := subs.SubForUser(ctx.User)
-			if subs == nil {
-				logrus.Warnf("Unable to find subscription for user %s", ctx.User)
-				return
-			}
 			if sub.started && sub.ts.Before(t) {
 				logrus.Debug("Pushing to queue")
 				ctx.OriginalUser, ctx.Channel, ctx.Type = msg.User, msg.Channel, msg.Type
 				workReq.ReplyQueue, workReq.Context = b.replyQueue, ctx
-				b.q.PushMessage(workReq)
+				b.q.PushWork(workReq)
 			} else {
 				logrus.Infof("Got old message from Slack - %s", workReq.MessageID)
 			}
 		} else {
 			b.smu.Lock()
 			defer b.smu.Unlock()
+			// Handle some internal commands
+			if msg.Channel != "" && msg.Channel[0] == 'D' {
+				text := strings.ToLower(msg.Text)
+				switch {
+				case strings.HasPrefix(text, "join "):
+					b.joinChannels(ctx.Team, msg.Text, msg.Channel)
+				case strings.HasPrefix(text, "verbose "):
+					b.handleVerbose(ctx.Team, msg.Text, msg.Channel) // Need the actual channel IDs
+				case text == "config":
+					b.handleConfig(ctx.Team, msg.Channel)
+				case text == "?" || strings.HasPrefix(text, "help"):
+					b.showHelp(ctx.Team, msg.Channel)
+				}
+			}
 			stats := b.stats[ctx.Team]
 			if stats == nil {
 				stats = &domain.Statistics{Team: ctx.Team}
@@ -387,6 +365,10 @@ func (b *Bot) Start() error {
 					logrus.Fatal("Message channel from Slack closed - should never happen")
 				} else {
 					logrus.Infof("Got error message from channel %+v\n", msg)
+					// If this is an unmarshall error just ignore the message
+					if msg.Error.Unmarshall {
+						continue
+					}
 					// Check if we need to restart the channel
 					ctx, err := GetContext(msg.Context)
 					if err != nil {
@@ -395,13 +377,8 @@ func (b *Bot) Start() error {
 						b.mu.Lock()
 						teamSub := b.subscriptions[ctx.Team]
 						if teamSub != nil {
-							userSub := teamSub.SubForUser(ctx.User)
-							if userSub != nil {
-								if userSub.started && userSub.interest.IsActive() {
-									b.startWSForUser(ctx.Team, teamSub, userSub)
-								}
-							} else {
-								logrus.Warn("User subscription not found, not restarting")
+							if teamSub.started {
+								b.startWSForTeam(ctx.Team, teamSub)
 							}
 						} else {
 							logrus.Warn("Team subscription not found, not restarting")
@@ -436,40 +413,28 @@ func (b *Bot) Stop() {
 }
 
 // subscriptionChanged updates the subscriptions if a user changes them
-func (b *Bot) subscriptionChanged(user *domain.User, configuration *domain.Configuration) {
+func (b *Bot) subscriptionChanged(team string, configuration *domain.Configuration) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	subs := b.subscriptions[user.Team]
-	if subs == nil {
-		logrus.Debugf("Subscription for team not found: %+v\n", user)
+	sub := b.subscriptions[team]
+	if sub == nil {
+		logrus.Debugf("Subscription for team not found: %s\n", team)
 		return
 	}
-	sub := subs.SubForUser(user.ID)
-	if sub != nil {
-		// We already have subscription - if the new one is still active, no need to touch WS
-		sub.interest = configuration
-		if !configuration.IsActive() {
-			if sub.started {
-				sub.started = false
-				sub.s.RTMStop()
-			}
-		} else if !sub.started {
-			b.startWSForUser(user.Team, subs, sub)
-		}
-	}
+	sub.configuration = configuration
 }
 
 func (b *Bot) monitorChanges() {
 	for {
-		user, configuration, err := b.q.PopConf(0)
-		if err != nil || user == nil || configuration == nil {
+		team, configuration, err := b.q.PopConf(0)
+		if err != nil || team == "" || configuration == nil {
 			logrus.Infof("Quiting monitoring changes - %v\n", err)
 			// Go down
 			b.Stop()
 			break
 		}
-		logrus.Debugf("Configuration change received: %+v, %+v\n", user, configuration)
-		b.subscriptionChanged(user, configuration)
+		logrus.Debugf("Configuration change received: %s, %+v\n", team, configuration)
+		b.subscriptionChanged(team, configuration)
 	}
 }
 

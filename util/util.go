@@ -66,6 +66,17 @@ func In(s interface{}, val interface{}) bool {
 	return false
 }
 
+// Index returns the index for a given value or -1 if not there
+func Index(s interface{}, val interface{}) int {
+	si := ToIntf(s)
+	for i, v := range si {
+		if v == val {
+			return i
+		}
+	}
+	return -1
+}
+
 // Canonicalize the given URLs
 func Canonicalize(rawurls ...string) []string {
 	var canonicalized []string

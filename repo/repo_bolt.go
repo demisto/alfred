@@ -46,10 +46,6 @@ func New() (Repo, error) {
 		if err != nil {
 			return err
 		}
-		_, err = tx.CreateBucketIfNotExists([]byte("firstmessage"))
-		if err != nil {
-			return err
-		}
 		_, err = tx.CreateBucketIfNotExists([]byte("joinslack"))
 		if err != nil {
 			return err
@@ -312,88 +308,53 @@ func (r *repo) cleanOAuthState() {
 	}
 }
 
-func (r *repo) ChannelsAndGroups(user string) (*domain.Configuration, error) {
+func (r *repo) ChannelsAndGroups(team string) (*domain.Configuration, error) {
 	res := &domain.Configuration{}
-	err := r.get("channels", user, res)
+	err := r.get("channels", team, res)
 	if err == ErrNotFound {
 		err = nil
 	}
 	return res, err
 }
 
-func (r *repo) SetChannelsAndGroups(user string, configuration *domain.Configuration) error {
-	return r.set("channels", user, configuration)
-}
-
-func (r *repo) TeamSubscriptions(team string) (map[string]*domain.Configuration, error) {
-	subscriptions := make(map[string]*domain.Configuration)
-	err := r.db.View(func(tx *bolt.Tx) error {
-		tb := tx.Bucket([]byte("teamusers"))
-		cb := tx.Bucket([]byte("channels"))
-		var ids []string
-		members := tb.Get([]byte(team))
-		if members == nil {
-			return nil
-		}
-		err := json.Unmarshal(members, &ids)
-		if err != nil {
-			return err
-		}
-		for _, id := range ids {
-			s := cb.Get([]byte(id))
-			if s != nil {
-				c := &domain.Configuration{}
-				err := json.Unmarshal(s, c)
-				if err != nil {
-					return err
-				}
-				subscriptions[id] = c
-			}
-		}
-		return nil
-	})
-	return subscriptions, err
+func (r *repo) SetChannelsAndGroups(team string, configuration *domain.Configuration) error {
+	return r.set("channels", team, configuration)
 }
 
 func (r *repo) IsVerboseChannel(team, channel string) (bool, error) {
-	subs, err := r.TeamSubscriptions(team)
+	subs, err := r.ChannelsAndGroups(team)
 	if err != nil {
 		return false, err
 	}
-	for _, v := range subs {
-		if v.IsVerbose(channel, "") {
-			return true, nil
-		}
-	}
-	return false, nil
+	return subs.IsVerbose(channel, ""), nil
 }
 
-// OpenUsers just returns all users without associating them with a bot since this is on dev system
-func (r *repo) OpenUsers(includeMine bool) ([]domain.UserBot, error) {
-	var users []domain.UserBot
+// OpenTeams just returns all users without associating them with a bot since this is on dev system
+func (r *repo) OpenTeams(includeMine bool) ([]domain.TeamBot, error) {
+	var teams []domain.TeamBot
 	if !includeMine {
-		return users, nil
+		return teams, nil
 	}
 	err := r.db.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket([]byte("users")).Cursor()
+		c := tx.Bucket([]byte("teams")).Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			var u domain.User
-			err := json.Unmarshal(v, &u)
+			var t domain.Team
+			err := json.Unmarshal(v, &t)
 			if err != nil {
 				return err
 			}
-			users = append(users, domain.UserBot{User: u.ID, Timestamp: time.Now()})
+			teams = append(teams, domain.TeamBot{Team: t.ID, Timestamp: time.Now()})
 		}
 		return nil
 	})
-	return users, err
+	return teams, err
 }
 
-func (r *repo) LockUser(user *domain.UserBot) (bool, error) {
+func (r *repo) LockTeam(team *domain.TeamBot) (bool, error) {
 	return true, nil
 }
 
-func (r *repo) UnlockUser(id string) error {
+func (r *repo) UnlockTeam(id string) error {
 	return nil
 }
 
@@ -420,22 +381,6 @@ func (r *repo) TotalMessages() (int, error) {
 
 func (r *repo) StoreMaliciousContent(convicted *domain.MaliciousContent) error {
 	return r.set("convicted", convicted.UniqueID(), convicted)
-}
-
-func (r *repo) MessageSentOnChannel(team, channel string) error {
-	return r.set("firstmessage", channel+"@"+"team", "Y")
-}
-
-func (r *repo) WasMessageSentOnChannel(team, channel string) (bool, error) {
-	var x string
-	err := r.get("firstmessage", channel+"@"+team, &x)
-	if err != nil {
-		if err == ErrNotFound {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
 }
 
 func (r *repo) JoinSlackChannel(email string) error {
