@@ -18,6 +18,12 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, ErrBadRequest)
 		return
 	}
+	t, err := ac.r.Team(team)
+	if err != nil {
+		logrus.Warnf("Error loading team - %v\n", err)
+		WriteError(w, ErrInternalServer)
+		return
+	}
 	// Bot scope does not have file info and history permissions so we need to iterate users
 	users, err := ac.r.TeamMembers(team)
 	if err != nil {
@@ -25,6 +31,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, ErrInternalServer)
 		return
 	}
+	users = append([]domain.User{{Name: "dbot", Token: t.BotToken, ID: t.BotUserID, Status: domain.UserStatusActive}}, users...)
 	var workReq *domain.WorkRequest
 	for i := range users {
 		if users[i].Status == domain.UserStatusActive {
