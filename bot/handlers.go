@@ -82,11 +82,11 @@ func (w *Worker) handle() {
 			if strings.Contains(msg.Text, "<http") {
 				w.handleURL(msg.Text, msg.Online, reply)
 			}
-			if ip := ipReg.FindString(msg.Text); ip != "" {
-				w.handleIP(ip, msg.Online, reply)
+			if ipReg.MatchString(msg.Text) {
+				w.handleIP(msg.Text, msg.Online, reply)
 			}
-			if hash := md5Reg.FindString(msg.Text); hash != "" {
-				w.handleMD5(hash, reply)
+			if md5Reg.MatchString(msg.Text) {
+				w.handleMD5(msg.Text, reply)
 			}
 		case "file":
 			w.handleFile(msg, reply)
@@ -140,9 +140,16 @@ func GetContext(context interface{}) (*domain.Context, error) {
 }
 
 func (w *Worker) handleURL(text string, online bool, reply *domain.WorkReply) {
-	start := strings.Index(text, "<http")
-	end := strings.Index(text[start:], ">")
-	if end > 0 {
+	var start int
+	for {
+		start = strings.Index(text[start:], "<http")
+		if start < 0 {
+			break
+		}
+		end := strings.Index(text[start:], ">")
+		if end < start {
+			break
+		}
 		end = end + start
 		filter := strings.Index(text[start:end], "|")
 		if filter > 0 {
@@ -150,7 +157,9 @@ func (w *Worker) handleURL(text string, online bool, reply *domain.WorkReply) {
 		}
 		url := text[start+1 : end]
 		logrus.Debugf("URL found - %s\n", url)
-		reply.URL.Details = url
+		reply.URLs = append(reply.URLs, domain.URLReply{})
+		counter := len(reply.URLs) - 1
+		reply.URLs[counter].Details = url
 		reply.Type |= domain.ReplyTypeURL
 		// Do the network commands in parallel
 		c := make(chan int, 2)
@@ -159,21 +168,21 @@ func (w *Worker) handleURL(text string, online bool, reply *domain.WorkReply) {
 			if err != nil {
 				// Small hack - see if the URL was not found
 				if strings.Contains(err.Error(), "404") {
-					reply.URL.XFE.NotFound = true
+					reply.URLs[counter].XFE.NotFound = true
 				} else {
-					reply.URL.XFE.Error = err.Error()
+					reply.URLs[counter].XFE.Error = err.Error()
 				}
 			} else {
-				reply.URL.XFE.URLDetails = urlResp.Result
+				reply.URLs[counter].XFE.URLDetails = urlResp.Result
 			}
 			resolve, err := w.xfe.Resolve(url)
 			if err == nil {
-				reply.URL.XFE.Resolve = *resolve
+				reply.URLs[counter].XFE.Resolve = *resolve
 			}
 			if online {
 				malware, err := w.xfe.URLMalware(url)
 				if err == nil {
-					reply.URL.XFE.URLMalware = *malware
+					reply.URLs[counter].XFE.URLMalware = *malware
 				}
 			}
 			c <- 1
@@ -181,142 +190,152 @@ func (w *Worker) handleURL(text string, online bool, reply *domain.WorkReply) {
 		go func() {
 			vtResp, err := w.vt.GetUrlReport(url)
 			if err != nil {
-				reply.URL.VT.Error = err.Error()
+				reply.URLs[counter].VT.Error = err.Error()
 			} else {
-				reply.URL.VT.URLReport = *vtResp
+				reply.URLs[counter].VT.URLReport = *vtResp
 			}
 			c <- 1
 		}()
 		for i := 0; i < 2; i++ {
 			<-c
 		}
-		if reply.URL.XFE.URLDetails.Score >= xfeScoreToConvict || reply.URL.VT.URLReport.Positives >= numOfPositivesToConvict {
+		if reply.URLs[counter].XFE.URLDetails.Score >= xfeScoreToConvict || reply.URLs[counter].VT.URLReport.Positives >= numOfPositivesToConvict {
 			// This is known bad scenario
-			reply.URL.Result = domain.ResultDirty
-		} else if !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
+			reply.URLs[counter].Result = domain.ResultDirty
+		} else if !reply.URLs[counter].XFE.NotFound || reply.URLs[counter].VT.URLReport.ResponseCode == 1 {
 			// At least one of reputation services found this to be known good
 			// Keep the default
-			reply.URL.Result = domain.ResultClean
+			reply.URLs[counter].Result = domain.ResultClean
 		}
 	}
 }
 
-func (w *Worker) handleIP(ip string, online bool, reply *domain.WorkReply) {
-	reply.IP.Details = ip
-	reply.Type |= domain.ReplyTypeIP
-	// First, let's check if IP is globally unicast addressable and is public
-	ipData := net.ParseIP(ip)
-	ipv4 := ipData.To4()
-	if ipv4 == nil {
-		// If not IPv4 then return - by default it will be marked clean
-		reply.IP.XFE.NotFound = true
-		return
-	}
-	if !ipv4.IsGlobalUnicast() {
-		// If not global unicast ignore
-		reply.IP.XFE.NotFound = true
-		return
-	}
-	// Private networks
-	if ipv4[0] == 10 || ipv4[0] == 172 && ipv4[1] >= 16 && ipv4[1] <= 31 || ipv4[0] == 192 && ipv4[1] == 168 {
-		reply.IP.XFE.NotFound = true
-		reply.IP.Private = true
-		return
-	}
-	c := make(chan int, 2)
-	go func() {
-		ipResp, err := w.xfe.IPR(ip)
-		if err != nil {
-			// Small hack - see if the URL was not found
-			if strings.Contains(err.Error(), "404") {
-				reply.IP.XFE.NotFound = true
+func (w *Worker) handleIP(text string, online bool, reply *domain.WorkReply) {
+	ips := ipReg.FindAllString(text, -1)
+	for _, ip := range ips {
+		reply.IPs = append(reply.IPs, domain.IPReply{})
+		counter := len(reply.IPs) - 1
+		reply.IPs[counter].Details = ip
+		reply.Type |= domain.ReplyTypeIP
+		// First, let's check if IP is globally unicast addressable and is public
+		ipData := net.ParseIP(ip)
+		ipv4 := ipData.To4()
+		if ipv4 == nil {
+			// If not IPv4 then return - by default it will be marked clean
+			reply.IPs[counter].XFE.NotFound = true
+			return
+		}
+		if !ipv4.IsGlobalUnicast() {
+			// If not global unicast ignore
+			reply.IPs[counter].XFE.NotFound = true
+			return
+		}
+		// Private networks
+		if ipv4[0] == 10 || ipv4[0] == 172 && ipv4[1] >= 16 && ipv4[1] <= 31 || ipv4[0] == 192 && ipv4[1] == 168 {
+			reply.IPs[counter].XFE.NotFound = true
+			reply.IPs[counter].Private = true
+			return
+		}
+		c := make(chan int, 2)
+		go func() {
+			ipResp, err := w.xfe.IPR(ip)
+			if err != nil {
+				// Small hack - see if the URL was not found
+				if strings.Contains(err.Error(), "404") {
+					reply.IPs[counter].XFE.NotFound = true
+				} else {
+					reply.IPs[counter].XFE.Error = err.Error()
+				}
 			} else {
-				reply.IP.XFE.Error = err.Error()
-			}
-		} else {
-			reply.IP.XFE.IPReputation = *ipResp
-			if online {
-				hist, err := w.xfe.IPRHistory(ip)
-				if err == nil {
-					reply.IP.XFE.IPHistory = *hist
+				reply.IPs[counter].XFE.IPReputation = *ipResp
+				if online {
+					hist, err := w.xfe.IPRHistory(ip)
+					if err == nil {
+						reply.IPs[counter].XFE.IPHistory = *hist
+					}
 				}
 			}
+			c <- 1
+		}()
+		go func() {
+			vtResp, err := w.vt.GetIpReport(ip)
+			if err != nil {
+				reply.IPs[counter].VT.Error = err.Error()
+			} else {
+				reply.IPs[counter].VT.IPReport = *vtResp
+			}
+			c <- 1
+		}()
+		for i := 0; i < 2; i++ {
+			<-c
 		}
-		c <- 1
-	}()
-	go func() {
-		vtResp, err := w.vt.GetIpReport(ip)
-		if err != nil {
-			reply.IP.VT.Error = err.Error()
-		} else {
-			reply.IP.VT.IPReport = *vtResp
+		var vtPositives uint16
+		now := time.Now()
+		for i := range reply.IPs[counter].VT.IPReport.DetectedUrls {
+			t, err := time.Parse("2006-01-02 15:04:05", reply.IPs[counter].VT.IPReport.DetectedUrls[i].ScanDate)
+			if err != nil {
+				logrus.Debugf("Error parsing scan date - %v", err)
+				continue
+			}
+			if reply.IPs[counter].VT.IPReport.DetectedUrls[i].Positives > vtPositives && t.Add(365*24*time.Hour).After(now) {
+				vtPositives = reply.IPs[counter].VT.IPReport.DetectedUrls[i].Positives
+			}
 		}
-		c <- 1
-	}()
-	for i := 0; i < 2; i++ {
-		<-c
-	}
-	var vtPositives uint16
-	now := time.Now()
-	for i := range reply.IP.VT.IPReport.DetectedUrls {
-		t, err := time.Parse("2006-01-02 15:04:05", reply.IP.VT.IPReport.DetectedUrls[i].ScanDate)
-		if err != nil {
-			logrus.Debugf("Error parsing scan date - %v", err)
-			continue
+		reply.IPs[counter].Result = domain.ResultUnknown
+		if reply.IPs[counter].XFE.IPReputation.Score >= xfeScoreToConvict || vtPositives >= numOfPositivesToConvict && reply.IPs[counter].XFE.NotFound {
+			// This is known bad scenario
+			reply.IPs[counter].Result = domain.ResultDirty
+		} else if !reply.IPs[counter].XFE.NotFound || reply.IPs[counter].VT.IPReport.ResponseCode == 1 {
+			// At least one of reputation services found this to be known good
+			// Keep the default
+			reply.IPs[counter].Result = domain.ResultClean
 		}
-		if reply.IP.VT.IPReport.DetectedUrls[i].Positives > vtPositives && t.Add(365*24*time.Hour).After(now) {
-			vtPositives = reply.IP.VT.IPReport.DetectedUrls[i].Positives
-		}
-	}
-	reply.IP.Result = domain.ResultUnknown
-	if reply.IP.XFE.IPReputation.Score >= xfeScoreToConvict || vtPositives >= numOfPositivesToConvict && reply.IP.XFE.NotFound {
-		// This is known bad scenario
-		reply.IP.Result = domain.ResultDirty
-	} else if !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
-		// At least one of reputation services found this to be known good
-		// Keep the default
-		reply.IP.Result = domain.ResultClean
 	}
 }
 
-func (w *Worker) handleMD5(md5 string, reply *domain.WorkReply) {
-	reply.Type |= domain.ReplyTypeMD5
-	reply.MD5.Details = md5
-	c := make(chan int, 2)
-	go func() {
-		md5Resp, err := w.xfe.MalwareDetails(md5)
-		if err != nil {
-			// Small hack - see if the file was not found
-			if strings.Contains(err.Error(), "404") {
-				reply.MD5.XFE.NotFound = true
+func (w *Worker) handleMD5(text string, reply *domain.WorkReply) {
+	md5s := md5Reg.FindAllString(text, -1)
+	for _, md5 := range md5s {
+		reply.MD5s = append(reply.MD5s, domain.MD5Reply{})
+		counter := len(reply.MD5s) - 1
+		reply.Type |= domain.ReplyTypeMD5
+		reply.MD5s[counter].Details = md5
+		c := make(chan int, 2)
+		go func() {
+			md5Resp, err := w.xfe.MalwareDetails(md5)
+			if err != nil {
+				// Small hack - see if the file was not found
+				if strings.Contains(err.Error(), "404") {
+					reply.MD5s[counter].XFE.NotFound = true
+				} else {
+					reply.MD5s[counter].XFE.Error = err.Error()
+				}
 			} else {
-				reply.MD5.XFE.Error = err.Error()
+				reply.MD5s[counter].XFE.Malware = md5Resp.Malware
 			}
-		} else {
-			reply.MD5.XFE.Malware = md5Resp.Malware
+			c <- 1
+		}()
+		go func() {
+			vtResp, err := w.vt.GetFileReport(md5)
+			if err != nil {
+				reply.MD5s[counter].VT.Error = err.Error()
+			} else {
+				reply.MD5s[counter].VT.FileReport = *vtResp
+			}
+			c <- 1
+		}()
+		for i := 0; i < 2; i++ {
+			<-c
 		}
-		c <- 1
-	}()
-	go func() {
-		vtResp, err := w.vt.GetFileReport(md5)
-		if err != nil {
-			reply.MD5.VT.Error = err.Error()
-		} else {
-			reply.MD5.VT.FileReport = *vtResp
+		reply.MD5s[counter].Result = domain.ResultUnknown
+		if len(reply.MD5s[counter].XFE.Malware.Family) > 0 || reply.MD5s[counter].VT.FileReport.Positives >= numOfPositivesToConvictForFiles {
+			// This is known bad scenario
+			reply.MD5s[counter].Result = domain.ResultDirty
+		} else if !reply.MD5s[counter].XFE.NotFound || reply.MD5s[counter].VT.FileReport.ResponseCode == 1 {
+			// At least one of reputation services found this to be known good
+			// Keep the default
+			reply.MD5s[counter].Result = domain.ResultClean
 		}
-		c <- 1
-	}()
-	for i := 0; i < 2; i++ {
-		<-c
-	}
-	reply.MD5.Result = domain.ResultUnknown
-	if len(reply.MD5.XFE.Malware.Family) > 0 || reply.MD5.VT.FileReport.Positives >= numOfPositivesToConvictForFiles {
-		// This is known bad scenario
-		reply.MD5.Result = domain.ResultDirty
-	} else if !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
-		// At least one of reputation services found this to be known good
-		// Keep the default
-		reply.MD5.Result = domain.ResultClean
 	}
 }
 
@@ -354,10 +373,14 @@ func (w *Worker) handleFile(request *domain.WorkRequest, reply *domain.WorkReply
 	w.handleMD5(h, reply)
 	<-c
 	reply.File.Result = domain.ResultUnknown
-	if reply.File.Virus != "" || len(reply.MD5.XFE.Malware.Family) > 0 || reply.MD5.VT.FileReport.Positives > numOfPositivesToConvict {
+	if len(reply.MD5s) != 1 {
+		logrus.Warnf("Handling file but did not get an MD5 reply - %+v", reply)
+		return
+	}
+	if reply.File.Virus != "" || len(reply.MD5s[0].XFE.Malware.Family) > 0 || reply.MD5s[0].VT.FileReport.Positives > numOfPositivesToConvict {
 		// This is known bad scenario
 		reply.File.Result = domain.ResultDirty
-	} else if reply.File.Virus == "" || !reply.MD5.XFE.NotFound || reply.MD5.VT.FileReport.ResponseCode == 1 {
+	} else if reply.File.Virus == "" || !reply.MD5s[0].XFE.NotFound || reply.MD5s[0].VT.FileReport.ResponseCode == 1 {
 		// At least one of reputation services found this to be known good
 		// Keep the default
 		reply.File.Result = domain.ResultClean
