@@ -49,7 +49,7 @@ func (ac *AppContext) initiateOAuth(w http.ResponseWriter, r *http.Request) {
 		ClientID:     conf.Options.Slack.ClientID,
 		ClientSecret: conf.Options.Slack.ClientSecret,
 		Scopes: []string{
-			"bot", "mpim:history", "im:history", "groups:history", "files:read", "channels:history", "channels:write"},
+			"bot", "mpim:history", "im:history", "groups:history", "files:read", "channels:history", "channels:write", "team:read", "users:read"},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  slackOAuthEndpoint,
 			TokenURL: slackOAuthExchange,
