@@ -14,34 +14,45 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 	file := r.FormValue("f")
 	message := r.FormValue("m")
 	channel := r.FormValue("c")
-	if team == "" || file == "" && (message == "" || channel == "") {
+	text := r.FormValue("text")
+	if team == "" || file == "" && (message == "" || channel == "" || text == "") {
 		WriteError(w, ErrBadRequest)
 		return
 	}
+	// We need this just for a small verification that the team is one of ours
 	t, err := ac.r.Team(team)
 	if err != nil {
 		logrus.Warnf("Error loading team - %v\n", err)
 		WriteError(w, ErrInternalServer)
 		return
 	}
-	// Bot scope does not have file info and history permissions so we need to iterate users
-	users, err := ac.r.TeamMembers(team)
-	if err != nil {
-		logrus.Warnf("Error loading team members - %v\n", err)
-		WriteError(w, ErrInternalServer)
-		return
-	}
-	users = append([]domain.User{{Name: "dbot", Token: t.BotToken, ID: t.BotUserID, Status: domain.UserStatusActive}}, users...)
 	var workReq *domain.WorkRequest
-	for i := range users {
-		if users[i].Status == domain.UserStatusActive {
-			// The first one that can retrieve the info...
-			s, err := slack.New(slack.SetToken(users[i].Token))
-			if err != nil {
-				logrus.Infof("Error creating Slack client for user %s (%s) - %v\n", users[i].ID, users[i].Name, err)
-				continue
-			}
-			if file != "" {
+	// If we have the actual text to show details for
+	if file == "" {
+		workReq = &domain.WorkRequest{
+			MessageID:  message,
+			Type:       "message",
+			Text:       text,
+			ReplyQueue: ac.replyQueue,
+			Online:     true,
+		}
+	} else {
+		// Bot scope does not have file info and history permissions so we need to iterate users
+		users, err := ac.r.TeamMembers(team)
+		if err != nil {
+			logrus.Warnf("Error loading team members - %v\n", err)
+			WriteError(w, ErrInternalServer)
+			return
+		}
+		users = append([]domain.User{{Name: "dbot", Token: t.BotToken, ID: t.BotUserID, Status: domain.UserStatusActive}}, users...)
+		for i := range users {
+			if users[i].Status == domain.UserStatusActive {
+				// The first one that can retrieve the info...
+				s, err := slack.New(slack.SetToken(users[i].Token))
+				if err != nil {
+					logrus.Infof("Error creating Slack client for user %s (%s) - %v\n", users[i].ID, users[i].Name, err)
+					continue
+				}
 				info, err := s.FileInfo(file, 0, 0)
 				if err != nil {
 					logrus.Infof("Error retrieving file info - %v\n", err)
@@ -55,21 +66,16 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 					Online:     true,
 				}
 				break
-			} else {
-				resp, err := s.History(channel, message, message, true, false, 1)
-				if err != nil {
-					logrus.Infof("Error retrieving message history - %v\n", err)
-					continue
-				}
-				if len(resp.Messages) == 0 {
-					logrus.Infof("Error retrieving message history - message %s not found on channel %s\n", message, channel)
-					WriteError(w, ErrInternalServer)
-					return
-				}
-				workReq = domain.WorkRequestFromMessage(&resp.Messages[0])
-				workReq.ReplyQueue = ac.replyQueue
-				workReq.Online = true
-				break
+			}
+		}
+		// Just retrieve the details for the MD5
+		if workReq == nil {
+			workReq = &domain.WorkRequest{
+				MessageID:  "file-message",
+				Type:       "message",
+				Text:       text,
+				ReplyQueue: ac.replyQueue,
+				Online:     true,
 			}
 		}
 	}

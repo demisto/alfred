@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -82,7 +83,7 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 		color = "good"
 		comment = fileCommentGood
 	}
-	fileMessage := fmt.Sprintf(comment, reply.File.Details.Name, fmt.Sprintf("<%s|Details>", link))
+	fileMessage := fmt.Sprintf(comment, reply.File.Details.Name, fmt.Sprintf("<%s&text=%s|Details>", link, url.QueryEscape(reply.MD5.Details)))
 	postMessage := &slack.PostMessageRequest{
 		Channel:     data.Channel,
 		Attachments: []slack.Attachment{{Fallback: fileMessage, Text: fileMessage, Color: color}},
@@ -305,7 +306,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				color = "good"
 				comment = urlCommentGood
 			}
-			urlMessage := fmt.Sprintf(comment, reply.URL.Details, fmt.Sprintf("<%s|Details>", link))
+			urlMessage := fmt.Sprintf(comment, reply.URL.Details, fmt.Sprintf("<%s&text=%s|Details>", link, url.QueryEscape(reply.URL.Details)))
 			if verbose || color != "good" {
 				postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
 					Fallback: urlMessage,
@@ -370,7 +371,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				color = "good"
 				comment = ipCommentGood
 			}
-			ipMessage := fmt.Sprintf(comment, reply.IP.Details, fmt.Sprintf("<%s|Details>", link))
+			ipMessage := fmt.Sprintf(comment, reply.IP.Details, fmt.Sprintf("<%s&text=%s|Details>", link, url.QueryEscape(reply.IP.Details)))
 			if verbose || color != "good" {
 				postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
 					Fallback: ipMessage,
@@ -441,7 +442,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				color = "good"
 				comment = md5CommentGood
 			}
-			md5Message := fmt.Sprintf(comment, reply.MD5.Details, fmt.Sprintf("<%s|Details>", link))
+			md5Message := fmt.Sprintf(comment, reply.MD5.Details, fmt.Sprintf("<%s&text=%s|Details>", link, url.QueryEscape(reply.MD5.Details)))
 			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
 				Fallback: md5Message,
 				Text:     md5Message,
