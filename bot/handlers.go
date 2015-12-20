@@ -140,9 +140,8 @@ func GetContext(context interface{}) (*domain.Context, error) {
 }
 
 func (w *Worker) handleURL(text string, online bool, reply *domain.WorkReply) {
-	var start int
 	for {
-		start = strings.Index(text[start:], "<http")
+		start := strings.Index(text, "<http")
 		if start < 0 {
 			break
 		}
@@ -151,12 +150,14 @@ func (w *Worker) handleURL(text string, online bool, reply *domain.WorkReply) {
 			break
 		}
 		end = end + start
+		realEnd := end
 		filter := strings.Index(text[start:end], "|")
 		if filter > 0 {
 			end = start + filter
 		}
 		url := text[start+1 : end]
 		logrus.Debugf("URL found - %s\n", url)
+		text = text[realEnd:]
 		reply.URLs = append(reply.URLs, domain.URLReply{})
 		counter := len(reply.URLs) - 1
 		reply.URLs[counter].Details = url
