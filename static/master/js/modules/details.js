@@ -84,7 +84,7 @@
           return null;
         }
         else {
-          var ipdata = this.props.data.ip;
+          var ipdata = this.props.data.ips[0];
           return (
             <div>
               <h2>IP: {ipdata.details}</h2>
@@ -335,7 +335,7 @@
         if (!isurl) {
           return null;
         } else {
-          var urldata = this.props.data.url;
+          var urldata = this.props.data.urls[0];
           return (
             <div>
               <h2>URL: {urldata.details}</h2>
@@ -568,10 +568,10 @@
           var data = this.props.data;
           return (
             <div>
-              <h2>File: {isfile ? data.file.details.name : data.md5.details}</h2>
+              <h2>File: {isfile ? data.file.details.name : data.md5s[0].details}</h2>
               <FileResultMessage data={data} />
               <FileAV data={data} />
-              <FileDetails data={data.md5} />
+              <FileDetails data={data.md5s[0]} />
             </div>
           );
         }
@@ -582,10 +582,8 @@
       render: function() {
         var resultMessage = 'Could not determine the File reputation.';
         var color = 'warning-text';
-        var filedata = null;
-        var md5data = null;
-        filedata = this.props.data.file;
-        md5data = this.props.data.md5;
+        var filedata = this.props.data.file;
+        var md5data = this.props.data.md5s[0];
         if (isfile && filedata.Result == 0 || ismd5 && md5data.Result == 0) {
           resultMessage = 'File is found to be clean.';
           color = 'success-text';
