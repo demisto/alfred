@@ -712,7 +712,8 @@ func (b *Bot) showHelp(team, channel string) {
 		Text: `Here are the commands I understand:
 config: list the current channels I'm listening on
 join all/#channel1,#channel2...: I will join all/specified public channels and start monitoring them.
-verbose on/off #channel1,#channel2... - turn on verbose mode on the specified channels`,
+verbose on/off #channel1,#channel2... - turn on verbose mode on the specified channels
+verbose mode is usually used by security professionals. When in verbose mode, dbot will display reputation details about any URL, IP or file including clean ones.`,
 	}
 	sub := b.subscriptions[team]
 	var err error
