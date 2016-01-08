@@ -184,7 +184,8 @@ func (b *Bot) startWSForTeam(team string, teamSub *subscription) error {
 	if err != nil {
 		logrus.Warnf("Unable to start WS for team %s (%s) - %v\n", team, teamSub.team.Name, err)
 		// For revoked tokens, the user is not active anymore
-		if strings.Contains(err.Error(), "token_revoked") {
+		errStr := err.Error()
+		if strings.Contains(errStr, "token_revoked") || strings.Contains(errStr, "account_inactive") {
 			teamSub.team.Status = domain.UserStatusDeleted
 			logrus.Infof("Updating team status for %s (%s)", team, teamSub.team.Name)
 			dbErr := b.r.SetTeam(teamSub.team)
@@ -212,7 +213,8 @@ func (b *Bot) startWS() error {
 	for k, v := range b.subscriptions {
 		if !v.started && v.team.Status == domain.UserStatusActive {
 			err := b.startWSForTeam(k, v)
-			if err != nil && strings.Contains(err.Error(), "token_revoked") {
+			errStr := err.Error()
+			if err != nil && (strings.Contains(errStr, "token_revoked") || strings.Contains(errStr, "account_inactive")) {
 				subsToClean = append(subsToClean, k)
 			}
 		}
