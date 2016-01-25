@@ -92,7 +92,7 @@ func sendThanks(team *domain.Team, user *domain.User) {
 		AsUser:  true,
 		Text: fmt.Sprintf(`Hi %s, thanks for inviting me to this team.
 If you want me to monitor conversations, please add me to the relevant channels and groups.
-Here are the commands I understand:
+Here are the commands I understand when you send me a DIRECT MESSAGE here:
 config: list the current channels I'm listening on
 join all/#channel1,#channel2...: I will join all/specified public channels and start monitoring them.
 verbose on/off #channel1,#channel2... - turn on verbose mode on the specified channels
@@ -176,11 +176,12 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 			Created:     time.Now(),
 			BotUserID:   token.Bot.BotUserID,
 			BotToken:    token.Bot.BotAccessToken,
+			Status:      domain.UserStatusActive,
 		}
 	} else {
 		logrus.Debugf("Got an existing team - %s", team.Team.Name)
-		ourTeam.Name, ourTeam.EmailDomain, ourTeam.Domain, ourTeam.Plan, ourTeam.BotUserID, ourTeam.BotToken =
-			team.Team.Name, team.Team.EmailDomain, team.Team.Domain, team.Team.Plan, token.Bot.BotUserID, token.Bot.BotAccessToken
+		ourTeam.Name, ourTeam.EmailDomain, ourTeam.Domain, ourTeam.Plan, ourTeam.BotUserID, ourTeam.BotToken, ourTeam.Status =
+			team.Team.Name, team.Team.EmailDomain, team.Team.Domain, team.Team.Plan, token.Bot.BotUserID, token.Bot.BotAccessToken, domain.UserStatusActive
 	}
 	newUser := false
 	logrus.Debugln("Finding the user...")
