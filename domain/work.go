@@ -17,10 +17,11 @@ type Context struct {
 
 // File details for a request
 type File struct {
-	ID   string `json:"id"`
-	URL  string `json:"url"`
-	Name string `json:"name"`
-	Size int    `json:"size"`
+	ID    string `json:"id"`
+	URL   string `json:"url"`
+	Name  string `json:"name"`
+	Size  int    `json:"size"`
+	Token string `json:"token"`
 }
 
 // WorkRequest contains the relevant fields for a work request
@@ -35,7 +36,7 @@ type WorkRequest struct {
 }
 
 // WorkRequestFromMessage converts a message to a work request
-func WorkRequestFromMessage(msg *slack.Message) *WorkRequest {
+func WorkRequestFromMessage(msg *slack.Message, token string) *WorkRequest {
 	req := &WorkRequest{}
 	switch msg.Type {
 	case "message":
@@ -45,7 +46,7 @@ func WorkRequestFromMessage(msg *slack.Message) *WorkRequest {
 		case "message_changed":
 			req.MessageID, req.Type, req.Text = msg.Message.Timestamp, "message", msg.Message.Text
 		case "file_share", "file_mention":
-			req.MessageID, req.Type, req.File = msg.Timestamp, "file", File{ID: msg.File.ID, URL: msg.File.URL, Name: msg.File.Name, Size: msg.File.Size}
+			req.MessageID, req.Type, req.File = msg.Timestamp, "file", File{ID: msg.File.ID, URL: msg.File.URLPrivate, Name: msg.File.Name, Size: msg.File.Size, Token: token}
 		case "file_comment":
 			req.MessageID, req.Type, req.Text = msg.Timestamp, "message", msg.Comment.Comment
 		}

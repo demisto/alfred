@@ -60,7 +60,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 				}
 				workReq = &domain.WorkRequest{
 					Type:       "file",
-					File:       domain.File{URL: info.File.URL, Name: info.File.Name, Size: info.File.Size},
+					File:       domain.File{URL: info.File.URLPrivate, Name: info.File.Name, Size: info.File.Size, Token: t.BotToken},
 					ReplyQueue: ac.replyQueue,
 					Context:    nil,
 					Online:     true,

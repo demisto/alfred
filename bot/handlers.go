@@ -349,7 +349,13 @@ func (w *Worker) handleFile(request *domain.WorkRequest, reply *domain.WorkReply
 		return
 	}
 	hash := md5.New()
-	resp, err := http.Get(request.File.URL)
+	req, err := http.NewRequest("GET", request.File.URL, nil)
+	if err != nil {
+		logrus.Errorf("Unable to create request for download file - %v\n", err)
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+request.File.Token)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		logrus.Errorf("Unable to download file - %v\n", err)
 		return

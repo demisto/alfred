@@ -281,7 +281,7 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 		// If we need to handle the message, pass it to the queue
 		if push {
 			logrus.Debugf("Handling message - %+v\n", msg)
-			workReq := domain.WorkRequestFromMessage(msg)
+			workReq := domain.WorkRequestFromMessage(msg, sub.team.BotToken)
 			t, err := slack.TimestampToTime(workReq.MessageID)
 			if err != nil {
 				logrus.Warnf("Unable to get message timestamp %s - %v", workReq.MessageID, err)
