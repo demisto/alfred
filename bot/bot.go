@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	maxUsersPerBot = 500
+	maxUsersPerBot = 600
 )
 
 // subscription holds the interest we have for each team
