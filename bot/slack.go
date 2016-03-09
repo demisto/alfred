@@ -285,6 +285,16 @@ func nilOrUnknown(v interface{}) string {
 	return fmt.Sprintf("%v", v)
 }
 
+func defangURL(u string) string {
+	if i := strings.Index(u, "https://"); i >= 0 {
+		return strings.Replace(u, "https://", "httpsdefang://", 1)
+	}
+	if i := strings.Index(u, "http://"); i >= 0 {
+		return strings.Replace(u, "http://", "httpdefang://", 1)
+	}
+	return u
+}
+
 func (b *Bot) handleReply(reply *domain.WorkReply) {
 	logrus.Debugf("Handling reply - %s", reply.MessageID)
 	data, err := GetContext(reply.Context)
@@ -322,7 +332,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 				color = "good"
 				comment = urlCommentGood
 			}
-			urlMessage := fmt.Sprintf(comment, reply.URLs[i].Details, fmt.Sprintf("<%s&text=%s|Details>", link, url.QueryEscape("<"+reply.URLs[i].Details+">")))
+			urlMessage := fmt.Sprintf(comment, defangURL(reply.URLs[i].Details), fmt.Sprintf("<%s&text=%s|Details>", link, url.QueryEscape("<"+reply.URLs[i].Details+">")))
 			if verbose || color != "good" {
 				postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
 					Fallback: urlMessage,
@@ -430,7 +440,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 							vtPositives = detectedURLs[j].Positives
 						}
 						if j < 20 {
-							listOfURLs += fmt.Sprintf("URL: %s, Positives: %v, Total: %v, Date: %s", detectedURLs[j].Url, detectedURLs[j].Positives, detectedURLs[j].Total, detectedURLs[j].ScanDate) + "\n"
+							listOfURLs += fmt.Sprintf("URL: %s, Positives: %v, Total: %v, Date: %s", defangURL(detectedURLs[j].Url), detectedURLs[j].Positives, detectedURLs[j].Total, detectedURLs[j].ScanDate) + "\n"
 						}
 					}
 					vtColor := "good"
