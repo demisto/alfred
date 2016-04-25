@@ -16,10 +16,6 @@ import (
 )
 
 const (
-	botName            = "DBot"
-	reactionTooBig     = "warning"
-	reactionGood       = "+1"
-	reactionBad        = "imp"
 	fileCommentGood    = "File (%s) is clean. Click %s for more details."
 	fileCommentBig     = "File (%s) is too large to scan. Click %s for more details."
 	fileCommentBad     = "Warning: File (%s) is malicious. Click %s for more details."
@@ -35,7 +31,6 @@ const (
 	md5CommentBad      = "Warning: MD5 hash (%s) is malicious: %s."
 	md5CommentWarning  = "Unable to find details regarding this MD5 hash (%s): %s."
 	mainMessage        = "Security check by DBot - Demisto Bot. Click <%s|here> for configuration and details."
-	firstMessage       = "<@%s|%s> has added <%s|DBot> by Demisto to monitor this channel."
 )
 
 func joinMap(m map[string]bool) string {
@@ -555,9 +550,13 @@ func parseChannels(sub *subscription, text string, pos int) ([]string, []string,
 			subpart := strings.TrimSpace(subparts[j])
 			if subpart != "" {
 				var ch string
-				if strings.Contains(subpart, "<#") { // if this is #channel
+				switch {
+				case strings.Contains(subpart, "<#"): // if this is #channel
 					ch = subpart[2 : len(subpart)-1]
-				} else {
+				case strings.HasPrefix(subpart, "#"): // if this is a group but someone chose # as start
+					subpart = subpart[1:]
+					fallthrough
+				default:
 					ch = sub.ChannelID(subpart)
 				}
 				if ch != "" {
@@ -650,15 +649,39 @@ func (b *Bot) handleVerbose(team, text, channel string) {
 		postMessage.Text = "I could not understand your command. Verbose command is:\nverbose on #channel1,#channel2 - to turn on verbose mode on for a list of channels.\nverbose off #channel1,#channel2 - to turn off verbose mode on for a list of channels."
 	} else {
 		for _, ch := range channels {
-			if strings.ToLower(parts[1]) == "on" && !util.In(sub.configuration.VerboseChannels, ch) {
-				sub.configuration.VerboseChannels = append(sub.configuration.VerboseChannels, ch)
-				changed = true
-			} else if strings.ToLower(parts[1]) == "off" && util.In(sub.configuration.VerboseChannels, ch) {
-				index := util.Index(sub.configuration.VerboseChannels, ch)
-				if index >= 0 {
-					sub.configuration.VerboseChannels = sub.configuration.VerboseChannels[:index+copy(sub.configuration.VerboseChannels[index:], sub.configuration.VerboseChannels[index+1:])]
+			if ch == "" {
+				continue
+			}
+			if strings.ToLower(parts[1]) == "on" {
+				if ch[0] == 'C' {
+					if !util.In(sub.configuration.VerboseChannels, ch) {
+						sub.configuration.VerboseChannels = append(sub.configuration.VerboseChannels, ch)
+						changed = true
+					}
+				} else if ch[0] == 'G' {
+					if !util.In(sub.configuration.VerboseGroups, ch) {
+						sub.configuration.VerboseGroups = append(sub.configuration.VerboseGroups, ch)
+						changed = true
+					}
 				}
-				changed = true
+			} else if strings.ToLower(parts[1]) == "off" {
+				if ch[0] == 'C' {
+					if util.In(sub.configuration.VerboseChannels, ch) {
+						index := util.Index(sub.configuration.VerboseChannels, ch)
+						if index >= 0 {
+							sub.configuration.VerboseChannels = sub.configuration.VerboseChannels[:index+copy(sub.configuration.VerboseChannels[index:], sub.configuration.VerboseChannels[index+1:])]
+						}
+						changed = true
+					}
+				} else if ch[0] == 'G' {
+					if util.In(sub.configuration.VerboseGroups, ch) {
+						index := util.Index(sub.configuration.VerboseGroups, ch)
+						if index >= 0 {
+							sub.configuration.VerboseGroups = sub.configuration.VerboseGroups[:index+copy(sub.configuration.VerboseGroups[index:], sub.configuration.VerboseGroups[index+1:])]
+						}
+						changed = true
+					}
+				}
 			}
 		}
 	}
@@ -670,6 +693,8 @@ func (b *Bot) handleVerbose(team, text, channel string) {
 		} else {
 			postMessage.Text = "Verbose state was changed."
 		}
+	} else {
+		postMessage.Text = "Verbose state did not change - could not find anything new to change"
 	}
 	_, err = sub.s.PostMessage(postMessage, false)
 	if err != nil {
@@ -677,9 +702,9 @@ func (b *Bot) handleVerbose(team, text, channel string) {
 	}
 }
 
-func (b *Bot) handleConfig(team, channel string) {
+func (b *Bot) handleConfig(team string, msg *slack.Message) {
 	postMessage := &slack.PostMessageRequest{
-		Channel: channel,
+		Channel: msg.Channel,
 		AsUser:  true,
 	}
 	sub := b.subscriptions[team]
@@ -706,6 +731,30 @@ func (b *Bot) handleConfig(team, channel string) {
 		text := fmt.Sprintf("Channels I'm monitoring: %s", strings.Join(channels, ", "))
 		if len(verboseChannels) > 0 {
 			text = text + fmt.Sprintf("\nChannels I'm monitoring and providing extra info: %s", strings.Join(verboseChannels, ", "))
+		}
+		grp, err := sub.s.GroupList(true)
+		// Ignore the error - most usage will be with channels anyway
+		if err == nil {
+			var groups []string
+			var verboseGroups []string
+			for i := range grp.Groups {
+				// Filter groups only to those that the user is member of so we don't leak info
+				if util.In(grp.Groups[i].Members, msg.User) {
+					if sub.configuration.IsVerbose(grp.Groups[i].ID, "") {
+						verboseGroups = append(verboseGroups, grp.Groups[i].Name)
+					} else {
+						groups = append(groups, grp.Groups[i].Name)
+					}
+				}
+			}
+			if len(groups) > 0 {
+				text = text + fmt.Sprintf("\nPrivate channels I'm monitoring: %s", strings.Join(groups, ", "))
+			}
+			if len(verboseGroups) > 0 {
+				text = text + fmt.Sprintf("\nPrivate channels I'm monitoring and providing extra info: %s", strings.Join(verboseGroups, ", "))
+			}
+		} else {
+			logrus.Warnf("Error retrieving groups for sub %s - %v", sub.team.Name, err)
 		}
 		postMessage.Text = text
 	}

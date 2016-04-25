@@ -70,14 +70,31 @@ func (sub *subscription) ChannelID(channel string) string {
 	if channel == "" {
 		return ""
 	}
+	channel = strings.ToLower(channel)
 	for i := range sub.info.Channels {
-		if strings.ToLower(channel) == strings.ToLower(sub.info.Channels[i].Name) {
+		if channel == strings.ToLower(sub.info.Channels[i].Name) {
 			return sub.info.Channels[i].ID
+		}
+	}
+	// Might be a new channel
+	if list, err := sub.s.ChannelList(true); err == nil {
+		for i := range list.Channels {
+			if channel == strings.ToLower(list.Channels[i].Name) {
+				return list.Channels[i].ID
+			}
 		}
 	}
 	for i := range sub.info.Groups {
 		if strings.ToLower(channel) == strings.ToLower(sub.info.Groups[i].Name) {
 			return sub.info.Groups[i].ID
+		}
+	}
+	// Might be a new private channel
+	if list, err := sub.s.GroupList(true); err == nil {
+		for i := range list.Groups {
+			if channel == strings.ToLower(list.Groups[i].Name) {
+				return list.Groups[i].ID
+			}
 		}
 	}
 	return ""
@@ -307,7 +324,7 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 				case strings.HasPrefix(text, "verbose "):
 					b.handleVerbose(ctx.Team, msg.Text, msg.Channel) // Need the actual channel IDs
 				case text == "config":
-					b.handleConfig(ctx.Team, msg.Channel)
+					b.handleConfig(ctx.Team, msg)
 				case text == "?" || strings.HasPrefix(text, "help"):
 					b.showHelp(ctx.Team, msg.Channel)
 				}
