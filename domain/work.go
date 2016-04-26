@@ -32,12 +32,15 @@ type WorkRequest struct {
 	File       File        `json:"file"`
 	ReplyQueue string      `json:"reply_queue"`
 	Context    interface{} `json:"context"`
-	Online     bool        `json:"online"` // Are we running this request from online details page
+	Online     bool        `json:"online"`   // Are we running this request from online details page
+	VTKey      string      `json:"vt_key"`   // This team has his own vt key
+	XFEKey     string      `json:"xfe_key"`  // This team has his own xfe key
+	XFEPass    string      `json:"xfe_pass"` // This team has his own xfe pass
 }
 
 // WorkRequestFromMessage converts a message to a work request
-func WorkRequestFromMessage(msg *slack.Message, token string) *WorkRequest {
-	req := &WorkRequest{}
+func WorkRequestFromMessage(msg *slack.Message, token, vtKey, xfeKey, xfePass string) *WorkRequest {
+	req := &WorkRequest{VTKey: vtKey, XFEKey: xfeKey, XFEPass: xfePass}
 	switch msg.Type {
 	case "message":
 		switch msg.Subtype {

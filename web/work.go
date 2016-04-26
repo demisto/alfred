@@ -35,6 +35,9 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 			Text:       text,
 			ReplyQueue: ac.replyQueue,
 			Online:     true,
+			VTKey:      t.VTKey,
+			XFEKey:     t.XFEKey,
+			XFEPass:    t.XFEPass,
 		}
 	} else {
 		// Bot scope does not have file info and history permissions so we need to iterate users
@@ -64,6 +67,9 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 					ReplyQueue: ac.replyQueue,
 					Context:    nil,
 					Online:     true,
+					VTKey:      t.VTKey,
+					XFEKey:     t.XFEKey,
+					XFEPass:    t.XFEPass,
 				}
 				break
 			}
@@ -76,6 +82,9 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 				Text:       text,
 				ReplyQueue: ac.replyQueue,
 				Online:     true,
+				VTKey:      t.VTKey,
+				XFEKey:     t.XFEKey,
+				XFEPass:    t.XFEPass,
 			}
 		}
 	}

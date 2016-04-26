@@ -20,17 +20,20 @@ import (
 
 const schema = `
 CREATE TABLE IF NOT EXISTS teams (
-    id VARCHAR(64) NOT NULL,
-    name VARCHAR(128) NOT NULL,
-		status int NOT NULL,
-    email_domain VARCHAR(128),
-		domain VARCHAR(128),
-		plan VARCHAR(128),
-		external_id VARCHAR(64) NOT NULL,
-		created timestamp NOT NULL,
-		bot_user_id VARCHAR(64) NOT NULL,
-		bot_token VARCHAR(512) NOT NULL,
-		CONSTRAINT teams_pk PRIMARY KEY (id)
+	id VARCHAR(64) NOT NULL,
+	name VARCHAR(128) NOT NULL,
+	status int NOT NULL,
+	email_domain VARCHAR(128),
+	domain VARCHAR(128),
+	plan VARCHAR(128),
+	external_id VARCHAR(64) NOT NULL,
+	created timestamp NOT NULL,
+	bot_user_id VARCHAR(64) NOT NULL,
+	bot_token VARCHAR(512) NOT NULL,
+	vt_key VARCHAR(512),
+	xfe_key VARCHAR(512),
+	xfe_pass VARCHAR(512),
+	CONSTRAINT teams_pk PRIMARY KEY (id)
 );
 CREATE TABLE IF NOT EXISTS users (
 	id VARCHAR(64) NOT NULL,
@@ -221,12 +224,24 @@ func clearUserToken(u *domain.User) error {
 	return nil
 }
 
-func clearTeamToken(t *domain.Team) error {
+func clearTeamFields(t *domain.Team) error {
 	clearToken, err := t.ClearToken()
 	if err != nil {
 		return err
 	}
-	t.BotToken = clearToken
+	clearVTKey, err := t.ClearVTKey()
+	if err != nil {
+		return err
+	}
+	clearXFEKey, err := t.ClearXFEKey()
+	if err != nil {
+		return err
+	}
+	clearXFEPass, err := t.ClearXFEPass()
+	if err != nil {
+		return err
+	}
+	t.BotToken, t.VTKey, t.XFEKey, t.XFEPass = clearToken, clearVTKey, clearXFEKey, clearXFEPass
 	return nil
 }
 
@@ -271,7 +286,7 @@ func (r *repoMySQL) Team(id string) (*domain.Team, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = clearTeamToken(team); err != nil {
+	if err = clearTeamFields(team); err != nil {
 		return nil, err
 	}
 	return team, nil
@@ -283,7 +298,7 @@ func (r *repoMySQL) TeamByExternalID(id string) (*domain.Team, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = clearTeamToken(team); err != nil {
+	if err = clearTeamFields(team); err != nil {
 		return nil, err
 	}
 	return team, nil
@@ -300,7 +315,7 @@ func (r *repoMySQL) Teams() ([]domain.Team, error) {
 		return teams, err
 	}
 	for i := range teams {
-		err = clearTeamToken(&teams[i])
+		err = clearTeamFields(&teams[i])
 		if err != nil {
 			logrus.Warnf("Unencrypted token found in DB - %v", err)
 		}
@@ -334,9 +349,21 @@ func (r *repoMySQL) SetTeamAndUser(team *domain.Team, user *domain.User) error {
 		if err != nil {
 			return err
 		}
+		secureVTKey, err := team.SecureVTKey()
+		if err != nil {
+			return err
+		}
+		secureXFEKey, err := team.SecureXFEKey()
+		if err != nil {
+			return err
+		}
+		secureXFEPass, err := team.SecureXFEPass()
+		if err != nil {
+			return err
+		}
 		_, err = tx.Exec(`INSERT INTO teams (
-id, name, status, email_domain, domain, plan, external_id, created, bot_user_id, bot_token)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+id, name, status, email_domain, domain, plan, external_id, created, bot_user_id, bot_token, vt_key, xfe_key, xfe_pass)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 name = ?,
 status = ?,
@@ -346,9 +373,12 @@ plan = ?,
 external_id = ?,
 created = ?,
 bot_user_id = ?,
-bot_token = ?`,
-			team.ID, team.Name, team.Status, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created, team.BotUserID, secureToken,
-			team.Name, team.Status, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created, team.BotUserID, secureToken)
+bot_token = ?,
+vt_key = ?,
+xfe_key = ?,
+xfe_pass = ?`,
+			team.ID, team.Name, team.Status, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created, team.BotUserID, secureToken, secureVTKey, secureXFEKey, secureXFEPass,
+			team.Name, team.Status, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created, team.BotUserID, secureToken, secureVTKey, secureXFEKey, secureXFEPass)
 		if err != nil {
 			return err
 		}

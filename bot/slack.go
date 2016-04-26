@@ -756,10 +756,94 @@ func (b *Bot) handleConfig(team string, msg *slack.Message) {
 		} else {
 			logrus.Warnf("Error retrieving groups for sub %s - %v", sub.team.Name, err)
 		}
+		if sub.team.VTKey != "" {
+			l := len(sub.team.VTKey)
+			text = text + "\nUsing your own VirusTotal key ending with " + sub.team.VTKey[l-4:]
+		}
+		if sub.team.XFEKey != "" {
+			l := len(sub.team.XFEKey)
+			text = text + "\nUsing your own IBM X-Force Exchange key ending with " + sub.team.XFEKey[l-4:]
+		}
 		postMessage.Text = text
 	}
 	_, err = sub.s.PostMessage(postMessage, false)
 	if err != nil {
+		logrus.Warnf("Error posting config message - %v", err)
+	}
+}
+
+func (b *Bot) handleVT(team, text, channel string) {
+	postMessage := &slack.PostMessageRequest{
+		Channel: channel,
+		AsUser:  true,
+	}
+	sub := b.subscriptions[team]
+	if sub == nil {
+		logrus.Warnf("Got message but do not have subsciption for team %s", team)
+		return
+	}
+	parts := strings.Split(text, " ")
+	if len(parts) == 2 {
+		if parts[1] == "-" {
+			sub.team.VTKey = ""
+			err := b.r.SetTeam(sub.team)
+			if err == nil {
+				postMessage.Text = "Cleared VT key - using default"
+			} else {
+				postMessage.Text = "Error clearing VT key - no worries, we are handling it"
+				logrus.WithError(err).Warnf("Unable to clear VT key for team %s", team)
+			}
+		} else {
+			sub.team.VTKey = parts[1]
+			err := b.r.SetTeam(sub.team)
+			if err == nil {
+				postMessage.Text = "VT key set."
+			} else {
+				postMessage.Text = "Error setting VT key - no worries, we are handling it"
+				logrus.WithError(err).Warnf("Unable to set VT key for team %s", team)
+			}
+		}
+	} else {
+		postMessage.Text = "Sorry, I could not understand you."
+	}
+	if _, err := sub.s.PostMessage(postMessage, false); err != nil {
+		logrus.Warnf("Error posting config message - %v", err)
+	}
+}
+
+func (b *Bot) handleXFE(team, text, channel string) {
+	postMessage := &slack.PostMessageRequest{
+		Channel: channel,
+		AsUser:  true,
+	}
+	sub := b.subscriptions[team]
+	if sub == nil {
+		logrus.Warnf("Got message but do not have subsciption for team %s", team)
+		return
+	}
+	parts := strings.Split(text, " ")
+	if len(parts) == 2 && parts[1] == "-" || len(parts) == 3 && parts[1] == "-" {
+		sub.team.XFEKey, sub.team.XFEPass = "", ""
+		err := b.r.SetTeam(sub.team)
+		if err == nil {
+			postMessage.Text = "Cleared XFE key - using default"
+		} else {
+			postMessage.Text = "Error clearing XFE key - no worries, we are handling it"
+			logrus.WithError(err).Warnf("Unable to clear XFE key for team %s", team)
+		}
+	} else if len(parts) == 3 {
+		sub.team.XFEKey, sub.team.XFEPass = parts[1], parts[2]
+		err := b.r.SetTeam(sub.team)
+		if err == nil {
+			postMessage.Text = "XFE key set."
+		} else {
+			postMessage.Text = "Error setting XFE key - no worries, we are handling it"
+			logrus.WithError(err).Warnf("Unable to set XFE key for team %s", team)
+		}
+	} else {
+		postMessage.Text = "Sorry, I could not understand you."
+	}
+	if _, err := sub.s.PostMessage(postMessage, false); err != nil {
 		logrus.Warnf("Error posting config message - %v", err)
 	}
 }
@@ -769,11 +853,14 @@ func (b *Bot) showHelp(team, channel string) {
 		Channel: channel,
 		AsUser:  true,
 		Text: `Here are the commands I understand:
-config: list the current channels I'm listening on
-join all/#channel1,#channel2...: I will join all/specified public channels and start monitoring them.
-verbose on/off #channel1,#channel2... - turn on verbose mode on the specified channels
-verbose mode is usually used by security professionals. When in verbose mode, dbot will display reputation details about any URL, IP or file including clean ones.`,
-	}
+*config*: list the current channels I'm listening on
+*join all/#channel1,#channel2...*: I will join all/specified public channels and start monitoring them.
+*verbose on/off #channel1,#channel2,private1...* - turn on verbose mode on the specified channels or private groups
+verbose mode is usually used by security professionals. When in verbose mode, dbot will display reputation details about any URL, IP or file including clean ones.
+
+*vt the-api-key-you-got-from-vt*: add your own VirusTotal key to use. Accepts "-" to return to default. You can get a key at https://www.virustotal.com/en/documentation/public-api/
+*xfe the-api-key-you-got-from-xfe the-password-you-got*: add your own IBM X-Force Exchange credentials to use. Accepts "-" to return to default. You can get credentials at https://exchange.xforce.ibmcloud.com/
+- It's important to specify your own keys to get reliable results as our public API keys are rate limited.`}
 	sub := b.subscriptions[team]
 	var err error
 	_, err = sub.s.PostMessage(postMessage, false)

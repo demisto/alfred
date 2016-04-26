@@ -99,6 +99,9 @@ type Team struct {
 	Created     time.Time  `json:"created"`
 	BotUserID   string     `json:"bot_user_id" db:"bot_user_id"`
 	BotToken    string     `json:"bot_token" db:"bot_token"`
+	VTKey       string     `json:"vt_key" db:"vt_key"`
+	XFEKey      string     `json:"xfe_key" db:"xfe_key"`
+	XFEPass     string     `json:"xfe_pass" db:"xfe_pass"`
 }
 
 // ClearToken is returned from the encrypted token
@@ -109,10 +112,58 @@ func (t *Team) ClearToken() (string, error) {
 	return "", nil
 }
 
+// ClearVTKey is returned from the encrypted vt key
+func (t *Team) ClearVTKey() (string, error) {
+	if t.VTKey != "" {
+		return util.Decrypt(t.VTKey, conf.Options.Security.DBKey)
+	}
+	return "", nil
+}
+
+// ClearXFEKey is returned from the encrypted xfe key
+func (t *Team) ClearXFEKey() (string, error) {
+	if t.XFEKey != "" {
+		return util.Decrypt(t.XFEKey, conf.Options.Security.DBKey)
+	}
+	return "", nil
+}
+
+// ClearXFEPass is returned from the encrypted xfe pass
+func (t *Team) ClearXFEPass() (string, error) {
+	if t.XFEPass != "" {
+		return util.Decrypt(t.XFEPass, conf.Options.Security.DBKey)
+	}
+	return "", nil
+}
+
 // SecureToken is returned from the clear token
 func (t *Team) SecureToken() (string, error) {
 	if t.BotToken != "" {
 		return util.Encrypt(t.BotToken, conf.Options.Security.DBKey)
+	}
+	return "", nil
+}
+
+// SecureVTKey is returned from the clear vt key
+func (t *Team) SecureVTKey() (string, error) {
+	if t.VTKey != "" {
+		return util.Encrypt(t.VTKey, conf.Options.Security.DBKey)
+	}
+	return "", nil
+}
+
+// SecureXFEKey is returned from the clear xfe key
+func (t *Team) SecureXFEKey() (string, error) {
+	if t.XFEKey != "" {
+		return util.Encrypt(t.XFEKey, conf.Options.Security.DBKey)
+	}
+	return "", nil
+}
+
+// SecureXFEPass is returned from the clear xfe pass
+func (t *Team) SecureXFEPass() (string, error) {
+	if t.XFEPass != "" {
+		return util.Encrypt(t.XFEPass, conf.Options.Security.DBKey)
 	}
 	return "", nil
 }

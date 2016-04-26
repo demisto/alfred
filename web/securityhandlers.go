@@ -93,10 +93,14 @@ func sendThanks(team *domain.Team, user *domain.User) {
 		Text: fmt.Sprintf(`Hi %s, thanks for inviting me to this team.
 If you want me to monitor conversations, please add me to the relevant channels and groups.
 Here are the commands I understand when you send me a DIRECT MESSAGE here:
-config: list the current channels I'm listening on
-join all/#channel1,#channel2...: I will join all/specified public channels and start monitoring them.
-verbose on/off #channel1,#channel2... - turn on verbose mode on the specified channels
-verbose mode is usually used by security professionals. When in verbose mode, dbot will display reputation details about any URL, IP or file including clean ones.`, user.Name),
+*config*: list the current channels I'm listening on
+*join all/#channel1,#channel2...*: I will join all/specified public channels and start monitoring them.
+*verbose on/off #channel1,#channel2,private1...* - turn on verbose mode on the specified channels or private groups
+verbose mode is usually used by security professionals. When in verbose mode, dbot will display reputation details about any URL, IP or file including clean ones.
+
+*vt the-api-key-you-got-from-vt*: add your own VirusTotal key to use. Accepts "-" to return to default. You can get a key at https://www.virustotal.com/en/documentation/public-api/
+*xfe the-api-key-you-got-from-xfe the-password-you-got*: add your own IBM X-Force Exchange credentials to use. Accepts "-" to return to default. You can get credentials at https://exchange.xforce.ibmcloud.com/
+- It's important to specify your own keys to get reliable results as our public API keys are rate limited.`, user.Name),
 	}
 	_, err = s.PostMessage(postMessage, false)
 	if err != nil {

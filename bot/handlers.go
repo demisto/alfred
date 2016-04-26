@@ -80,13 +80,13 @@ func (w *Worker) handle() {
 		switch msg.Type {
 		case "message":
 			if strings.Contains(msg.Text, "<http") {
-				w.handleURL(msg.Text, msg.Online, reply)
+				w.handleURL(msg, reply)
 			}
 			if ipReg.MatchString(msg.Text) {
-				w.handleIP(msg.Text, msg.Online, reply)
+				w.handleIP(msg, reply)
 			}
 			if md5Reg.MatchString(msg.Text) {
-				w.handleMD5(msg.Text, reply)
+				w.handleMD5(msg, reply)
 			}
 		case "file":
 			w.handleFile(msg, reply)
@@ -139,7 +139,32 @@ func GetContext(context interface{}) (*domain.Context, error) {
 	}
 }
 
-func (w *Worker) handleURL(text string, online bool, reply *domain.WorkReply) {
+func (w *Worker) localVTXfe(request *domain.WorkRequest) (*goxforce.Client, *govt.Client) {
+	vt := w.vt
+	if request.VTKey != "" {
+		vtTmp, err := govt.New(
+			govt.SetApikey(request.VTKey),
+			govt.SetErrorLog(log.New(conf.LogWriter, "VT:", log.Lshortfile)))
+		if err == nil {
+			vt = vtTmp
+		}
+	}
+	xfe := w.xfe
+	if request.XFEKey != "" && request.XFEPass != "" {
+		xfeTmp, err := goxforce.New(
+			goxforce.SetCredentials(request.XFEKey, request.XFEPass),
+			goxforce.SetErrorLog(log.New(conf.LogWriter, "XFE:", log.Lshortfile)))
+		if err == nil {
+			xfe = xfeTmp
+		}
+	}
+	return xfe, vt
+}
+
+func (w *Worker) handleURL(request *domain.WorkRequest, reply *domain.WorkReply) {
+	text := request.Text
+	online := request.Online
+	xfe, vt := w.localVTXfe(request)
 	for {
 		start := strings.Index(text, "<http")
 		if start < 0 {
@@ -165,7 +190,7 @@ func (w *Worker) handleURL(text string, online bool, reply *domain.WorkReply) {
 		// Do the network commands in parallel
 		c := make(chan int, 2)
 		go func() {
-			urlResp, err := w.xfe.URL(url)
+			urlResp, err := xfe.URL(url)
 			if err != nil {
 				// Small hack - see if the URL was not found
 				if strings.Contains(err.Error(), "404") {
@@ -176,12 +201,12 @@ func (w *Worker) handleURL(text string, online bool, reply *domain.WorkReply) {
 			} else {
 				reply.URLs[counter].XFE.URLDetails = urlResp.Result
 			}
-			resolve, err := w.xfe.Resolve(url)
+			resolve, err := xfe.Resolve(url)
 			if err == nil {
 				reply.URLs[counter].XFE.Resolve = *resolve
 			}
 			if online {
-				malware, err := w.xfe.URLMalware(url)
+				malware, err := xfe.URLMalware(url)
 				if err == nil {
 					reply.URLs[counter].XFE.URLMalware = *malware
 				}
@@ -189,7 +214,7 @@ func (w *Worker) handleURL(text string, online bool, reply *domain.WorkReply) {
 			c <- 1
 		}()
 		go func() {
-			vtResp, err := w.vt.GetUrlReport(url)
+			vtResp, err := vt.GetUrlReport(url)
 			if err != nil {
 				reply.URLs[counter].VT.Error = err.Error()
 			} else {
@@ -211,7 +236,10 @@ func (w *Worker) handleURL(text string, online bool, reply *domain.WorkReply) {
 	}
 }
 
-func (w *Worker) handleIP(text string, online bool, reply *domain.WorkReply) {
+func (w *Worker) handleIP(request *domain.WorkRequest, reply *domain.WorkReply) {
+	text := request.Text
+	online := request.Online
+	xfe, vt := w.localVTXfe(request)
 	ips := ipReg.FindAllString(text, -1)
 	for _, ip := range ips {
 		reply.IPs = append(reply.IPs, domain.IPReply{})
@@ -239,7 +267,7 @@ func (w *Worker) handleIP(text string, online bool, reply *domain.WorkReply) {
 		}
 		c := make(chan int, 2)
 		go func() {
-			ipResp, err := w.xfe.IPR(ip)
+			ipResp, err := xfe.IPR(ip)
 			if err != nil {
 				// Small hack - see if the URL was not found
 				if strings.Contains(err.Error(), "404") {
@@ -250,7 +278,7 @@ func (w *Worker) handleIP(text string, online bool, reply *domain.WorkReply) {
 			} else {
 				reply.IPs[counter].XFE.IPReputation = *ipResp
 				if online {
-					hist, err := w.xfe.IPRHistory(ip)
+					hist, err := xfe.IPRHistory(ip)
 					if err == nil {
 						reply.IPs[counter].XFE.IPHistory = *hist
 					}
@@ -259,7 +287,7 @@ func (w *Worker) handleIP(text string, online bool, reply *domain.WorkReply) {
 			c <- 1
 		}()
 		go func() {
-			vtResp, err := w.vt.GetIpReport(ip)
+			vtResp, err := vt.GetIpReport(ip)
 			if err != nil {
 				reply.IPs[counter].VT.Error = err.Error()
 			} else {
@@ -294,7 +322,9 @@ func (w *Worker) handleIP(text string, online bool, reply *domain.WorkReply) {
 	}
 }
 
-func (w *Worker) handleMD5(text string, reply *domain.WorkReply) {
+func (w *Worker) handleMD5(request *domain.WorkRequest, reply *domain.WorkReply) {
+	text := request.Text
+	xfe, vt := w.localVTXfe(request)
 	md5s := md5Reg.FindAllString(text, -1)
 	for _, md5 := range md5s {
 		reply.MD5s = append(reply.MD5s, domain.MD5Reply{})
@@ -303,7 +333,7 @@ func (w *Worker) handleMD5(text string, reply *domain.WorkReply) {
 		reply.MD5s[counter].Details = md5
 		c := make(chan int, 2)
 		go func() {
-			md5Resp, err := w.xfe.MalwareDetails(md5)
+			md5Resp, err := xfe.MalwareDetails(md5)
 			if err != nil {
 				// Small hack - see if the file was not found
 				if strings.Contains(err.Error(), "404") {
@@ -317,7 +347,7 @@ func (w *Worker) handleMD5(text string, reply *domain.WorkReply) {
 			c <- 1
 		}()
 		go func() {
-			vtResp, err := w.vt.GetFileReport(md5)
+			vtResp, err := vt.GetFileReport(md5)
 			if err != nil {
 				reply.MD5s[counter].VT.Error = err.Error()
 			} else {
@@ -377,7 +407,8 @@ func (w *Worker) handleFile(request *domain.WorkRequest, reply *domain.WorkReply
 		}
 		c <- 1
 	}()
-	w.handleMD5(h, reply)
+	request.Text = h
+	w.handleMD5(request, reply)
 	<-c
 	reply.File.Result = domain.ResultUnknown
 	if len(reply.MD5s) != 1 {
