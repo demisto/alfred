@@ -35,18 +35,9 @@
   if (matchMedia('(min-width: 992px), (max-width: 767px)').matches) {
     stickyNavScroll = function () {
       var top = (document.documentElement && document.documentElement.scrollTop) || document.body.scrollTop;
-      var social_widget_top = $("#social").offset().top;
-      var social_widget_bottom = social_widget_top + $("#social").outerHeight();
       var features_section_top = $("#features").offset().top;
       var features_section_bottom = features_section_top + $("#features").outerHeight();
 
-      if (social_widget_bottom > features_section_top && social_widget_top < features_section_bottom) {
-        $('#social').addClass('socialwidget-light');
-        $('#social').removeClass('socialwidget-dark');
-      } else {
-        $('#social').addClass('socialwidget-dark');
-        $('#social').removeClass('socialwidget-light');
-      }
 
       if (top > 40) {
         if (!$(stickySelector).hasClass('navbar-sticky-color')) {
@@ -191,26 +182,34 @@
   // -----------------------------------
   $(function () {
     // If we are on the homepage
-    if ($('#slack-message').length) {
+    if ($('#counter').length) {
       var counter_timer;
 
       // counter
-      // var counter = new CountUp("counter", 500, 10000, 0, 30);
-      // counter.start();
+        var options = {
+          useEasing : false,
+          useGrouping : true,
+          separator : '',
+          decimal : '.',
+          prefix : '',
+          suffix : ''
+        };
+       var counter = new CountUp("counter", 500, 10000, 0, 30, options);
+       counter.start();
       //
       var last_stop_counter;
       var refreshCounter = function(start_count, stop_count, duration) {
         var options = {
           useEasing : false,
           useGrouping : true,
-          separator : ',',
+          separator : '|',
           decimal : '.',
-          prefix : 'Messages Protected: ',
+          prefix : '',
           suffix : ''
         };
-        var counter = new CountUp("counter", start_count, stop_count, 0, duration, options);
-        last_stop_counter = stop_count;
-        counter.start();
+      //  var counter = new CountUp("counter", start_count, stop_count, 0, duration, options);
+      //  last_stop_counter = stop_count;
+      //  counter.start();
       }
 
       $.getJSON('/messages', function(data) {

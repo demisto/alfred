@@ -29,5 +29,9 @@
   "bower_components/owl-carousel/owl-carousel/owl.carousel.js",
   "bower_components/owl-carousel/owl-carousel/owl.carousel.css",
   "bower_components/owl-carousel/owl-carousel/owl.theme.css",
-  "bower_components/owl-carousel/owl-carousel/owl.transitions.css"
+  "bower_components/owl-carousel/owl-carousel/owl.transitions.css",
+  "bower_components/Headhesive.js",
+  "bower_components/Swiper/dist/js/swiper.jquery.min.js",
+  "bower_components/Swiper/dist/css/swiper.min.css",
+  "bower_components/modernizr/modernizr.js"
 ]

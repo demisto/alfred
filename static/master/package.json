@@ -19,6 +19,7 @@
     "gulp": "^3.8.8",
     "gulp-changed": "^1.0.0",
     "gulp-concat": "^2.4.1",
+    "gulp-debug": "^2.1.2",
     "gulp-expect-file": "0.0.7",
     "gulp-filter": "^2.0.0",
     "gulp-html-prettify": "0.0.1",

@@ -19,6 +19,7 @@ var gulp        = require('gulp'),
     sourcemaps  = require('gulp-sourcemaps'),
     react       = require('gulp-react'),
     PluginError = gutil.PluginError;
+    debug       = require('gulp-debug');
 
 // production mode (see build task)
 var isProduction = false;
@@ -41,21 +42,23 @@ var source = {
   scripts: {
     site:  [ 'js/countUp.js',
              'js/script.js',
+             'js/main.js',
              'js/modules/**/*.js',
              'js/custom/**/*.js',
               ignored_files
             ],
+    newfiles: ['js/vendor/**/*'],
     watch: ['js/*.js', 'js/**/*.js']
   },
   templates: {
     pages: {
-        files : ['jade/*.jade', ignored_files],
-        watch: ['jade/**/*.jade', 'jade/*.jade', 'jade/'+hidden_files]
+        files : ['jade/*.jade', ignored_files, 'index.html'],
+        watch: ['jade/**/*.jade', 'jade/*.jade', 'index.html', 'jade/'+hidden_files]
     }
   },
   styles: {
     site: {
-      main: ['less/styles.less', '!less/themes/*.less'],
+      main: ['less/styles.less','less/main.less', '!less/themes/*.less'],
       dir:  'less',
       watch: ['less/*.less', 'less/**/*.less', '!less/themes/*.less']
     },
@@ -132,6 +135,14 @@ gulp.task('scripts:vendor', function() {
 
 });
 
+// copy file from js/vendor as is - new is new build stuff - needs cleanup later. 
+gulp.task('scripts:newvendor', function() {
+  return gulp.src(source.scripts.newfiles)
+      .pipe(debug())
+      .pipe(gulp.dest(build.scripts.site.dir));
+});
+
+
 // copy file from bower folder into the site vendor folder
 gulp.task('styles:vendor', function() {
   var cssFilter = gulpFilter('**/*.css');
@@ -181,9 +192,14 @@ gulp.task('bootstrap', function() {
 
 // JADE
 gulp.task('templates:pages', function() {
+    var jadefilter = gulpFilter(['**/*.jade'], {restore: true});
+
     return gulp.src(source.templates.pages.files)
-        // .pipe(changed(build.templates.pages, { extension: '.html' }))
+        .pipe(jadefilter)
         .pipe(jade())
+        .pipe(jadefilter.restore())
+        .pipe(changed(build.templates.pages, { extension: '.html' }))
+        .pipe(debug({extension: '.html'}))
         .on("error", handleError)
         .pipe(prettify({
             indent_char: ' ',
@@ -251,6 +267,7 @@ gulp.task('finish',[
 gulp.task('default', gulpsync.sync([
           'scripts:vendor',
           'scripts:site',
+          'scripts:newvendor',
           'start'
         ]), function(){
 
