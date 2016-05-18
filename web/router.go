@@ -83,6 +83,8 @@ func New(appC *AppContext) *Router {
 	r.Get("/messages", commonHandlers.ThenFunc(appC.totalMessages))
 	// Static
 	r.Get("/", staticHandlers.ThenFunc(pageHandler("/index.html")))
+	r.Get("/analyst", staticHandlers.ThenFunc(pageHandler("/index.html")))
+	r.Get("/slackuser", staticHandlers.ThenFunc(pageHandler("/slackuser.html")))
 	r.Get("/conf", staticHandlers.ThenFunc(pageHandler("/conf.html")))
 	r.Get("/details", staticHandlers.ThenFunc(pageHandler("/details.html")))
 	r.Get("/faq", staticHandlers.ThenFunc(pageHandler("/faq.html")))

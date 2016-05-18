@@ -20,6 +20,8 @@ var gulp        = require('gulp'),
     react       = require('gulp-react'),
     PluginError = gutil.PluginError;
     debug       = require('gulp-debug');
+    replace     = require('gulp-replace');
+    gtmidsrc    = require('./\_gtmid.json');
 
 // production mode (see build task)
 var isProduction = false;
@@ -52,8 +54,8 @@ var source = {
   },
   templates: {
     pages: {
-        files : ['jade/*.jade', ignored_files, 'index.html'],
-        watch: ['jade/**/*.jade', 'jade/*.jade', 'index.html', 'jade/'+hidden_files]
+        files : ['jade/*.jade', ignored_files, 'index.html', 'slackuser.html'],
+        watch: ['jade/**/*.jade', 'jade/*.jade', 'index.html', 'slackuser.html', 'jade/'+hidden_files]
     }
   },
   styles: {
@@ -200,6 +202,7 @@ gulp.task('templates:pages', function() {
         .pipe(jadefilter.restore())
         .pipe(changed(build.templates.pages, { extension: '.html' }))
         .pipe(debug({extension: '.html'}))
+        .pipe(replace('gtmid', gtmidsrc.gtmid))
         .on("error", handleError)
         .pipe(prettify({
             indent_char: ' ',

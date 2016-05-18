@@ -25,7 +25,7 @@ $ gulp
 
 Please note that there are some files missing from the repository as they contain our sensitive information or our analytics code. To make gulp work, create the following two empty files:
 ```sh
-$GOPATH/src/github.com/demisto/alfred/static/master/jade/_analytics.jade
+$GOPATH/src/github.com/demisto/alfred/static/master/jade/_gtmid.json
 $GOPATH/src/github.com/demisto/alfred/static/master/jade/_ze.jade
 ```
 

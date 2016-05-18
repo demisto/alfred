@@ -49,6 +49,7 @@ etc/*.yaml
 etc/*mysql*
 
 _analytics.jade
+_gtmid.json
 _ze.jade
 .idea
 
