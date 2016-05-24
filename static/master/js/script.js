@@ -186,30 +186,30 @@
       var counter_timer;
 
       // counter
-        var options = {
-          useEasing : false,
-          useGrouping : true,
-          separator : '',
-          decimal : '.',
-          prefix : '',
-          suffix : ''
-        };
-       var counter = new CountUp("counter", 500, 10000, 0, 30, options);
-       counter.start();
+//        var options = {
+//          useEasing : false,
+//          useGrouping : true,
+//          separator : '',
+//          decimal : '.',
+//          prefix : '',
+//          suffix : ''
+//        };
+//       var counter = new CountUp("counter", 500, 10000, 0, 30, options);
+//       counter.start();
       //
       var last_stop_counter;
       var refreshCounter = function(start_count, stop_count, duration) {
         var options = {
           useEasing : false,
           useGrouping : true,
-          separator : '|',
+          separator : ' ',
           decimal : '.',
           prefix : '',
           suffix : ''
         };
-      //  var counter = new CountUp("counter", start_count, stop_count, 0, duration, options);
-      //  last_stop_counter = stop_count;
-      //  counter.start();
+        var counter = new CountUp("counter", start_count, stop_count, 0, duration, options);
+        last_stop_counter = stop_count;
+        counter.start();
       }
 
       $.getJSON('/messages', function(data) {
@@ -235,7 +235,8 @@
 
       $.getJSON('/user', function(data) {
         $('#slack-message').html('Configure D<small>BOT</small>');
-        $('#action').attr('href', '/conf')
+        $('#slack-message').attr('href', '/conf')
+        $('#slack-message').attr('target', '')
       });
       var recaptcha_widget_id = null;
       var captcha_callback = function(captcha_response) {

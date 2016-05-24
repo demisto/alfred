@@ -44,12 +44,11 @@ var source = {
   scripts: {
     site:  [ 'js/countUp.js',
              'js/script.js',
-             'js/main.js',
              'js/modules/**/*.js',
              'js/custom/**/*.js',
               ignored_files
             ],
-    newfiles: ['js/vendor/**/*'],
+    newfiles: ['js/vendor/**/*', 'js/main.js'],
     watch: ['js/*.js', 'js/**/*.js']
   },
   templates: {
@@ -283,6 +282,7 @@ gulp.task('default', gulpsync.sync([
 gulp.task('default-finish', gulpsync.sync([
           'scripts:vendor',
           'scripts:site',
+          'scripts:newvendor',
           'finish'
         ]), function(){
 
