@@ -21,7 +21,7 @@ var gulp        = require('gulp'),
     PluginError = gutil.PluginError;
     debug       = require('gulp-debug');
     replace     = require('gulp-replace');
-    gtmidsrc    = require('./\_gtmid.json');
+    gtmidsrc    = require('./_gtmid.json');
 
 // production mode (see build task)
 var isProduction = false;
