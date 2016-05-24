@@ -30,10 +30,10 @@ alfred.db
 *~
 
 node_modules/
-vendor/
 bower_components/
 static/site/js/
 static/site/css/
+static/site/vendor/
 static/site/*.html
 .DS_Store
 

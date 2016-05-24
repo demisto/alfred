@@ -1,0 +1,77 @@
+
+
+/* Primary Color */
+   
+a,
+.navbar .navbar-nav > li > a:hover,
+.navbar .navbar-nav > li.active > a,
+.navbar .navbar-nav > li.active > a:hover,
+.navbar .navbar-nav > li.active > a:focus,
+.navbar .navbar-nav .dropdown-menu li.active a,
+.page-title h1,
+.light-text .btn-ghost:hover,
+.accent,
+.panel-title i, 
+.simple-cta span,
+.pricing-column.highlight .btn-standard,
+.light-text .pricing-column.highlight .btn-standard,
+.pricing-column.highlight .btn-ghost:hover,
+.light-text .pricing-column.highlight .btn-ghost:hover,
+.pricing-cost, #main-flex-slider .slides h1,   
+.team-member-social a .soc-icon:hover {color:#2b8dd6}
+	
+
+.circle-lrg-icon span,
+.circle-lrg-icon i,
+.btn-standard, 
+.btn-ghost:hover, 
+.pager li > a:hover,
+.pager li > span:hover, 
+.accordion .accordion-btn .btn-ghost:hover,   
+.pricing-column.highlight, 
+.light-text .pricing-table .btn-ghost:hover {
+	background-color:#2b8dd6;	
+	border-color:#2b8dd6;
+}
+
+
+.circle-lrg-icon span:hover,
+.circle-lrg-icon i:hover,
+.btn-ghost,
+.accordion .accordion-btn .btn-ghost,
+.light-text .pricing-table .btn-ghost {
+	color:#2b8dd6;
+	border-color:#2b8dd6;
+}
+
+.circle-med-icon span, .circle-med-icon i,
+form input[type=submit],
+.with_frm_style .frm_submit input[type=submit],
+.with_frm_style .frm_submit input[type=button],
+.frm_form_submit_style, .with_frm_style.frm_login_form input[type=submit],
+form input[type=submit]:hover,
+.with_frm_style .frm_submit input[type=submit]:hover,
+.with_frm_style .frm_submit input[type=button]:hover,
+.frm_form_submit_style:hover, .with_frm_style.frm_login_form input[type=submit]:hover {background:#2b8dd6}
+
+
+form select:focus,
+form textarea:focus,
+form input:focus,
+.search-form input:focus, 
+.widget select:focus {border-color:#2b8dd6}
+
+
+.simple-conversion form input[type=submit],
+.simple-conversion .with_frm_style input[type=submit],
+.simple-conversion form input[type=submit]:focus,
+.simple-conversion .with_frm_style input[type=submit]:focus,
+.search-submit, 
+.search-submit:hover,
+.widget .tagcloud a:hover, 
+.footer .tagcloud a:hover {background-color:#2b8dd6 !important}
+
+
+/* Accent Color */
+
+.btn-cta {background-color:#00d148}
