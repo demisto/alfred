@@ -53,6 +53,8 @@ var Options struct {
 		// Password to access the service
 		Password string
 	}
+	// Cy API key
+	Cy string
 	// DB properties
 	DB struct {
 		// ConnectString how to connect to DB

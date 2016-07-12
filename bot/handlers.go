@@ -3,6 +3,7 @@ package bot
 import (
 	"bytes"
 	"crypto/md5"
+	"debug/pe"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -19,6 +21,7 @@ import (
 	"github.com/demisto/alfred/queue"
 	"github.com/demisto/alfred/repo"
 	"github.com/demisto/goxforce"
+	"github.com/demisto/infinigo"
 	"github.com/slavikm/govt"
 )
 
@@ -26,6 +29,7 @@ const (
 	numOfPositivesToConvict         = 7
 	numOfPositivesToConvictForFiles = 3
 	xfeScoreToConvict               = 7
+	cyScoreToConvict                = -0.5
 )
 
 // Worker reads messages from the queue and does the actual work
@@ -35,6 +39,7 @@ type Worker struct {
 	r    repo.Repo
 	xfe  *goxforce.Client
 	vt   *govt.Client
+	cy   *infinigo.Client
 	clam *clamEngine
 }
 
@@ -52,6 +57,12 @@ func NewWorker(r repo.Repo, q queue.Queue) (*Worker, error) {
 	if err != nil {
 		return nil, err
 	}
+	cy, err := infinigo.New(
+		infinigo.SetKey(conf.Options.Cy),
+		infinigo.SetErrorLog(log.New(conf.LogWriter, "VT:", log.Lshortfile)))
+	if err != nil {
+		return nil, err
+	}
 	clam, err := newClamEngine()
 	if err != nil {
 		return nil, err
@@ -62,6 +73,7 @@ func NewWorker(r repo.Repo, q queue.Queue) (*Worker, error) {
 		c:    make(chan *domain.WorkRequest, runtime.NumCPU()),
 		xfe:  xfe,
 		vt:   vt,
+		cy:   cy,
 		clam: clam,
 	}, nil
 }
@@ -97,7 +109,7 @@ func (w *Worker) handle() {
 	}
 }
 
-// Start the dedup process. To stop, just close the queue.
+// Start the worker process. To stop, just close the queue.
 func (w *Worker) Start() {
 	// Right now, just use the numebr of CPUs
 	for i := 0; i < runtime.NumCPU(); i++ {
@@ -188,8 +200,10 @@ func (w *Worker) handleURL(request *domain.WorkRequest, reply *domain.WorkReply)
 		reply.URLs[counter].Details = url
 		reply.Type |= domain.ReplyTypeURL
 		// Do the network commands in parallel
-		c := make(chan int, 2)
+		var wg sync.WaitGroup
+		wg.Add(2)
 		go func() {
+			defer wg.Done()
 			urlResp, err := xfe.URL(url)
 			if err != nil {
 				// Small hack - see if the URL was not found
@@ -211,20 +225,17 @@ func (w *Worker) handleURL(request *domain.WorkRequest, reply *domain.WorkReply)
 					reply.URLs[counter].XFE.URLMalware = *malware
 				}
 			}
-			c <- 1
 		}()
 		go func() {
+			defer wg.Done()
 			vtResp, err := vt.GetUrlReport(url)
 			if err != nil {
 				reply.URLs[counter].VT.Error = err.Error()
 			} else {
 				reply.URLs[counter].VT.URLReport = *vtResp
 			}
-			c <- 1
 		}()
-		for i := 0; i < 2; i++ {
-			<-c
-		}
+		wg.Wait()
 		if reply.URLs[counter].XFE.URLDetails.Score >= xfeScoreToConvict || reply.URLs[counter].VT.URLReport.Positives >= numOfPositivesToConvict {
 			// This is known bad scenario
 			reply.URLs[counter].Result = domain.ResultDirty
@@ -265,8 +276,10 @@ func (w *Worker) handleIP(request *domain.WorkRequest, reply *domain.WorkReply) 
 			reply.IPs[counter].Private = true
 			return
 		}
-		c := make(chan int, 2)
+		var wg sync.WaitGroup
+		wg.Add(2)
 		go func() {
+			defer wg.Done()
 			ipResp, err := xfe.IPR(ip)
 			if err != nil {
 				// Small hack - see if the URL was not found
@@ -284,20 +297,17 @@ func (w *Worker) handleIP(request *domain.WorkRequest, reply *domain.WorkReply) 
 					}
 				}
 			}
-			c <- 1
 		}()
 		go func() {
+			defer wg.Done()
 			vtResp, err := vt.GetIpReport(ip)
 			if err != nil {
 				reply.IPs[counter].VT.Error = err.Error()
 			} else {
 				reply.IPs[counter].VT.IPReport = *vtResp
 			}
-			c <- 1
 		}()
-		for i := 0; i < 2; i++ {
-			<-c
-		}
+		wg.Wait()
 		var vtPositives uint16
 		now := time.Now()
 		for i := range reply.IPs[counter].VT.IPReport.DetectedUrls {
@@ -331,8 +341,10 @@ func (w *Worker) handleMD5(request *domain.WorkRequest, reply *domain.WorkReply)
 		counter := len(reply.MD5s) - 1
 		reply.Type |= domain.ReplyTypeMD5
 		reply.MD5s[counter].Details = md5
-		c := make(chan int, 2)
+		var wg sync.WaitGroup
+		wg.Add(3)
 		go func() {
+			defer wg.Done()
 			md5Resp, err := xfe.MalwareDetails(md5)
 			if err != nil {
 				// Small hack - see if the file was not found
@@ -344,28 +356,80 @@ func (w *Worker) handleMD5(request *domain.WorkRequest, reply *domain.WorkReply)
 			} else {
 				reply.MD5s[counter].XFE.Malware = md5Resp.Malware
 			}
-			c <- 1
 		}()
 		go func() {
+			defer wg.Done()
 			vtResp, err := vt.GetFileReport(md5)
 			if err != nil {
 				reply.MD5s[counter].VT.Error = err.Error()
 			} else {
 				reply.MD5s[counter].VT.FileReport = *vtResp
 			}
-			c <- 1
 		}()
-		for i := 0; i < 2; i++ {
-			<-c
-		}
+		go func() {
+			defer wg.Done()
+			cyResp, err := w.cy.Query("", md5)
+			if err != nil {
+				reply.MD5s[counter].Cy.Error = err.Error()
+			} else {
+				// Should be only one
+				for k := range cyResp {
+					reply.MD5s[counter].Cy.Result = cyResp[k]
+				}
+			}
+		}()
+		wg.Wait()
 		reply.MD5s[counter].Result = domain.ResultUnknown
-		if len(reply.MD5s[counter].XFE.Malware.Family) > 0 || reply.MD5s[counter].VT.FileReport.Positives >= numOfPositivesToConvictForFiles {
+		if len(reply.MD5s[counter].XFE.Malware.Family) > 0 || len(reply.MD5s[counter].XFE.Malware.Origins.External.Family) > 0 ||
+			reply.MD5s[counter].VT.FileReport.Positives >= numOfPositivesToConvictForFiles ||
+			reply.MD5s[counter].Cy.Result.GeneralScore < cyScoreToConvict {
 			// This is known bad scenario
 			reply.MD5s[counter].Result = domain.ResultDirty
-		} else if !reply.MD5s[counter].XFE.NotFound || reply.MD5s[counter].VT.FileReport.ResponseCode == 1 {
+		} else if !reply.MD5s[counter].XFE.NotFound || reply.MD5s[counter].VT.FileReport.ResponseCode == 1 || reply.MD5s[counter].Cy.Result.StatusCode == 1 {
 			// At least one of reputation services found this to be known good
 			// Keep the default
 			reply.MD5s[counter].Result = domain.ResultClean
+		}
+	}
+}
+
+func (w *Worker) uploadToCylance(reply *domain.WorkReply, buf *bytes.Buffer) {
+	// For now, just check Windows executables
+	_, err := pe.NewFile(bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		logrus.WithError(err).Infof("Error reading the file as PE file - %s", reply.File.Details.Name)
+		return
+	}
+	logrus.Debugf("Sending file %s to Cylance", reply.File.Details.Name)
+	resp, err := w.cy.Upload(reply.MD5s[0].Cy.Result.ConfirmCode, bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		logrus.WithError(err).Infof("Error uploading the file - configuration code was %s", reply.MD5s[0].Cy.Result.ConfirmCode)
+		return
+	}
+	for k := range resp {
+		if resp[k].StatusCode == 1 {
+			// Wait for 10 seconds and try getting reply again
+			tries := 3
+			for i := 0; i < tries; i++ {
+				time.Sleep(10 * time.Second)
+				cyResp, err := w.cy.Query("", reply.MD5s[0].Details)
+				if err != nil {
+					return
+				} else {
+					// Should be only one
+					for k := range cyResp {
+						if cyResp[k].StatusCode == 1 {
+							reply.MD5s[0].Cy.Result = cyResp[k]
+							return
+						} else if cyResp[k].StatusCode != 2 {
+							// If there is an error it means Cylance does not handle the file so no point in waiting
+							return
+						}
+					}
+				}
+			}
+		} else {
+			logrus.Debugf("File was not accepted - %v [%s]", resp[k].StatusCode, resp[k].Error)
 		}
 	}
 }
@@ -397,28 +461,33 @@ func (w *Worker) handleFile(request *domain.WorkRequest, reply *domain.WorkReply
 	h := fmt.Sprintf("%x", hash.Sum(nil))
 	logrus.Debugf("MD5 for file %s is %s\n", request.File.Name, h)
 	// Do the network commands in parallel
-	c := make(chan int, 1)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		virus, err := w.clam.scan(request.File.Name, buf.Bytes())
 		if (err == nil || err.Error() == "Virus(es) detected") && virus != "" {
 			reply.File.Virus = virus
 		} else if err != nil {
 			reply.File.Error = err.Error()
 		}
-		c <- 1
 	}()
 	request.Text = h
 	w.handleMD5(request, reply)
-	<-c
+	wg.Wait()
 	reply.File.Result = domain.ResultUnknown
 	if len(reply.MD5s) != 1 {
 		logrus.Warnf("Handling file but did not get an MD5 reply - %+v", reply)
 		return
 	}
-	if reply.File.Virus != "" || len(reply.MD5s[0].XFE.Malware.Family) > 0 || reply.MD5s[0].VT.FileReport.Positives > numOfPositivesToConvict {
+	// If Cylance does not know about the file but can handle it then handle it...
+	if reply.MD5s[0].Cy.Result.StatusCode == 3 {
+		w.uploadToCylance(reply, buf)
+	}
+	if reply.File.Virus != "" || reply.MD5s[0].Result == domain.ResultDirty {
 		// This is known bad scenario
 		reply.File.Result = domain.ResultDirty
-	} else if reply.File.Virus == "" || !reply.MD5s[0].XFE.NotFound || reply.MD5s[0].VT.FileReport.ResponseCode == 1 {
+	} else if reply.File.Virus == "" || reply.MD5s[0].Result == domain.ResultClean {
 		// At least one of reputation services found this to be known good
 		// Keep the default
 		reply.File.Result = domain.ResultClean

@@ -116,6 +116,7 @@ CREATE TABLE IF NOT EXISTS convicted (
 	vt VARCHAR(128),
 	xfe VARCHAR(128),
 	clamav VARCHAR(128),
+	cy VARCHAR(128),
 	CONSTRAINT convicted_pk PRIMARY KEY (team, channel, message_id),
 	CONSTRAINT convicted_team_fk FOREIGN KEY (team) REFERENCES teams (id)
 )`
@@ -737,9 +738,9 @@ func (r *repoMySQL) TotalMessages() (int, error) {
 }
 
 func (r *repoMySQL) StoreMaliciousContent(convicted *domain.MaliciousContent) error {
-	_, err := r.db.Exec("INSERT INTO convicted (team, channel, message_id, ts, content_type, content, file_name, vt, xfe, clamav) VALUES (?, ?, ?, now(), ?, ?, ?, ?, ?, ?)",
+	_, err := r.db.Exec("INSERT INTO convicted (team, channel, message_id, ts, content_type, content, file_name, vt, xfe, clamav, cy) VALUES (?, ?, ?, now(), ?, ?, ?, ?, ?, ?, ?)",
 		convicted.Team, convicted.Channel, convicted.MessageID, convicted.ContentType, util.Substr(convicted.Content, 0, 128), util.Substr(convicted.FileName, 0, 128),
-		util.Substr(convicted.VT, 0, 128), util.Substr(convicted.XFE, 0, 128), util.Substr(convicted.ClamAV, 0, 128))
+		util.Substr(convicted.VT, 0, 128), util.Substr(convicted.XFE, 0, 128), util.Substr(convicted.ClamAV, 0, 128), util.Substr(convicted.Cy, 0, 128))
 	return err
 }
 

@@ -89,52 +89,68 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 		Attachments: []slack.Attachment{{Fallback: fileMessage, Text: fileMessage, Color: color}},
 	}
 	if data.Channel != "" {
+		if reply.MD5s[0].Cy.Error == "" && reply.MD5s[0].Cy.Result.StatusCode == 1 {
+			cyColor := "good"
+			if reply.MD5s[0].Cy.Result.GeneralScore < cyScoreToConvict {
+				cyColor = "danger"
+			}
+			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
+				Fallback:  fmt.Sprintf("Score: %v, Classifiers: %v", reply.MD5s[0].Cy.Result.GeneralScore, reply.MD5s[0].Cy.Result.Classifiers),
+				Color:     cyColor,
+				Title:     "Cylance Infinity",
+				TitleLink: "https://www.cylance.com",
+				Fields: []slack.AttachmentField{
+					{Title: "Score", Value: fmt.Sprintf("%v", reply.MD5s[0].Cy.Result.GeneralScore), Short: true},
+					{Title: "Classifiers", Value: fmt.Sprintf("%v", reply.MD5s[0].Cy.Result.Classifiers), Short: true},
+				},
+			})
+		}
+		if !reply.MD5s[0].XFE.NotFound && reply.MD5s[0].XFE.Error == "" {
+			xfeColor := "good"
+			if len(reply.MD5s[0].XFE.Malware.Family) > 0 || len(reply.MD5s[0].XFE.Malware.Origins.External.Family) > 0 {
+				xfeColor = "danger"
+			}
+			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
+				Fallback:  fmt.Sprintf("Mime Type: %s, Family: %s", reply.MD5s[0].XFE.Malware.MimeType, strings.Join(reply.MD5s[0].XFE.Malware.Family, ",")),
+				Color:     xfeColor,
+				Title:     "IBM X-Force Exchange",
+				TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.MD5s[0].Details),
+				Fields: []slack.AttachmentField{
+					{Title: "Family", Value: strings.Join(reply.MD5s[0].XFE.Malware.Family, ","), Short: true},
+					{Title: "MIME Type", Value: reply.MD5s[0].XFE.Malware.MimeType, Short: true},
+					{Title: "Created", Value: reply.MD5s[0].XFE.Malware.Created.String(), Short: true},
+				},
+			})
+		}
+		if reply.MD5s[0].VT.FileReport.ResponseCode == 1 {
+			vtColor := "good"
+			if reply.MD5s[0].VT.FileReport.Positives >= numOfPositivesToConvictForFiles {
+				vtColor = "danger"
+			}
+			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
+				Fallback:  fmt.Sprintf("Scan Date: %s, Positives: %v, Total: %v", reply.MD5s[0].VT.FileReport.ScanDate, reply.MD5s[0].VT.FileReport.Positives, reply.MD5s[0].VT.FileReport.Total),
+				Color:     vtColor,
+				Title:     "VirusTotal",
+				TitleLink: reply.MD5s[0].VT.FileReport.Permalink,
+				Fields: []slack.AttachmentField{
+					{Title: "Scan Date", Value: reply.MD5s[0].VT.FileReport.ScanDate, Short: true},
+					{Title: "Positives", Value: fmt.Sprintf("%v", reply.MD5s[0].VT.FileReport.Positives), Short: true},
+					{Title: "Total", Value: fmt.Sprintf("%v", reply.MD5s[0].VT.FileReport.Total), Short: true},
+				},
+			})
+		}
+		if reply.File.Virus != "" {
+			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
+				Fallback:   fmt.Sprintf("Virus name: %s", reply.File.Virus),
+				Text:       fmt.Sprintf("Virus name: %s", reply.File.Virus),
+				Color:      "danger",
+				AuthorName: "ClamAV",
+				Title:      "ClamAV",
+			})
+		}
 		if verbose {
 			shouldPost = true
-			if !reply.MD5s[0].XFE.NotFound && reply.MD5s[0].XFE.Error == "" {
-				xfeColor := "good"
-				if len(reply.MD5s[0].XFE.Malware.Family) > 0 {
-					xfeColor = "danger"
-				}
-				postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-					Fallback:  fmt.Sprintf("Mime Type: %s, Family: %s", reply.MD5s[0].XFE.Malware.MimeType, strings.Join(reply.MD5s[0].XFE.Malware.Family, ",")),
-					Color:     xfeColor,
-					Title:     "IBM X-Force Exchange",
-					TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.MD5s[0].Details),
-					Fields: []slack.AttachmentField{
-						slack.AttachmentField{Title: "Family", Value: strings.Join(reply.MD5s[0].XFE.Malware.Family, ","), Short: true},
-						slack.AttachmentField{Title: "MIME Type", Value: reply.MD5s[0].XFE.Malware.MimeType, Short: true},
-						slack.AttachmentField{Title: "Created", Value: reply.MD5s[0].XFE.Malware.Created.String(), Short: true},
-					},
-				})
-			}
-			if reply.MD5s[0].VT.FileReport.ResponseCode == 1 {
-				vtColor := "good"
-				if reply.MD5s[0].VT.FileReport.Positives >= numOfPositivesToConvictForFiles {
-					vtColor = "danger"
-				}
-				postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-					Fallback:  fmt.Sprintf("Scan Date: %s, Positives: %v, Total: %v", reply.MD5s[0].VT.FileReport.ScanDate, reply.MD5s[0].VT.FileReport.Positives, reply.MD5s[0].VT.FileReport.Total),
-					Color:     vtColor,
-					Title:     "VirusTotal",
-					TitleLink: reply.MD5s[0].VT.FileReport.Permalink,
-					Fields: []slack.AttachmentField{
-						slack.AttachmentField{Title: "Scan Date", Value: reply.MD5s[0].VT.FileReport.ScanDate, Short: true},
-						slack.AttachmentField{Title: "Positives", Value: fmt.Sprintf("%v", reply.MD5s[0].VT.FileReport.Positives), Short: true},
-						slack.AttachmentField{Title: "Total", Value: fmt.Sprintf("%v", reply.MD5s[0].VT.FileReport.Total), Short: true},
-					},
-				})
-			}
-			if reply.File.Virus != "" {
-				postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-					Fallback:   fmt.Sprintf("Virus name: %s", reply.File.Virus),
-					Text:       fmt.Sprintf("Virus name: %s", reply.File.Virus),
-					Color:      "danger",
-					AuthorName: "ClamAV",
-					Title:      "ClamAV",
-				})
-			}
-		} else if reply.File.Result != domain.ResultClean {
+		} else if reply.File.Result == domain.ResultDirty {
 			shouldPost = true
 		}
 	}
@@ -204,6 +220,7 @@ func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context) {
 		}
 		vtScore := fmt.Sprintf("%v / %v", reply.MD5s[0].VT.FileReport.Positives, reply.MD5s[0].VT.FileReport.Total)
 		xfeScore := strings.Join(reply.MD5s[0].XFE.Malware.Family, ",")
+		cyScore := fmt.Sprintf("%v - %v", reply.MD5s[0].Cy.Result.GeneralScore, reply.MD5s[0].Cy.Result.Classifiers)
 		b.r.StoreMaliciousContent(&domain.MaliciousContent{
 			Team:        ctx.Team,
 			Channel:     ctx.Channel,
@@ -213,12 +230,14 @@ func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context) {
 			FileName:    reply.File.Details.Name,
 			VT:          vtScore,
 			XFE:         xfeScore,
+			Cy:          cyScore,
 			ClamAV:      reply.File.Virus})
 	} else {
 		for i := range reply.MD5s {
 			if reply.MD5s[i].Result == domain.ResultDirty {
 				vtScore := fmt.Sprintf("%v / %v", reply.MD5s[i].VT.FileReport.Positives, reply.MD5s[i].VT.FileReport.Total)
 				xfeScore := strings.Join(reply.MD5s[i].XFE.Malware.Family, ",")
+				cyScore := fmt.Sprintf("%v - %v", reply.MD5s[i].Cy.Result.GeneralScore, reply.MD5s[i].Cy.Result.Classifiers)
 				b.r.StoreMaliciousContent(&domain.MaliciousContent{
 					Team:        ctx.Team,
 					Channel:     ctx.Channel,
@@ -226,7 +245,8 @@ func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context) {
 					ContentType: domain.ReplyTypeMD5,
 					Content:     reply.MD5s[i].Details,
 					VT:          vtScore,
-					XFE:         xfeScore})
+					XFE:         xfeScore,
+					Cy:          cyScore})
 			}
 		}
 		for i := range reply.URLs {
@@ -282,11 +302,12 @@ func nilOrUnknown(v interface{}) string {
 
 func defangURL(u string) string {
 	if i := strings.Index(u, "https://"); i >= 0 {
-		return strings.Replace(u, "https://", "httpsdefang://", 1)
+		return strings.Replace(u, "https://", "https[://]", 1)
 	}
 	if i := strings.Index(u, "http://"); i >= 0 {
-		return strings.Replace(u, "http://", "httpdefang://", 1)
+		return strings.Replace(u, "http://", "http[://]", 1)
 	}
+	strings.Replace(u, ".", "[.]", 1)
 	return u
 }
 
@@ -350,9 +371,9 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 						Title:     "IBM X-Force Exchange",
 						TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/url/%s", reply.URLs[i].Details),
 						Fields: []slack.AttachmentField{
-							slack.AttachmentField{Title: "Score", Value: fmt.Sprintf("%v", reply.URLs[i].XFE.URLDetails.Score), Short: true},
-							slack.AttachmentField{Title: "A Records", Value: strings.Join(reply.URLs[i].XFE.Resolve.A, ","), Short: true},
-							slack.AttachmentField{Title: "Categories", Value: joinMap(reply.URLs[i].XFE.URLDetails.Cats), Short: true},
+							{Title: "Score", Value: fmt.Sprintf("%v", reply.URLs[i].XFE.URLDetails.Score), Short: true},
+							{Title: "A Records", Value: strings.Join(reply.URLs[i].XFE.Resolve.A, ","), Short: true},
+							{Title: "Categories", Value: joinMap(reply.URLs[i].XFE.URLDetails.Cats), Short: true},
 						},
 					})
 					if len(reply.URLs[i].XFE.Resolve.AAAA) > 0 {
@@ -371,9 +392,9 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 						Title:     "VirusTotal",
 						TitleLink: reply.URLs[i].VT.URLReport.Permalink,
 						Fields: []slack.AttachmentField{
-							slack.AttachmentField{Title: "Scan Date", Value: reply.URLs[i].VT.URLReport.ScanDate, Short: true},
-							slack.AttachmentField{Title: "Positives", Value: fmt.Sprintf("%v", reply.URLs[i].VT.URLReport.Positives), Short: true},
-							slack.AttachmentField{Title: "Total", Value: fmt.Sprintf("%v", reply.URLs[i].VT.URLReport.Total), Short: true},
+							{Title: "Scan Date", Value: reply.URLs[i].VT.URLReport.ScanDate, Short: true},
+							{Title: "Positives", Value: fmt.Sprintf("%v", reply.URLs[i].VT.URLReport.Positives), Short: true},
+							{Title: "Total", Value: fmt.Sprintf("%v", reply.URLs[i].VT.URLReport.Total), Short: true},
 						},
 					})
 				}
@@ -413,9 +434,9 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 						Title:     "IBM X-Force Exchange",
 						TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/ip/%s", reply.IPs[i].Details),
 						Fields: []slack.AttachmentField{
-							slack.AttachmentField{Title: "Score", Value: fmt.Sprintf("%v", reply.IPs[i].XFE.IPReputation.Score), Short: true},
-							slack.AttachmentField{Title: "Categories", Value: joinMapInt(reply.IPs[i].XFE.IPReputation.Cats), Short: true},
-							slack.AttachmentField{Title: "Geo", Value: nilOrUnknown(reply.IPs[i].XFE.IPReputation.Geo["country"]), Short: true},
+							{Title: "Score", Value: fmt.Sprintf("%v", reply.IPs[i].XFE.IPReputation.Score), Short: true},
+							{Title: "Categories", Value: joinMapInt(reply.IPs[i].XFE.IPReputation.Cats), Short: true},
+							{Title: "Geo", Value: nilOrUnknown(reply.IPs[i].XFE.IPReputation.Geo["country"]), Short: true},
 						},
 					})
 				}
@@ -470,9 +491,25 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 					Text:     md5Message,
 					Color:    color,
 				})
+				if reply.MD5s[i].Cy.Error == "" && reply.MD5s[0].Cy.Result.StatusCode == 1 {
+					cyColor := "good"
+					if reply.MD5s[0].Cy.Result.GeneralScore < cyScoreToConvict {
+						cyColor = "danger"
+					}
+					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
+						Fallback:  fmt.Sprintf("Score: %v, Classifiers: %v", reply.MD5s[0].Cy.Result.GeneralScore, reply.MD5s[0].Cy.Result.Classifiers),
+						Color:     cyColor,
+						Title:     "Cylance Infinity",
+						TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.MD5s[0].Details),
+						Fields: []slack.AttachmentField{
+							{Title: "Score", Value: fmt.Sprintf("%v", reply.MD5s[0].Cy.Result.GeneralScore), Short: true},
+							{Title: "Classifiers", Value: fmt.Sprintf("%v", reply.MD5s[0].Cy.Result.Classifiers), Short: true},
+						},
+					})
+				}
 				if !reply.MD5s[i].XFE.NotFound && reply.MD5s[i].XFE.Error == "" {
 					xfeColor := "good"
-					if len(reply.MD5s[i].XFE.Malware.Family) > 0 {
+					if len(reply.MD5s[i].XFE.Malware.Family) > 0 || len(reply.MD5s[i].XFE.Malware.Origins.External.Family) > 0 {
 						xfeColor = "danger"
 					}
 					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
@@ -481,9 +518,9 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 						Title:     "IBM X-Force Exchange",
 						TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.MD5s[i].Details),
 						Fields: []slack.AttachmentField{
-							slack.AttachmentField{Title: "Family", Value: strings.Join(reply.MD5s[i].XFE.Malware.Family, ","), Short: true},
-							slack.AttachmentField{Title: "MIME Type", Value: reply.MD5s[i].XFE.Malware.MimeType, Short: true},
-							slack.AttachmentField{Title: "Created", Value: reply.MD5s[i].XFE.Malware.Created.String(), Short: true},
+							{Title: "Family", Value: strings.Join(reply.MD5s[i].XFE.Malware.Family, ","), Short: true},
+							{Title: "MIME Type", Value: reply.MD5s[i].XFE.Malware.MimeType, Short: true},
+							{Title: "Created", Value: reply.MD5s[i].XFE.Malware.Created.String(), Short: true},
 						},
 					})
 				}
@@ -498,9 +535,9 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 						Title:     "VirusTotal",
 						TitleLink: reply.MD5s[i].VT.FileReport.Permalink,
 						Fields: []slack.AttachmentField{
-							slack.AttachmentField{Title: "Scan Date", Value: reply.MD5s[i].VT.FileReport.ScanDate, Short: true},
-							slack.AttachmentField{Title: "Positives", Value: fmt.Sprintf("%v", reply.MD5s[i].VT.FileReport.Positives), Short: true},
-							slack.AttachmentField{Title: "Total", Value: fmt.Sprintf("%v", reply.MD5s[i].VT.FileReport.Total), Short: true},
+							{Title: "Scan Date", Value: reply.MD5s[i].VT.FileReport.ScanDate, Short: true},
+							{Title: "Positives", Value: fmt.Sprintf("%v", reply.MD5s[i].VT.FileReport.Positives), Short: true},
+							{Title: "Total", Value: fmt.Sprintf("%v", reply.MD5s[i].VT.FileReport.Total), Short: true},
 						},
 					})
 				}

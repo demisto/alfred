@@ -2,6 +2,7 @@ package domain
 
 import (
 	"github.com/demisto/goxforce"
+	"github.com/demisto/infinigo"
 	"github.com/demisto/slack"
 	"github.com/slavikm/govt"
 )
@@ -93,6 +94,10 @@ type MD5Reply struct {
 		Error      string          `json:"error"`
 		FileReport govt.FileReport `json:"file_report"`
 	} `json:"vt"`
+	Cy struct {
+		Error  string                 `json:"error"`
+		Result infinigo.QueryResponse `json:"result"`
+	} `json:"cy"`
 }
 
 // URLReply holds the information about a URL
@@ -159,6 +164,7 @@ type MaliciousContent struct {
 	FileName    string `json:"file_name" db:"file_name"`
 	VT          string `json:"vt"`
 	XFE         string `json:"xfe"`
+	Cy          string `json:"cy"`
 	ClamAV      string `json:"clamav"`
 }
 
