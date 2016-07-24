@@ -1,1 +1,1 @@
-select u.name, substr(u.real_name, 1, 20), u.email, t.name, t.domain, t.created from users u, teams t where t.status = 0 and u.team = t.id order by t.created
+select u.name, u.real_name, u.email, t.name, t.domain, t.created from users u, teams t where t.status = 0 and u.team = t.id order by t.created

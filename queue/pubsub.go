@@ -102,6 +102,11 @@ func (q *queuePubSub) push(qname string, body interface{}) error {
 	return err
 }
 
+const (
+	popErrRetryTimes = 10
+	popErrSleep      = 5
+)
+
 func (q *queuePubSub) pop(qname string, timeout time.Duration, body interface{}) error {
 	if q.closed {
 		return ErrClosed
@@ -114,10 +119,19 @@ func (q *queuePubSub) pop(qname string, timeout time.Duration, body interface{})
 	var pullResponse *pubsub.PullResponse
 	var err error
 	started := time.Now()
+	errCount := 0
 	for {
 		pullResponse, err = q.svc.Projects.Subscriptions.Pull(subName, pullRequest).Do()
+		// It turns out that PubSub sometimes returns errors of service unavailable.
+		// We will retry 10 times before giving up
 		if err != nil {
-			return err
+			if errCount < popErrRetryTimes {
+				errCount++
+				time.Sleep(popErrSleep * time.Second)
+				continue
+			} else {
+				return err
+			}
 		}
 		if len(pullResponse.ReceivedMessages) > 0 {
 			break
@@ -125,7 +139,7 @@ func (q *queuePubSub) pop(qname string, timeout time.Duration, body interface{})
 		if q.closed {
 			return ErrClosed
 		}
-		if started.Add(timeout).After(time.Now()) {
+		if timeout > 0 && started.Add(timeout).Before(time.Now()) {
 			return ErrTimeout
 		}
 	}
