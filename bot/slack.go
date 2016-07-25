@@ -57,6 +57,17 @@ func joinMapInt(m map[string]int) string {
 	return res
 }
 
+func joinMapFloat32(m map[string]float32) string {
+	res := ""
+	for k, v := range m {
+		res += fmt.Sprintf("%s: %v,", k, v)
+	}
+	if len(res) > 0 {
+		return res[0 : len(res)-1]
+	}
+	return res
+}
+
 func mainMessageFormatted() string {
 	return fmt.Sprintf(mainMessage, conf.Options.ExternalAddress)
 }
@@ -101,7 +112,7 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 				TitleLink: "https://www.cylance.com",
 				Fields: []slack.AttachmentField{
 					{Title: "Score", Value: fmt.Sprintf("%v", reply.MD5s[0].Cy.Result.GeneralScore), Short: true},
-					{Title: "Classifiers", Value: fmt.Sprintf("%v", reply.MD5s[0].Cy.Result.Classifiers), Short: true},
+					{Title: "Classifiers", Value: joinMapFloat32(reply.MD5s[0].Cy.Result.Classifiers), Short: true},
 				},
 			})
 		}
@@ -301,14 +312,7 @@ func nilOrUnknown(v interface{}) string {
 }
 
 func defangURL(u string) string {
-	if i := strings.Index(u, "https://"); i >= 0 {
-		return strings.Replace(u, "https://", "https[://]", 1)
-	}
-	if i := strings.Index(u, "http://"); i >= 0 {
-		return strings.Replace(u, "http://", "http[://]", 1)
-	}
-	strings.Replace(u, ".", "[.]", 1)
-	return u
+	return strings.Replace(strings.Replace(strings.Replace(u, "https://", "https[://]", 1), "http://", "http[://]", 1), ".", "[.]", -1)
 }
 
 func (b *Bot) handleReply(reply *domain.WorkReply) {
