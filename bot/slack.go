@@ -504,10 +504,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 						Fallback:  fmt.Sprintf("Score: %v, Classifiers: %v", reply.MD5s[0].Cy.Result.GeneralScore, reply.MD5s[0].Cy.Result.Classifiers),
 						Color:     cyColor,
 						Title:     "Cylance Infinity",
-						TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.MD5s[0].Details),
+						TitleLink: "https://www.cylance.com",
 						Fields: []slack.AttachmentField{
 							{Title: "Score", Value: fmt.Sprintf("%v", reply.MD5s[0].Cy.Result.GeneralScore), Short: true},
-							{Title: "Classifiers", Value: fmt.Sprintf("%v", reply.MD5s[0].Cy.Result.Classifiers), Short: true},
+							{Title: "Classifiers", Value: joinMapFloat32(reply.MD5s[0].Cy.Result.Classifiers), Short: true},
 						},
 					})
 				}
