@@ -20,7 +20,7 @@
 
 
 
-  $win.load(function() {
+  $win.on('load', function() {
     $body.addClass('site-loaded');
   });
 
@@ -167,16 +167,6 @@
        });
    });
 
-
-  // Wow Animation
-  // -----------------------------------
-
-  // setup global config
-  window.wow = (
-      new WOW({
-      mobile: false
-    })
-  ).init();
 
   // Check if we already have the cookie and if so, change the title of the button
   // -----------------------------------

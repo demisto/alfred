@@ -16,72 +16,7 @@
 // Detect screen size, add / subtract data-toggle
 // for mobile dropdown menu.
 //-----------------------------------------------------	
-function setNewsPostsHeight() {
-    if( jQuery('#news').length) {
-        //Reset height
-        jQuery('#news .block .inner').height('auto');
-        //Get value of highest element
-        var maxHeight = Math.max.apply(Math, jQuery('#news .block .inner').map (
-            function() {
-                return jQuery(this).height();
 
-            }
-        ));
-        jQuery('#news .block .inner').height(maxHeight);    
-    }
-}
-
-function setPartnersPostsHeight() {
-    if( jQuery('#partners').length) {
-        //Reset height
-        jQuery('#partners .block .inner').height('auto');
-        //Get value of highest element
-        var maxHeight = Math.max.apply(Math, jQuery('#partners .block .inner').map (
-            function() {
-                return jQuery(this).height();
-
-            }
-        ));
-        jQuery('#partners .block .inner').height(maxHeight);    
-    }
-}
-
-function setTeamBlocksHeight() {
-    if( jQuery('.team-all').length) {
-        //Reset height
-        jQuery('.team-all .team-block').height('auto');
-        //Get value of highest element
-        var maxHeight = Math.max.apply(Math, jQuery('.team-all .team-block').map (
-            function() {
-                return jQuery(this).height();
-
-            }
-        ));
-        jQuery('.team-all .team-block').height(maxHeight);    
-    }
-}
-
-function setdbotFeaturesBlocksHeight() {
-    if( jQuery('section.features').length) {
-        //Reset height
-        var fixedHeight = (jQuery('section.features .centered-image').height()-180)/3;
-        jQuery('section.features .block').height('auto');
-        console.log(fixedHeight);
-        //Get value of highest element
-        jQuery('section.features .block').height(fixedHeight);    
-    }
-}
-
-function splitDbotCounterNumber(){
-	// var number = jQuery.trim(jQuery('.counter-wraper').text());
-	// var numberArr = number.split('');
-	// var ret  = "";
-	
-	//  jQuery.each(numberArr, function (k, v) {
- //    	ret += "<span>" + v + "</span>";
- //    });
-	//  jQuery('.counter-wraper').html(ret);
-}
 function accordion(){
 	jQuery('.faq-row .title-row').on('click' , function(){
 		if(jQuery(this).hasClass('active')){
@@ -128,14 +63,6 @@ function themo_support_mobile_navigation(){
 	}*/
 }
 
-function timeline(){
-	 if( jQuery('#timeline').length) {
-	var firstBlock = jQuery('#timeline .block').first().find('h2').offset().top;
-	var lastBlock = jQuery('#timeline .block').last().find('h2').offset().top;
-	var lineHeight = lastBlock - firstBlock;
-	jQuery('#timeline .line span').css('height' , lineHeight);
-	}
-}
 
 //-----------------------------------------------------
 // ANIMATION - Adds support for CS3 Animations
@@ -612,12 +539,6 @@ var nice = false;
 //======================================================================
 jQuery(document).ready(function($) {
 	"use strict";
-	timeline();
-	setNewsPostsHeight();
-	setPartnersPostsHeight();
-	setTeamBlocksHeight();
-	setdbotFeaturesBlocksHeight();
-	splitDbotCounterNumber();
 	accordion();
     var swiper = new Swiper('.swiper-container', {
         pagination: '.swiper-pagination',
@@ -704,7 +625,7 @@ jQuery(document).ready(function($) {
 //======================================================================
 // On Window Load - executes when complete page is fully loaded, including all frames, objects and images
 //======================================================================
- jQuery(window).load(function($) {
+ jQuery(window).on('load', function($) {
 	 "use strict";
 
 	// Disable animation for mobile.
@@ -814,8 +735,6 @@ function fixheight(){
 //======================================================================
  jQuery(window).resize(function($){
 	 "use strict";
-	 setNewsPostsHeight();
-	 setPartnersPostsHeight();
 	// Detect and set isTouch for touch screens
 	var isTouch = themo_is_touch_device();
 
