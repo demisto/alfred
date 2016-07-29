@@ -16,6 +16,72 @@
 // Detect screen size, add / subtract data-toggle
 // for mobile dropdown menu.
 //-----------------------------------------------------	
+function setNewsPostsHeight() {
+    if( jQuery('#news').length) {
+        //Reset height
+        jQuery('#news .block .inner').height('auto');
+        //Get value of highest element
+        var maxHeight = Math.max.apply(Math, jQuery('#news .block .inner').map (
+            function() {
+                return jQuery(this).height();
+
+            }
+        ));
+        jQuery('#news .block .inner').height(maxHeight);    
+    }
+}
+
+function setPartnersPostsHeight() {
+    if( jQuery('#partners').length) {
+        //Reset height
+        jQuery('#partners .block .inner').height('auto');
+        //Get value of highest element
+        var maxHeight = Math.max.apply(Math, jQuery('#partners .block .inner').map (
+            function() {
+                return jQuery(this).height();
+
+            }
+        ));
+        jQuery('#partners .block .inner').height(maxHeight);    
+    }
+}
+
+function setTeamBlocksHeight() {
+    if( jQuery('.team-all').length) {
+        //Reset height
+        jQuery('.team-all .team-block').height('auto');
+        //Get value of highest element
+        var maxHeight = Math.max.apply(Math, jQuery('.team-all .team-block').map (
+            function() {
+                return jQuery(this).height();
+
+            }
+        ));
+        jQuery('.team-all .team-block').height(maxHeight);    
+    }
+}
+
+function setdbotFeaturesBlocksHeight() {
+    if( jQuery('section.features').length) {
+        //Reset height
+        var fixedHeight = (jQuery('section.features .centered-image').height()-180)/3;
+        jQuery('section.features .block').height('auto');
+        console.log(fixedHeight);
+        //Get value of highest element
+        jQuery('section.features .block').height(fixedHeight);    
+    }
+}
+
+function splitDbotCounterNumber(){
+	// var number = jQuery.trim(jQuery('.counter-wraper').text());
+	// var numberArr = number.split('');
+	// var ret  = "";
+	
+	//  jQuery.each(numberArr, function (k, v) {
+ //    	ret += "<span>" + v + "</span>";
+ //    });
+	//  jQuery('.counter-wraper').html(ret);
+}
 
 function accordion(){
 	jQuery('.faq-row .title-row').on('click' , function(){
@@ -63,7 +129,14 @@ function themo_support_mobile_navigation(){
 	}*/
 }
 
-
+function timeline(){
+	 if( jQuery('#timeline').length) {
+	var firstBlock = jQuery('#timeline .block').first().find('h2').offset().top;
+	var lastBlock = jQuery('#timeline .block').last().find('h2').offset().top;
+	var lineHeight = lastBlock - firstBlock;
+	jQuery('#timeline .line span').css('height' , lineHeight);
+	}
+}
 //-----------------------------------------------------
 // ANIMATION - Adds support for CS3 Animations
 // Check if element is visible after scrolling
@@ -221,29 +294,6 @@ function themo_is_touch_device(checkScreenSize){
 	return false;
 }
 
-//-----------------------------------------------------
-// Initiate PARALLAX
-//-----------------------------------------------------
-function themo_start_parallax(isTouch){
-
-	var $body = jQuery(".parallax-bg").parents(".preloader");
-	
-	//-----------------------------------------------------
-	// Select all parallax elemnts and start stellar script
-	// Don't start stellar if viewer is a touch device
-	// Use imagesLoaded to detect when images are loaded, until
-	// then use a preloader gif
-	//-----------------------------------------------------
-	var posts = document.querySelectorAll('.parallax-bg');
-		imagesLoaded( posts, function() { // Detect when images have been loaded (preloader)
-			// Do not use if a touch device!
-			if(!isTouch){ 
-				themo_startStellar();
-			}
-			$body.removeClass('loading').addClass('loaded'); // once images are loaded, remove preloader animation
-		});
-}
-
 
 //-----------------------------------------------------
 // Disable Transparent Header for Mobile
@@ -260,15 +310,6 @@ function themo_no_transparent_header_for_mobile(isTouch){
 	}
 }
 
-//-----------------------------------------------------
-// Initiate Steller (PARALLAX library)
-//-----------------------------------------------------
-function themo_startStellar(){
-	jQuery.stellar({
-		horizontalScrolling: false,
-		//verticalOffset: 145
-	});
-}	
 
 //-----------------------------------------------------
 // Scroll Up
@@ -423,38 +464,7 @@ function themo_init_one_page_scroll(){
     });
  
 	 
- 	if(!isTouch){
-		//Setup waypoints plugin
-		slide.waypoint(function (direction) {
-			
-			var links = jQuery('nav ul.navbar-nav').find('li.th-anchor a');
-			//cache the variable of the data-slide attribute associated with each slide
-			var dataslide = jQuery(this).attr('id');
-			if(typeof dataslide != 'undefined'){
-				
-				jQuery(links).each(function() {
-					var hashtag = jQuery(this).attr('href').split('#')[1];
-					if(hashtag === dataslide){
-						//console.log('Add Class to '+ hashtag);
-						jQuery(this).parent('li').addClass('active');
-					}else{
-						//console.log('Remove Class from '+ hashtag);
-						jQuery(this).parent('li').removeClass('active');
-					}
-				});
-			}
-		}, { 
-			offset: function() {
-				if (jQuery("header").hasClass("headhesive--clone")) {
-					return jQuery(".headhesive--clone").height() ;
-				}else{
-					return 0;
-				}
-			}
-			
-		});
-	}
-	
+
 	//waypoints doesnt detect the first slide when user scrolls back up to the top so we add this little bit of code, that removes the class 
     //from navigation link slide 2 and adds it to navigation link slide 1. 
 	if(!isTouch){
@@ -539,6 +549,12 @@ var nice = false;
 //======================================================================
 jQuery(document).ready(function($) {
 	"use strict";
+	timeline();
+	setNewsPostsHeight();
+	setPartnersPostsHeight();
+	setTeamBlocksHeight();
+	setdbotFeaturesBlocksHeight();
+	splitDbotCounterNumber();
 	accordion();
     var swiper = new Swiper('.swiper-container', {
         pagination: '.swiper-pagination',
@@ -655,9 +671,7 @@ jQuery(document).ready(function($) {
 	// Detect and set isTouch for touch screens
 	var isTouch = themo_is_touch_device();
 
-	// Initiate Parallax Script
-	themo_start_parallax(isTouch);
-
+	
 	// Disable Transparent Header for Mobile / touch
 	themo_no_transparent_header_for_mobile(isTouch);
 
