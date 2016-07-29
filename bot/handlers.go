@@ -22,6 +22,7 @@ import (
 	"github.com/demisto/alfred/repo"
 	"github.com/demisto/goxforce"
 	"github.com/demisto/infinigo"
+	stackerr "github.com/go-errors/errors"
 	"github.com/slavikm/govt"
 )
 
@@ -464,7 +465,13 @@ func (w *Worker) handleFile(request *domain.WorkRequest, reply *domain.WorkReply
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		defer wg.Done()
+		defer func() {
+			if err := recover(); err != nil {
+				logrus.Error(err)
+				logrus.Error(stackerr.Wrap(err, 2).ErrorStack())
+			}
+			wg.Done()
+		}()
 		virus, err := w.clam.scan(request.File.Name, buf.Bytes())
 		if (err == nil || err.Error() == "Virus(es) detected") && virus != "" {
 			reply.File.Virus = virus
