@@ -230,7 +230,7 @@ func (b *Bot) startWS() error {
 	for k, v := range b.subscriptions {
 		if !v.started && v.team.Status == domain.UserStatusActive {
 			err := b.startWSForTeam(k, v)
-			if err != nil && (strings.Contains(err.Error(), "token_revoked") || strings.Contains(err.Error(), "account_inactive")) {
+			if err != nil && (strings.Contains(err.Error(), "token_revoked") || strings.Contains(err.Error(), "account_inactive") || strings.Contains(err.Error(), "invalid_auth")) {
 				subsToClean = append(subsToClean, k)
 			}
 		}
