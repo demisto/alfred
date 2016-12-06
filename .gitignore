@@ -25,6 +25,7 @@ _testmain.go
 *.prof
 alfred
 alfred.db
+tools/pscleaner/pscleaner
 
 *.sw*
 *~
@@ -47,6 +48,8 @@ etc/*rsa*
 etc/*.pem
 etc/*.yaml
 etc/*mysql*
+etc/backup_script.sh
+etc/dbot_backup*
 
 _analytics.jade
 _gtmid.json

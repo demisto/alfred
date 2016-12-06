@@ -594,6 +594,9 @@ func parseChannels(sub *subscription, text string, pos int) ([]string, []string,
 				switch {
 				case strings.Contains(subpart, "<#"): // if this is #channel
 					ch = subpart[2 : len(subpart)-1]
+					if strings.Contains(ch, "|") {
+						ch = strings.Split(ch, "|")[0]
+					}
 				case strings.HasPrefix(subpart, "#"): // if this is a group but someone chose # as start
 					subpart = subpart[1:]
 					fallthrough
