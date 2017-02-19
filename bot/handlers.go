@@ -98,8 +98,8 @@ func (w *Worker) handle() {
 			if ipReg.MatchString(msg.Text) {
 				w.handleIP(msg, reply)
 			}
-			if md5Reg.MatchString(msg.Text) {
-				w.handleMD5(msg, reply)
+			if md5Reg.MatchString(msg.Text) || sha1Reg.MatchString(msg.Text) || sha256Reg.MatchString(msg.Text) {
+				w.handleHashes(msg, reply)
 			}
 		case "file":
 			w.handleFile(msg, reply)
@@ -333,64 +333,66 @@ func (w *Worker) handleIP(request *domain.WorkRequest, reply *domain.WorkReply) 
 	}
 }
 
-func (w *Worker) handleMD5(request *domain.WorkRequest, reply *domain.WorkReply) {
+func (w *Worker) handleHashes(request *domain.WorkRequest, reply *domain.WorkReply) {
 	text := request.Text
 	xfe, vt := w.localVTXfe(request)
-	md5s := md5Reg.FindAllString(text, -1)
-	for _, md5 := range md5s {
-		reply.MD5s = append(reply.MD5s, domain.MD5Reply{})
-		counter := len(reply.MD5s) - 1
-		reply.Type |= domain.ReplyTypeMD5
-		reply.MD5s[counter].Details = md5
+	hashes := md5Reg.FindAllString(text, -1)
+	hashes = append(hashes, sha1Reg.FindAllString(text, -1)...)
+	hashes = append(hashes, sha256Reg.FindAllString(text, -1)...)
+	for _, hash := range hashes {
+		var res domain.HashReply
+		reply.Type |= domain.ReplyTypeHash
+		res.Details = hash
 		var wg sync.WaitGroup
 		wg.Add(3)
 		go func() {
 			defer wg.Done()
-			md5Resp, err := xfe.MalwareDetails(md5)
+			xfeResp, err := xfe.MalwareDetails(hash)
 			if err != nil {
 				// Small hack - see if the file was not found
 				if strings.Contains(err.Error(), "404") {
-					reply.MD5s[counter].XFE.NotFound = true
+					res.XFE.NotFound = true
 				} else {
-					reply.MD5s[counter].XFE.Error = err.Error()
+					res.XFE.Error = err.Error()
 				}
 			} else {
-				reply.MD5s[counter].XFE.Malware = md5Resp.Malware
+				res.XFE.Malware = xfeResp.Malware
 			}
 		}()
 		go func() {
 			defer wg.Done()
-			vtResp, err := vt.GetFileReport(md5)
+			vtResp, err := vt.GetFileReport(hash)
 			if err != nil {
-				reply.MD5s[counter].VT.Error = err.Error()
+				res.VT.Error = err.Error()
 			} else {
-				reply.MD5s[counter].VT.FileReport = *vtResp
+				res.VT.FileReport = *vtResp
 			}
 		}()
 		go func() {
 			defer wg.Done()
-			cyResp, err := w.cy.Query("", md5)
+			cyResp, err := w.cy.Query("", hash)
 			if err != nil {
-				reply.MD5s[counter].Cy.Error = err.Error()
+				res.Cy.Error = err.Error()
 			} else {
 				// Should be only one
 				for k := range cyResp {
-					reply.MD5s[counter].Cy.Result = cyResp[k]
+					res.Cy.Result = cyResp[k]
 				}
 			}
 		}()
 		wg.Wait()
-		reply.MD5s[counter].Result = domain.ResultUnknown
-		if len(reply.MD5s[counter].XFE.Malware.Family) > 0 || len(reply.MD5s[counter].XFE.Malware.Origins.External.Family) > 0 ||
-			reply.MD5s[counter].VT.FileReport.Positives >= numOfPositivesToConvictForFiles ||
-			reply.MD5s[counter].Cy.Result.GeneralScore < cyScoreToConvict {
+		res.Result = domain.ResultUnknown
+		if len(res.XFE.Malware.Family) > 0 || len(res.XFE.Malware.Origins.External.Family) > 0 ||
+			res.VT.FileReport.Positives >= numOfPositivesToConvictForFiles ||
+			res.Cy.Result.GeneralScore < cyScoreToConvict {
 			// This is known bad scenario
-			reply.MD5s[counter].Result = domain.ResultDirty
-		} else if !reply.MD5s[counter].XFE.NotFound || reply.MD5s[counter].VT.FileReport.ResponseCode == 1 || reply.MD5s[counter].Cy.Result.StatusCode == 1 {
+			res.Result = domain.ResultDirty
+		} else if !res.XFE.NotFound || res.VT.FileReport.ResponseCode == 1 || res.Cy.Result.StatusCode == 1 {
 			// At least one of reputation services found this to be known good
 			// Keep the default
-			reply.MD5s[counter].Result = domain.ResultClean
+			res.Result = domain.ResultClean
 		}
+		reply.Hashes = append(reply.Hashes, res)
 	}
 }
 
@@ -402,9 +404,9 @@ func (w *Worker) uploadToCylance(reply *domain.WorkReply, buf *bytes.Buffer) {
 		return
 	}
 	logrus.Debugf("Sending file %s to Cylance", reply.File.Details.Name)
-	resp, err := w.cy.Upload(reply.MD5s[0].Cy.Result.ConfirmCode, bytes.NewReader(buf.Bytes()))
+	resp, err := w.cy.Upload(reply.Hashes[0].Cy.Result.ConfirmCode, bytes.NewReader(buf.Bytes()))
 	if err != nil {
-		logrus.WithError(err).Infof("Error uploading the file - configuration code was %s", reply.MD5s[0].Cy.Result.ConfirmCode)
+		logrus.WithError(err).Infof("Error uploading the file - configuration code was %s", reply.Hashes[0].Cy.Result.ConfirmCode)
 		return
 	}
 	for k := range resp {
@@ -413,14 +415,14 @@ func (w *Worker) uploadToCylance(reply *domain.WorkReply, buf *bytes.Buffer) {
 			tries := 3
 			for i := 0; i < tries; i++ {
 				time.Sleep(10 * time.Second)
-				cyResp, err := w.cy.Query("", reply.MD5s[0].Details)
+				cyResp, err := w.cy.Query("", reply.Hashes[0].Details)
 				if err != nil {
 					return
 				} else {
 					// Should be only one
 					for k := range cyResp {
 						if cyResp[k].StatusCode == 1 {
-							reply.MD5s[0].Cy.Result = cyResp[k]
+							reply.Hashes[0].Cy.Result = cyResp[k]
 							return
 						} else if cyResp[k].StatusCode != 2 {
 							// If there is an error it means Cylance does not handle the file so no point in waiting
@@ -480,21 +482,21 @@ func (w *Worker) handleFile(request *domain.WorkRequest, reply *domain.WorkReply
 		}
 	}()
 	request.Text = h
-	w.handleMD5(request, reply)
+	w.handleHashes(request, reply)
 	wg.Wait()
 	reply.File.Result = domain.ResultUnknown
-	if len(reply.MD5s) != 1 {
+	if len(reply.Hashes) != 1 {
 		logrus.Warnf("Handling file but did not get an MD5 reply - %+v", reply)
 		return
 	}
 	// If Cylance does not know about the file but can handle it then handle it...
-	if reply.MD5s[0].Cy.Result.StatusCode == 3 {
+	if reply.Hashes[0].Cy.Result.StatusCode == 3 {
 		w.uploadToCylance(reply, buf)
 	}
-	if reply.File.Virus != "" || reply.MD5s[0].Result == domain.ResultDirty {
+	if reply.File.Virus != "" || reply.Hashes[0].Result == domain.ResultDirty {
 		// This is known bad scenario
 		reply.File.Result = domain.ResultDirty
-	} else if reply.File.Virus == "" || reply.MD5s[0].Result == domain.ResultClean {
+	} else if reply.File.Virus == "" || reply.Hashes[0].Result == domain.ResultClean {
 		// At least one of reputation services found this to be known good
 		// Keep the default
 		reply.File.Result = domain.ResultClean

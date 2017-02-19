@@ -258,8 +258,10 @@ func (b *Bot) stopWS() {
 }
 
 var (
-	ipReg  = regexp.MustCompile("\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b")
-	md5Reg = regexp.MustCompile("\\b[a-fA-F\\d]{32}\\b")
+	ipReg     = regexp.MustCompile("\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b")
+	md5Reg    = regexp.MustCompile("\\b[a-fA-F\\d]{32}\\b")
+	sha1Reg   = regexp.MustCompile("\\b[a-fA-F\\d]{40}\\b")
+	sha256Reg = regexp.MustCompile("\\b[a-fA-F\\d]{64}\\b")
 )
 
 func (b *Bot) handleMessage(msg *slack.Message) {
@@ -285,7 +287,7 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 		push := false
 		switch msg.Subtype {
 		case "":
-			push = strings.Contains(msg.Text, "<http") || ipReg.MatchString(msg.Text) || md5Reg.MatchString(msg.Text)
+			push = strings.Contains(msg.Text, "<http") || ipReg.MatchString(msg.Text) || md5Reg.MatchString(msg.Text) || sha1Reg.MatchString(msg.Text) || sha256Reg.MatchString(msg.Text)
 		// case "message_changed":
 		// 	push = strings.Contains(msg.Message.Text, "<http") || ipReg.MatchString(msg.Message.Text) || md5Reg.MatchString(msg.Message.Text)
 		case "file_share":

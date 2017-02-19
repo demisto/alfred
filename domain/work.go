@@ -62,8 +62,8 @@ func WorkRequestFromMessage(msg *slack.Message, token, vtKey, xfeKey, xfePass st
 }
 
 const (
-	// ReplyTypeMD5 for MD5 replies
-	ReplyTypeMD5 int = 1 << iota
+	// ReplyTypeHash for hash replies
+	ReplyTypeHash int = 1 << iota
 	// ReplyTypeURL for URL replies
 	ReplyTypeURL
 	// ReplyTypeIP for IP replies
@@ -81,8 +81,8 @@ const (
 	ResultUnknown
 )
 
-// MD5Reply holds the information about an MD5
-type MD5Reply struct {
+// HashReply holds the information about a hash
+type HashReply struct {
 	Details string `json:"details"`
 	Result  int
 	XFE     struct {
@@ -147,7 +147,7 @@ type FileReply struct {
 type WorkReply struct {
 	Type      int         `json:"type"`
 	MessageID string      `json:"message_id"`
-	MD5s      []MD5Reply  `json:"md5s"`
+	Hashes    []HashReply `json:"hashes"`
 	URLs      []URLReply  `json:"urls"`
 	IPs       []IPReply   `json:"ips"`
 	File      FileReply   `json:"file"`

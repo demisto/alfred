@@ -568,10 +568,10 @@
           var data = this.props.data;
           return (
             <div>
-              <h2>File: {isfile ? data.file.details.name : data.md5s[0].details}</h2>
+              <h2>File: {isfile ? data.file.details.name : data.hashes[0].details}</h2>
               <FileResultMessage data={data} />
               <FileAV data={data} />
-              <FileDetails data={data.md5s[0]} />
+              <FileDetails data={data.hashes[0]} />
             </div>
           );
         }
@@ -583,7 +583,7 @@
         var resultMessage = 'Could not determine the File reputation.';
         var color = 'warning-text';
         var filedata = this.props.data.file;
-        var md5data = this.props.data.md5s[0];
+        var md5data = this.props.data.hashes[0];
         if (isfile && filedata.Result == 0 || ismd5 && md5data.Result == 0) {
           resultMessage = 'File is found to be clean.';
           color = 'success-text';
