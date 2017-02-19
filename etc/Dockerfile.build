@@ -1,4 +1,4 @@
-FROM golang:1.6.2
+FROM golang:latest
 
 # First, add npm as well
 # verify gpg and sha256: http://nodejs.org/dist/v0.10.30/SHASUMS256.txt.asc
