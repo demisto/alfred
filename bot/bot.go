@@ -284,18 +284,23 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 		if msg.User == sub.team.BotUserID {
 			return
 		}
+		text := strings.ToLower(msg.Text)
 		push := false
-		switch msg.Subtype {
-		case "":
-			push = strings.Contains(msg.Text, "<http") || ipReg.MatchString(msg.Text) || md5Reg.MatchString(msg.Text) || sha1Reg.MatchString(msg.Text) || sha256Reg.MatchString(msg.Text)
-		// case "message_changed":
-		// 	push = strings.Contains(msg.Message.Text, "<http") || ipReg.MatchString(msg.Message.Text) || md5Reg.MatchString(msg.Message.Text)
-		case "file_share":
-			push = true
-		case "file_comment":
-			push = !strings.Contains(msg.Comment.Comment, conf.Options.ExternalAddress) && (strings.Contains(msg.Comment.Comment, "<http") || ipReg.MatchString(msg.Comment.Comment) || md5Reg.MatchString(msg.Comment.Comment))
-		case "file_mention":
-			push = true
+		// If this is an internal command to us we should not check hashes, etc.
+		if !(msg.Subtype == "" && msg.Channel != "" && msg.Channel[0] == 'D' && (strings.HasPrefix(text, "join ") ||
+			strings.HasPrefix(text, "verbose ") || text == "config" ||
+			text == "?" || strings.HasPrefix(text, "help") || strings.HasPrefix(text, "vt ") ||
+			strings.HasPrefix(text, "xfe "))) {
+			switch msg.Subtype {
+			case "":
+				push = strings.Contains(msg.Text, "<http") || ipReg.MatchString(msg.Text) || md5Reg.MatchString(msg.Text) || sha1Reg.MatchString(msg.Text) || sha256Reg.MatchString(msg.Text)
+			case "file_share":
+				push = true
+			case "file_comment":
+				push = !strings.Contains(msg.Comment.Comment, conf.Options.ExternalAddress) && (strings.Contains(msg.Comment.Comment, "<http") || ipReg.MatchString(msg.Comment.Comment) || md5Reg.MatchString(msg.Comment.Comment))
+			case "file_mention":
+				push = true
+			}
 		}
 		// If we need to handle the message, pass it to the queue
 		if push {
@@ -319,7 +324,6 @@ func (b *Bot) handleMessage(msg *slack.Message) {
 			defer b.smu.Unlock()
 			// Handle some internal commands
 			if msg.Channel != "" && msg.Channel[0] == 'D' {
-				text := strings.ToLower(msg.Text)
 				switch {
 				case strings.HasPrefix(text, "join "):
 					b.joinChannels(ctx.Team, msg.Text, msg.Channel)
@@ -383,7 +387,6 @@ func (b *Bot) Start() error {
 			b.stopWS()
 			return nil
 		case msg := <-b.in:
-			// TODO - error handling - something wrong with channel closing in case of error
 			if msg == nil || msg.Type == "error" {
 				if msg == nil {
 					logrus.Fatal("Message channel from Slack closed - should never happen")

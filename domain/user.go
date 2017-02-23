@@ -179,6 +179,7 @@ type TeamBot struct {
 	Team      string    `json:"team"`
 	Bot       string    `json:"bot"`
 	Timestamp time.Time `json:"ts" db:"ts"`
+	Version   int       `json:"version"`
 }
 
 // JoinSlack holds invite information to join our Slack channel
