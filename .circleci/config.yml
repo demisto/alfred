@@ -1,0 +1,32 @@
+version: 2
+jobs:
+  build:
+    working_directory: /home/circleci/alfred
+    docker:
+      - image: circleci/node:8.11.0
+    environment:
+      GO_VERSION: "1.10"
+    steps:
+      - checkout
+      - run:
+          name: Initialize Variables
+          command: |
+              echo "$GO_VERSION" > ~/GO_VERSION.txt
+      - restore_cache:
+          key: gvm-{{ checksum "~/GO_VERSION.txt" }}
+      - run:
+          name: Install dependencies
+          command: |
+              sudo npm install -g gulp
+              sudo npm install -g bower
+              sudo apt-get update
+              sudo apt-get install bison
+              if [ -z "$(ls -A  $HOME/.gvm/)" ]; then bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer) ; fi
+              source $HOME/.gvm/scripts/gvm; gvm install go${GO_VERSION} --binary
+      - save_cache:
+          key: gvm-{{ checksum "~/GO_VERSION.txt" }}
+          paths:
+            - /home/circleci/.gvm
+      - run:
+          name: Test
+          command: bash circle-test.sh

@@ -3,7 +3,7 @@
 # Simple script to set up Circle environment and run the tests
 
 BUILD_DIR=$HOME/go
-GO_VERSION=go1.5
+GO_VERSION=go1.10
 TIMEOUT="-timeout 30s"
 
 # Executes the given statement, and exits if the command returns a non-zero code.
@@ -59,6 +59,8 @@ exit_if_fail cd $GOPATH/src/github.com/demisto/alfred
 exit_if_fail go get -t -d -v ./...
 
 # Touch missing private files
+exit_if_fail touch $GOPATH/src/github.com/demisto/alfred/static/master/_gtmid.json
+echo '{}' >> $GOPATH/src/github.com/demisto/alfred/static/master/_gtmid.json
 exit_if_fail touch $GOPATH/src/github.com/demisto/alfred/static/master/jade/_ze.jade
 exit_if_fail touch $GOPATH/src/github.com/demisto/alfred/static/master/jade/_analytics.jade
 
