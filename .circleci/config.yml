@@ -1,0 +1,28 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/node:8.11.0
+    environment:
+      GO_VERSION: "1.5"
+    steps:
+      - checkout
+      - run:
+          name: Initialize Variables
+          command: |
+              echo "$GO_VERSION" > ~/GO_VERSION.txt
+      - restore_cache:
+          key: gvm-{{ checksum "~/GO_VERSION.txt" }}
+      - run:
+          name: Install dependencies
+          command: |
+              sudo npm install --global gulp
+              bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+              source $HOME/.gvm/scripts/gvm; gvm install go${GO_VERSION} --binary
+      - save_cache:
+          key: gvm-{{ checksum "~/GO_VERSION.txt" }}
+          paths:
+            - /home/circleci/.gvm
+      - run:
+          name: Test
+          command: bash circle-test.sh
