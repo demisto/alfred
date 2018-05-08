@@ -17,7 +17,8 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-              sudo npm install --global gulp
+              sudo npm install -g gulp
+              sudo npm install -g bower
               sudo apt-get update
               sudo apt-get install bison
               if [ -z "$(ls -A  $HOME/.gvm/)" ]; then bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer) ; fi
