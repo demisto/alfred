@@ -59,7 +59,7 @@ exit_if_fail cd $GOPATH/src/github.com/demisto/alfred
 exit_if_fail go get -t -d -v ./...
 
 # Touch missing private files
-exit_if_fail touch $GOPATH/src/github.com/demisto/alfred/static/master/jade/_gtmid.json
+exit_if_fail touch $GOPATH/src/github.com/demisto/alfred/static/master/jade/_gtmid.json && echo '{}' >> $GOPATH/src/github.com/demisto/alfred/static/master/jade/_gtmid.json
 exit_if_fail touch $GOPATH/src/github.com/demisto/alfred/static/master/jade/_ze.jade
 exit_if_fail touch $GOPATH/src/github.com/demisto/alfred/static/master/jade/_analytics.jade
 
