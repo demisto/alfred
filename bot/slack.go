@@ -10,8 +10,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
+	"github.com/demisto/alfred/slack"
 	"github.com/demisto/alfred/util"
-	"github.com/demisto/slack"
 	"github.com/slavikm/govt"
 )
 
@@ -95,24 +95,22 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 		comment = fileCommentGood
 	}
 	fileMessage := fmt.Sprintf(comment, reply.File.Details.Name, fmt.Sprintf("<%s&text=%s|Details>", link, url.QueryEscape(reply.Hashes[0].Details)))
-	postMessage := &slack.PostMessageRequest{
-		Channel:     data.Channel,
-		Attachments: []slack.Attachment{{Fallback: fileMessage, Text: fileMessage, Color: color}},
-	}
+	attachments := []map[string]interface{}{{"fallback": fileMessage, "text": fileMessage, "color": color}}
+	postMessage := map[string]interface{}{"channel": data.Channel}
 	if data.Channel != "" {
 		if reply.Hashes[0].Cy.Error == "" && reply.Hashes[0].Cy.Result.StatusCode == 1 {
 			cyColor := "good"
 			if reply.Hashes[0].Cy.Result.GeneralScore < cyScoreToConvict {
 				cyColor = "danger"
 			}
-			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-				Fallback:  fmt.Sprintf("Score: %v, Classifiers: %v", reply.Hashes[0].Cy.Result.GeneralScore, reply.Hashes[0].Cy.Result.Classifiers),
-				Color:     cyColor,
-				Title:     "Cylance Infinity",
-				TitleLink: "https://www.cylance.com",
-				Fields: []slack.AttachmentField{
-					{Title: "Score", Value: fmt.Sprintf("%v", reply.Hashes[0].Cy.Result.GeneralScore), Short: true},
-					{Title: "Classifiers", Value: joinMapFloat32(reply.Hashes[0].Cy.Result.Classifiers), Short: true},
+			attachments = append(attachments, map[string]interface{}{
+				"fallback":   fmt.Sprintf("Score: %v, Classifiers: %v", reply.Hashes[0].Cy.Result.GeneralScore, reply.Hashes[0].Cy.Result.Classifiers),
+				"color":      cyColor,
+				"title":      "Cylance Infinity",
+				"title_link": "https://www.cylance.com",
+				"fields": []map[string]interface{}{
+					{"title": "Score", "value": fmt.Sprintf("%v", reply.Hashes[0].Cy.Result.GeneralScore), "short": true},
+					{"title": "Classifiers", "value": joinMapFloat32(reply.Hashes[0].Cy.Result.Classifiers), "short": true},
 				},
 			})
 		}
@@ -121,15 +119,15 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 			if len(reply.Hashes[0].XFE.Malware.Family) > 0 || len(reply.Hashes[0].XFE.Malware.Origins.External.Family) > 0 {
 				xfeColor = "danger"
 			}
-			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-				Fallback:  fmt.Sprintf("Mime Type: %s, Family: %s", reply.Hashes[0].XFE.Malware.MimeType, strings.Join(reply.Hashes[0].XFE.Malware.Family, ",")),
-				Color:     xfeColor,
-				Title:     "IBM X-Force Exchange",
-				TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.Hashes[0].Details),
-				Fields: []slack.AttachmentField{
-					{Title: "Family", Value: strings.Join(reply.Hashes[0].XFE.Malware.Family, ","), Short: true},
-					{Title: "MIME Type", Value: reply.Hashes[0].XFE.Malware.MimeType, Short: true},
-					{Title: "Created", Value: reply.Hashes[0].XFE.Malware.Created.String(), Short: true},
+			attachments = append(attachments, map[string]interface{}{
+				"fallback":   fmt.Sprintf("Mime Type: %s, Family: %s", reply.Hashes[0].XFE.Malware.MimeType, strings.Join(reply.Hashes[0].XFE.Malware.Family, ",")),
+				"color":      xfeColor,
+				"title":      "IBM X-Force Exchange",
+				"title_link": fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.Hashes[0].Details),
+				"fields": []map[string]interface{}{
+					{"title": "Family", "value": strings.Join(reply.Hashes[0].XFE.Malware.Family, ","), "short": true},
+					{"title": "MIME Type", "value": reply.Hashes[0].XFE.Malware.MimeType, "short": true},
+					{"title": "Created", "value": reply.Hashes[0].XFE.Malware.Created.String(), "short": true},
 				},
 			})
 		}
@@ -138,25 +136,25 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 			if reply.Hashes[0].VT.FileReport.Positives >= numOfPositivesToConvictForFiles {
 				vtColor = "danger"
 			}
-			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-				Fallback:  fmt.Sprintf("Scan Date: %s, Positives: %v, Total: %v", reply.Hashes[0].VT.FileReport.ScanDate, reply.Hashes[0].VT.FileReport.Positives, reply.Hashes[0].VT.FileReport.Total),
-				Color:     vtColor,
-				Title:     "VirusTotal",
-				TitleLink: reply.Hashes[0].VT.FileReport.Permalink,
-				Fields: []slack.AttachmentField{
-					{Title: "Scan Date", Value: reply.Hashes[0].VT.FileReport.ScanDate, Short: true},
-					{Title: "Positives", Value: fmt.Sprintf("%v", reply.Hashes[0].VT.FileReport.Positives), Short: true},
-					{Title: "Total", Value: fmt.Sprintf("%v", reply.Hashes[0].VT.FileReport.Total), Short: true},
+			attachments = append(attachments, map[string]interface{}{
+				"fallback":   fmt.Sprintf("Scan Date: %s, Positives: %v, Total: %v", reply.Hashes[0].VT.FileReport.ScanDate, reply.Hashes[0].VT.FileReport.Positives, reply.Hashes[0].VT.FileReport.Total),
+				"color":      vtColor,
+				"title":      "VirusTotal",
+				"title_link": reply.Hashes[0].VT.FileReport.Permalink,
+				"fields": []map[string]interface{}{
+					{"title": "Scan Date", "value": reply.Hashes[0].VT.FileReport.ScanDate, "short": true},
+					{"title": "Positives", "value": fmt.Sprintf("%v", reply.Hashes[0].VT.FileReport.Positives), "short": true},
+					{"title": "Total", "value": fmt.Sprintf("%v", reply.Hashes[0].VT.FileReport.Total), "short": true},
 				},
 			})
 		}
 		if reply.File.Virus != "" {
-			postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-				Fallback:   fmt.Sprintf("Virus name: %s", reply.File.Virus),
-				Text:       fmt.Sprintf("Virus name: %s", reply.File.Virus),
-				Color:      "danger",
-				AuthorName: "ClamAV",
-				Title:      "ClamAV",
+			attachments = append(attachments, map[string]interface{}{
+				"fallback":    fmt.Sprintf("Virus name: %s", reply.File.Virus),
+				"text":        fmt.Sprintf("Virus name: %s", reply.File.Virus),
+				"color":       "danger",
+				"author_name": "ClamAV",
+				"title":       "ClamAV",
 			})
 		}
 		if verbose {
@@ -166,6 +164,7 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 		}
 	}
 	if shouldPost {
+		postMessage["attachments"] = attachments
 		err := b.post(postMessage, reply, data, sub)
 		if err != nil {
 			logrus.Errorf("Unable to send message to Slack - %v\n", err)
@@ -317,7 +316,7 @@ func defangURL(u string) string {
 
 func (b *Bot) handleReply(reply *domain.WorkReply) {
 	logrus.Debugf("Handling reply - %s", reply.MessageID)
-	data, err := GetContext(reply.Context)
+	data, err := domain.GetContext(reply.Context)
 	if err != nil {
 		logrus.Warnf("Error getting context from reply - %+v\n", reply)
 		return
@@ -334,14 +333,15 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 			// Since it's a direct message to me, I need to reply verbose
 			verbose = true
 		} else {
-			verbose = sub.configuration.IsVerbose(data.Channel, "")
+			verbose = sub.configuration.IsVerbose(data.Channel)
 		}
 	}
 	if reply.Type&domain.ReplyTypeFile > 0 {
 		b.handleFileReply(reply, data, sub, verbose)
 	} else {
 		link := fmt.Sprintf("%s/details?c=%s&m=%s&t=%s", conf.Options.ExternalAddress, data.Channel, reply.MessageID, data.Team)
-		postMessage := &slack.PostMessageRequest{Channel: data.Channel}
+		postMessage := slack.Response{"channel": data.Channel}
+		attachments := make([]map[string]interface{}, 0)
 		for i := range reply.URLs {
 			color := "warning"
 			comment := urlCommentWarning
@@ -354,10 +354,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 			}
 			urlMessage := fmt.Sprintf(comment, defangURL(reply.URLs[i].Details), fmt.Sprintf("<%s&text=%s|Details>", link, url.QueryEscape("<"+reply.URLs[i].Details+">")))
 			if verbose || color != "good" {
-				postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-					Fallback: urlMessage,
-					Text:     urlMessage,
-					Color:    color,
+				attachments = append(attachments, map[string]interface{}{
+					"fallback": urlMessage,
+					"text":     urlMessage,
+					"color":    color,
 				})
 			}
 			if verbose {
@@ -366,23 +366,23 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 					if reply.URLs[i].XFE.URLDetails.Score >= xfeScoreToConvict {
 						xfeColor = "danger"
 					}
-					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-						Fallback: fmt.Sprintf("Score: %v, A Records: %s, Categories: %s",
+					attachments = append(attachments, map[string]interface{}{
+						"fallback": fmt.Sprintf("Score: %v, A Records: %s, Categories: %s",
 							reply.URLs[i].XFE.URLDetails.Score,
 							strings.Join(reply.URLs[i].XFE.Resolve.A, ","),
 							joinMap(reply.URLs[i].XFE.URLDetails.Cats)),
-						Color:     xfeColor,
-						Title:     "IBM X-Force Exchange",
-						TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/url/%s", reply.URLs[i].Details),
-						Fields: []slack.AttachmentField{
-							{Title: "Score", Value: fmt.Sprintf("%v", reply.URLs[i].XFE.URLDetails.Score), Short: true},
-							{Title: "A Records", Value: strings.Join(reply.URLs[i].XFE.Resolve.A, ","), Short: true},
-							{Title: "Categories", Value: joinMap(reply.URLs[i].XFE.URLDetails.Cats), Short: true},
+						"color":      xfeColor,
+						"title":      "IBM X-Force Exchange",
+						"title_link": fmt.Sprintf("https://exchange.xforce.ibmcloud.com/url/%s", reply.URLs[i].Details),
+						"fields": []map[string]interface{}{
+							{"title": "Score", "value": fmt.Sprintf("%v", reply.URLs[i].XFE.URLDetails.Score), "short": true},
+							{"title": "A Records", "value": strings.Join(reply.URLs[i].XFE.Resolve.A, ","), "short": true},
+							{"title": "Categories", "value": joinMap(reply.URLs[i].XFE.URLDetails.Cats), "short": true},
 						},
 					})
 					if len(reply.URLs[i].XFE.Resolve.AAAA) > 0 {
-						postMessage.Attachments[len(postMessage.Attachments)-1].Fields = append(postMessage.Attachments[len(postMessage.Attachments)-1].Fields,
-							slack.AttachmentField{Title: "A Records", Value: strings.Join(reply.URLs[i].XFE.Resolve.AAAA, ","), Short: true})
+						attachments[len(attachments)-1]["fields"] = append(attachments[len(attachments)-1]["fields"].([]map[string]interface{}),
+							map[string]interface{}{"title": "A Records", "value": strings.Join(reply.URLs[i].XFE.Resolve.AAAA, ","), "short": true})
 					}
 				}
 				if reply.URLs[i].VT.URLReport.ResponseCode == 1 {
@@ -390,15 +390,15 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 					if reply.URLs[i].VT.URLReport.Positives >= numOfPositivesToConvict {
 						vtColor = "danger"
 					}
-					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-						Fallback:  fmt.Sprintf("Scan Date: %s, Positives: %v, Total: %v", reply.URLs[i].VT.URLReport.ScanDate, reply.URLs[i].VT.URLReport.Positives, reply.URLs[i].VT.URLReport.Total),
-						Color:     vtColor,
-						Title:     "VirusTotal",
-						TitleLink: reply.URLs[i].VT.URLReport.Permalink,
-						Fields: []slack.AttachmentField{
-							{Title: "Scan Date", Value: reply.URLs[i].VT.URLReport.ScanDate, Short: true},
-							{Title: "Positives", Value: fmt.Sprintf("%v", reply.URLs[i].VT.URLReport.Positives), Short: true},
-							{Title: "Total", Value: fmt.Sprintf("%v", reply.URLs[i].VT.URLReport.Total), Short: true},
+					attachments = append(attachments, map[string]interface{}{
+						"fallback":   fmt.Sprintf("Scan Date: %s, Positives: %v, Total: %v", reply.URLs[i].VT.URLReport.ScanDate, reply.URLs[i].VT.URLReport.Positives, reply.URLs[i].VT.URLReport.Total),
+						"color":      vtColor,
+						"title":      "VirusTotal",
+						"title_link": reply.URLs[i].VT.URLReport.Permalink,
+						"fields": []map[string]interface{}{
+							{"title": "Scan Date", "value": reply.URLs[i].VT.URLReport.ScanDate, "short": true},
+							{"title": "Positives", "value": fmt.Sprintf("%v", reply.URLs[i].VT.URLReport.Positives), "short": true},
+							{"title": "Total", "value": fmt.Sprintf("%v", reply.URLs[i].VT.URLReport.Total), "short": true},
 						},
 					})
 				}
@@ -419,10 +419,10 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 			}
 			ipMessage := fmt.Sprintf(comment, reply.IPs[i].Details, fmt.Sprintf("<%s&text=%s|Details>", link, url.QueryEscape(reply.IPs[i].Details)))
 			if verbose || color != "good" {
-				postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-					Fallback: ipMessage,
-					Text:     ipMessage,
-					Color:    color,
+				attachments = append(attachments, map[string]interface{}{
+					"fallback": ipMessage,
+					"text":     ipMessage,
+					"color":    color,
 				})
 			}
 			if verbose {
@@ -431,16 +431,16 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 					if reply.IPs[i].XFE.IPReputation.Score >= xfeScoreToConvict {
 						xfeColor = "danger"
 					}
-					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-						Fallback: fmt.Sprintf("Score: %v, Categories: %s, Geo: %v",
+					attachments = append(attachments, map[string]interface{}{
+						"fallback": fmt.Sprintf("Score: %v, Categories: %s, Geo: %v",
 							reply.IPs[i].XFE.IPReputation.Score, joinMapInt(reply.IPs[i].XFE.IPReputation.Cats), nilOrUnknown(reply.IPs[i].XFE.IPReputation.Geo["country"])),
-						Color:     xfeColor,
-						Title:     "IBM X-Force Exchange",
-						TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/ip/%s", reply.IPs[i].Details),
-						Fields: []slack.AttachmentField{
-							{Title: "Score", Value: fmt.Sprintf("%v", reply.IPs[i].XFE.IPReputation.Score), Short: true},
-							{Title: "Categories", Value: joinMapInt(reply.IPs[i].XFE.IPReputation.Cats), Short: true},
-							{Title: "Geo", Value: nilOrUnknown(reply.IPs[i].XFE.IPReputation.Geo["country"]), Short: true},
+						"color":      xfeColor,
+						"title":      "IBM X-Force Exchange",
+						"title_link": fmt.Sprintf("https://exchange.xforce.ibmcloud.com/ip/%s", reply.IPs[i].Details),
+						"fields": []map[string]interface{}{
+							{"title": "Score", "value": fmt.Sprintf("%v", reply.IPs[i].XFE.IPReputation.Score), "short": true},
+							{"title": "Categories", "value": joinMapInt(reply.IPs[i].XFE.IPReputation.Cats), "short": true},
+							{"title": "Geo", "value": nilOrUnknown(reply.IPs[i].XFE.IPReputation.Geo["country"]), "short": true},
 						},
 					})
 				}
@@ -467,12 +467,12 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 					if vtPositives >= numOfPositivesToConvict {
 						vtColor = "danger"
 					}
-					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-						Fallback:  listOfURLs,
-						Text:      listOfURLs,
-						Color:     vtColor,
-						Title:     "VirusTotal",
-						TitleLink: "https://www.virustotal.com/en/search?query=" + reply.IPs[i].Details,
+					attachments = append(attachments, map[string]interface{}{
+						"fallback":   listOfURLs,
+						"text":       listOfURLs,
+						"color":      vtColor,
+						"title":      "VirusTotal",
+						"title_link": "https://www.virustotal.com/en/search?query=" + reply.IPs[i].Details,
 					})
 				}
 			}
@@ -490,24 +490,24 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 					comment = hashCommentGood
 				}
 				hashMessage := fmt.Sprintf(comment, reply.Hashes[i].Details, fmt.Sprintf("<%s&text=%s|Details>", link, url.QueryEscape(reply.Hashes[i].Details)))
-				postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-					Fallback: hashMessage,
-					Text:     hashMessage,
-					Color:    color,
+				attachments = append(attachments, map[string]interface{}{
+					"fallback": hashMessage,
+					"text":     hashMessage,
+					"color":    color,
 				})
 				if reply.Hashes[i].Cy.Error == "" && reply.Hashes[0].Cy.Result.StatusCode == 1 {
 					cyColor := "good"
 					if reply.Hashes[0].Cy.Result.GeneralScore < cyScoreToConvict {
 						cyColor = "danger"
 					}
-					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-						Fallback:  fmt.Sprintf("Score: %v, Classifiers: %v", reply.Hashes[0].Cy.Result.GeneralScore, reply.Hashes[0].Cy.Result.Classifiers),
-						Color:     cyColor,
-						Title:     "Cylance Infinity",
-						TitleLink: "https://www.cylance.com",
-						Fields: []slack.AttachmentField{
-							{Title: "Score", Value: fmt.Sprintf("%v", reply.Hashes[0].Cy.Result.GeneralScore), Short: true},
-							{Title: "Classifiers", Value: joinMapFloat32(reply.Hashes[0].Cy.Result.Classifiers), Short: true},
+					attachments = append(attachments, map[string]interface{}{
+						"fallback":   fmt.Sprintf("Score: %v, Classifiers: %v", reply.Hashes[0].Cy.Result.GeneralScore, reply.Hashes[0].Cy.Result.Classifiers),
+						"color":      cyColor,
+						"title":      "Cylance Infinity",
+						"title_link": "https://www.cylance.com",
+						"fields": []map[string]interface{}{
+							{"title": "Score", "value": fmt.Sprintf("%v", reply.Hashes[0].Cy.Result.GeneralScore), "short": true},
+							{"title": "Classifiers", "value": joinMapFloat32(reply.Hashes[0].Cy.Result.Classifiers), "short": true},
 						},
 					})
 				}
@@ -516,15 +516,15 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 					if len(reply.Hashes[i].XFE.Malware.Family) > 0 || len(reply.Hashes[i].XFE.Malware.Origins.External.Family) > 0 {
 						xfeColor = "danger"
 					}
-					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-						Fallback:  fmt.Sprintf("Mime Type: %s, Family: %s", reply.Hashes[i].XFE.Malware.MimeType, strings.Join(reply.Hashes[i].XFE.Malware.Family, ",")),
-						Color:     xfeColor,
-						Title:     "IBM X-Force Exchange",
-						TitleLink: fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.Hashes[i].Details),
-						Fields: []slack.AttachmentField{
-							{Title: "Family", Value: strings.Join(reply.Hashes[i].XFE.Malware.Family, ","), Short: true},
-							{Title: "MIME Type", Value: reply.Hashes[i].XFE.Malware.MimeType, Short: true},
-							{Title: "Created", Value: reply.Hashes[i].XFE.Malware.Created.String(), Short: true},
+					attachments = append(attachments, map[string]interface{}{
+						"fallback":   fmt.Sprintf("Mime Type: %s, Family: %s", reply.Hashes[i].XFE.Malware.MimeType, strings.Join(reply.Hashes[i].XFE.Malware.Family, ",")),
+						"color":      xfeColor,
+						"title":      "IBM X-Force Exchange",
+						"title_link": fmt.Sprintf("https://exchange.xforce.ibmcloud.com/malware/%s", reply.Hashes[i].Details),
+						"fields": []map[string]interface{}{
+							{"title": "Family", "value": strings.Join(reply.Hashes[i].XFE.Malware.Family, ","), "short": true},
+							{"title": "MIME Type", "value": reply.Hashes[i].XFE.Malware.MimeType, "short": true},
+							{"title": "Created", "value": reply.Hashes[i].XFE.Malware.Created.String(), "short": true},
 						},
 					})
 				}
@@ -533,15 +533,15 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 					if reply.Hashes[i].VT.FileReport.Positives >= numOfPositivesToConvictForFiles {
 						vtColor = "danger"
 					}
-					postMessage.Attachments = append(postMessage.Attachments, slack.Attachment{
-						Fallback:  fmt.Sprintf("Scan Date: %s, Positives: %v, Total: %v", reply.Hashes[i].VT.FileReport.ScanDate, reply.Hashes[i].VT.FileReport.Positives, reply.Hashes[i].VT.FileReport.Total),
-						Color:     vtColor,
-						Title:     "VirusTotal",
-						TitleLink: reply.Hashes[i].VT.FileReport.Permalink,
-						Fields: []slack.AttachmentField{
-							{Title: "Scan Date", Value: reply.Hashes[i].VT.FileReport.ScanDate, Short: true},
-							{Title: "Positives", Value: fmt.Sprintf("%v", reply.Hashes[i].VT.FileReport.Positives), Short: true},
-							{Title: "Total", Value: fmt.Sprintf("%v", reply.Hashes[i].VT.FileReport.Total), Short: true},
+					attachments = append(attachments, map[string]interface{}{
+						"fallback":   fmt.Sprintf("Scan Date: %s, Positives: %v, Total: %v", reply.Hashes[i].VT.FileReport.ScanDate, reply.Hashes[i].VT.FileReport.Positives, reply.Hashes[i].VT.FileReport.Total),
+						"color":      vtColor,
+						"title":      "VirusTotal",
+						"title_link": reply.Hashes[i].VT.FileReport.Permalink,
+						"fields": []map[string]interface{}{
+							{"title": "Scan Date", "value": reply.Hashes[i].VT.FileReport.ScanDate, "short": true},
+							{"title": "Positives", "value": fmt.Sprintf("%v", reply.Hashes[i].VT.FileReport.Positives), "short": true},
+							{"title": "Total", "value": fmt.Sprintf("%v", reply.Hashes[i].VT.FileReport.Total), "short": true},
 						},
 					})
 				}
@@ -549,14 +549,15 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 		}
 		clean := true
 		if !verbose {
-			for i := range postMessage.Attachments {
-				if postMessage.Attachments[i].Color != "good" {
+			for i := range attachments {
+				if attachments[i]["color"] != "good" {
 					clean = false
 					break
 				}
 			}
 		}
 		if verbose || !clean {
+			postMessage["attachments"] = attachments
 			err = b.post(postMessage, reply, data, sub)
 			if err != nil {
 				logrus.Errorf("Unable to send message to Slack - %v\n", err)
@@ -571,20 +572,24 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 // post uses the correct client to post to the channel
 // See if the original message poster is subscribed and if so use him.
 // If not, use the first user we have that is subscribed to the channel.
-func (b *Bot) post(message *slack.PostMessageRequest, reply *domain.WorkReply, data *domain.Context, sub *subscription) error {
-	message.Text = mainMessageFormatted()
-	message.AsUser = true
+func (b *Bot) post(message map[string]interface{}, reply *domain.WorkReply, data *domain.Context, sub *subscription) error {
+	message["text"] = mainMessageFormatted()
+	message["as_user"] = true
 	var err error
-	_, err = sub.s.PostMessage(message, false)
+	_, err = sub.s.Do("POST", "chat.postMessage", message)
 	return err
 }
 
 func parseChannels(sub *subscription, text string, pos int) ([]string, []string, error) {
 	parts := strings.Split(text, " ")
 	if len(parts) <= pos {
-		return nil, nil, fmt.Errorf("Not enough parameters in '%s'", text)
+		return nil, nil, fmt.Errorf("not enough parameters in '%s'", text)
 	}
 	var channels []string
+	conversations, err := sub.s.Conversations("public_channel,private_channel")
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to retrieve the list of conversations - %v", err)
+	}
 	for i := pos; i < len(parts); i++ {
 		subparts := strings.Split(parts[i], ",")
 		for j := range subparts {
@@ -601,7 +606,12 @@ func parseChannels(sub *subscription, text string, pos int) ([]string, []string,
 					subpart = subpart[1:]
 					fallthrough
 				default:
-					ch = sub.ChannelID(subpart)
+					for _, conversation := range conversations {
+						if strings.EqualFold(conversation.S("name"), subpart) {
+							ch = conversation.S("id")
+							break
+						}
+					}
 				}
 				if ch != "" {
 					channels = append(channels, ch)
@@ -613,13 +623,13 @@ func parseChannels(sub *subscription, text string, pos int) ([]string, []string,
 }
 
 func (b *Bot) joinChannels(team, text, channel string) {
-	postMessage := &slack.PostMessageRequest{
-		Channel: channel,
-		AsUser:  true,
+	postMessage := map[string]interface{}{
+		"channel": channel,
+		"as_user": true,
 	}
 	sub := b.subscriptions[team]
 	if sub == nil {
-		logrus.Warnf("Got message but do not have subsciption for team %s", team)
+		logrus.Warnf("Got message but do not have subscription for team %s", team)
 		return
 	}
 	users, err := b.r.TeamMembers(team)
@@ -628,31 +638,34 @@ func (b *Bot) joinChannels(team, text, channel string) {
 		return
 	}
 	parts, incomingChannels, err := parseChannels(sub, text, 1)
-	ch, err := sub.s.ChannelList(true)
+	ch, err := sub.s.Conversations("")
 	if err != nil {
-		logrus.Warnf("Error retrieving my channels - %v", err)
-		postMessage.Text = "Error retrieving current configuration. Rest assured we are looking into the issue."
+		logrus.WithError(err).Warn("Error retrieving my channels")
+		postMessage["text"] = "Error retrieving current configuration. Rest assured we are looking into the issue."
 	} else {
 		var channels []string
 		var channelFound bool
-	users_loop:
+	usersLoop:
 		for i := range users {
 			if users[i].Status == domain.UserStatusActive {
-				s, err := slack.New(slack.SetToken(users[i].Token))
+				s := &slack.Client{Token: users[i].Token}
 				if err != nil {
 					logrus.Infof("Error creating Slack client for user %s (%s) - %v\n", users[i].ID, users[i].Name, err)
 					continue
 				}
-				for i := range ch.Channels {
-					if !ch.Channels[i].IsMember && !util.In(channels, ch.Channels[i].Name) &&
-						(strings.ToLower(parts[1]) == "all" || util.In(incomingChannels, ch.Channels[i].ID)) {
+				for _, c := range ch {
+					if !c.B("is_member") && !util.In(channels, c.S("name")) &&
+						(strings.ToLower(parts[1]) == "all" || util.In(incomingChannels, c.S("id"))) {
 						channelFound = true
-						_, err = s.ChannelInvite(ch.Channels[i].ID, sub.team.BotUserID)
+						_, err = s.Do("POST", "conversations.invite", map[string]interface{}{
+							"channel": c.S("id"),
+							"users":   sub.team.BotUserID,
+						})
 						if err != nil {
 							logrus.Infof("Error inviting us - %v\n", err)
-							continue users_loop
+							continue usersLoop
 						}
-						channels = append(channels, ch.Channels[i].Name)
+						channels = append(channels, c.S("name"))
 					}
 				}
 				break
@@ -660,29 +673,29 @@ func (b *Bot) joinChannels(team, text, channel string) {
 		}
 		if len(channels) > 0 {
 			text := fmt.Sprintf("I've started monitoring the following channels: %s", strings.Join(channels, ", "))
-			postMessage.Text = text
+			postMessage["text"] = text
 		} else {
 			if channelFound {
-				postMessage.Text = "I could not invite myself to the public channels, rest assured we are looking into the issue."
+				postMessage["text"] = "I could not invite myself to the public channels, rest assured we are looking into the issue."
 			} else {
-				postMessage.Text = "I was already monitoring all public channels but thanks for thinking of me."
+				postMessage["text"] = "I was already monitoring all public channels but thanks for thinking of me."
 			}
 		}
 	}
-	_, err = sub.s.PostMessage(postMessage, false)
+	_, err = sub.s.Do("POST", "chat.postMessage", postMessage)
 	if err != nil {
 		logrus.Warnf("Error posting config message - %v", err)
 	}
 }
 
 func (b *Bot) handleVerbose(team, text, channel string) {
-	postMessage := &slack.PostMessageRequest{
-		Channel: channel,
-		AsUser:  true,
+	postMessage := map[string]interface{}{
+		"channel": channel,
+		"as_user": true,
 	}
 	sub := b.subscriptions[team]
 	if sub == nil {
-		logrus.Warnf("Got message but do not have subsciption for team %s", team)
+		logrus.Warnf("Got message but do not have subscription for team %s", team)
 		return
 	}
 	changed := false
@@ -690,7 +703,7 @@ func (b *Bot) handleVerbose(team, text, channel string) {
 	defer b.mu.Unlock()
 	parts, channels, err := parseChannels(sub, text, 2)
 	if err != nil {
-		postMessage.Text = "I could not understand your command. Verbose command is:\nverbose on #channel1,#channel2 - to turn on verbose mode on for a list of channels.\nverbose off #channel1,#channel2 - to turn off verbose mode on for a list of channels."
+		postMessage["text"] = "I could not understand your command. Verbose command is:\nverbose on #channel1,#channel2 - to turn on verbose mode on for a list of channels.\nverbose off #channel1,#channel2 - to turn off verbose mode on for a list of channels."
 	} else {
 		for _, ch := range channels {
 			if ch == "" {
@@ -730,45 +743,55 @@ func (b *Bot) handleVerbose(team, text, channel string) {
 		}
 	}
 	if changed {
-		err := b.r.SetChannelsAndGroups(team, sub.configuration)
+		err := b.r.SetChannelsAndGroups(sub.configuration)
 		if err != nil {
 			logrus.Warnf("Error storing verbose configuration for team %s - %v", team, err)
-			postMessage.Text = "I had an issue saving the verbose state."
+			postMessage["text"] = "I had an issue saving the verbose state."
 		} else {
-			postMessage.Text = "Verbose state was changed."
+			postMessage["text"] = "Verbose state was changed."
 		}
 	} else {
-		postMessage.Text = "Verbose state did not change - could not find anything new to change"
+		postMessage["text"] = "Verbose state did not change - could not find anything new to change"
 	}
-	_, err = sub.s.PostMessage(postMessage, false)
+	_, err = sub.s.Do("POST", "chat.postMessage", postMessage)
 	if err != nil {
 		logrus.Warnf("Error posting config message - %v", err)
 	}
 }
 
-func (b *Bot) handleConfig(team string, msg *slack.Message) {
-	postMessage := &slack.PostMessageRequest{
-		Channel: msg.Channel,
-		AsUser:  true,
+func (b *Bot) handleConfig(team string, msg slack.Response) {
+	postMessage := map[string]interface{}{
+		"channel": msg["event.channel"],
+		"as_user": true,
 	}
 	sub := b.subscriptions[team]
 	if sub == nil {
 		logrus.Warnf("Got message but do not have subsciption for team %s", team)
 		return
 	}
-	ch, err := sub.s.ChannelList(true)
+	ch, err := sub.s.Conversations("public_channel,private_channel")
 	if err != nil {
 		logrus.Warnf("Error retrieving my channels - %v", err)
-		postMessage.Text = "Error retrieving configuration. Rest assured we are looking into the issue."
+		postMessage["text"] = "Error retrieving configuration. Rest assured we are looking into the issue."
 	} else {
 		var channels []string
 		var verboseChannels []string
-		for i := range ch.Channels {
-			if ch.Channels[i].IsMember {
-				if sub.configuration.IsVerbose(ch.Channels[i].ID, "") {
-					verboseChannels = append(verboseChannels, ch.Channels[i].Name)
+		var groups []string
+		var verboseGroups []string
+		for _, c := range ch {
+			if c.B("is_member") {
+				if sub.configuration.IsVerbose(c.S("id")) {
+					if c.B("is_channel") {
+						verboseChannels = append(verboseChannels, c.S("name"))
+					} else {
+						verboseGroups = append(verboseGroups, c.S("name"))
+					}
 				} else {
-					channels = append(channels, ch.Channels[i].Name)
+					if c.B("is_channel") {
+						channels = append(channels, c.S("name"))
+					} else {
+						groups = append(groups, c.S("name"))
+					}
 				}
 			}
 		}
@@ -776,29 +799,11 @@ func (b *Bot) handleConfig(team string, msg *slack.Message) {
 		if len(verboseChannels) > 0 {
 			text = text + fmt.Sprintf("\nChannels I'm monitoring and providing extra info: %s", strings.Join(verboseChannels, ", "))
 		}
-		grp, err := sub.s.GroupList(true)
-		// Ignore the error - most usage will be with channels anyway
-		if err == nil {
-			var groups []string
-			var verboseGroups []string
-			for i := range grp.Groups {
-				// Filter groups only to those that the user is member of so we don't leak info
-				if util.In(grp.Groups[i].Members, msg.User) {
-					if sub.configuration.IsVerbose(grp.Groups[i].ID, "") {
-						verboseGroups = append(verboseGroups, grp.Groups[i].Name)
-					} else {
-						groups = append(groups, grp.Groups[i].Name)
-					}
-				}
-			}
-			if len(groups) > 0 {
-				text = text + fmt.Sprintf("\nPrivate channels I'm monitoring: %s", strings.Join(groups, ", "))
-			}
-			if len(verboseGroups) > 0 {
-				text = text + fmt.Sprintf("\nPrivate channels I'm monitoring and providing extra info: %s", strings.Join(verboseGroups, ", "))
-			}
-		} else {
-			logrus.Warnf("Error retrieving groups for sub %s - %v", sub.team.Name, err)
+		if len(groups) > 0 {
+			text = text + fmt.Sprintf("\nPrivate channels I'm monitoring: %s", strings.Join(groups, ", "))
+		}
+		if len(verboseGroups) > 0 {
+			text = text + fmt.Sprintf("\nPrivate channels I'm monitoring and providing extra info: %s", strings.Join(verboseGroups, ", "))
 		}
 		if sub.team.VTKey != "" {
 			l := len(sub.team.VTKey)
@@ -808,18 +813,17 @@ func (b *Bot) handleConfig(team string, msg *slack.Message) {
 			l := len(sub.team.XFEKey)
 			text = text + "\nUsing your own IBM X-Force Exchange key ending with " + sub.team.XFEKey[l-4:]
 		}
-		postMessage.Text = text
+		postMessage["text"] = text
 	}
-	_, err = sub.s.PostMessage(postMessage, false)
-	if err != nil {
+	if _, err = sub.s.Do("POST", "chat.postMessage", postMessage); err != nil {
 		logrus.Warnf("Error posting config message - %v", err)
 	}
 }
 
 func (b *Bot) handleVT(team, text, channel string) {
-	postMessage := &slack.PostMessageRequest{
-		Channel: channel,
-		AsUser:  true,
+	postMessage := map[string]interface{}{
+		"channel": channel,
+		"as_user": true,
 	}
 	sub := b.subscriptions[team]
 	if sub == nil {
@@ -832,33 +836,33 @@ func (b *Bot) handleVT(team, text, channel string) {
 			sub.team.VTKey = ""
 			err := b.r.SetTeam(sub.team)
 			if err == nil {
-				postMessage.Text = "Cleared VT key - using default"
+				postMessage["text"] = "Cleared VT key - using default"
 			} else {
-				postMessage.Text = "Error clearing VT key - no worries, we are handling it"
+				postMessage["text"] = "Error clearing VT key - no worries, we are handling it"
 				logrus.WithError(err).Warnf("Unable to clear VT key for team %s", team)
 			}
 		} else {
 			sub.team.VTKey = parts[1]
 			err := b.r.SetTeam(sub.team)
 			if err == nil {
-				postMessage.Text = "VT key set."
+				postMessage["text"] = "VT key set."
 			} else {
-				postMessage.Text = "Error setting VT key - no worries, we are handling it"
+				postMessage["text"] = "Error setting VT key - no worries, we are handling it"
 				logrus.WithError(err).Warnf("Unable to set VT key for team %s", team)
 			}
 		}
 	} else {
-		postMessage.Text = "Sorry, I could not understand you."
+		postMessage["text"] = "Sorry, I could not understand you."
 	}
-	if _, err := sub.s.PostMessage(postMessage, false); err != nil {
+	if _, err := sub.s.Do("POST", "chat.postMessage", postMessage); err != nil {
 		logrus.Warnf("Error posting config message - %v", err)
 	}
 }
 
 func (b *Bot) handleXFE(team, text, channel string) {
-	postMessage := &slack.PostMessageRequest{
-		Channel: channel,
-		AsUser:  true,
+	postMessage := map[string]interface{}{
+		"channel": channel,
+		"as_user": true,
 	}
 	sub := b.subscriptions[team]
 	if sub == nil {
@@ -870,45 +874,35 @@ func (b *Bot) handleXFE(team, text, channel string) {
 		sub.team.XFEKey, sub.team.XFEPass = "", ""
 		err := b.r.SetTeam(sub.team)
 		if err == nil {
-			postMessage.Text = "Cleared XFE key - using default"
+			postMessage["text"] = "Cleared XFE key - using default"
 		} else {
-			postMessage.Text = "Error clearing XFE key - no worries, we are handling it"
+			postMessage["text"] = "Error clearing XFE key - no worries, we are handling it"
 			logrus.WithError(err).Warnf("Unable to clear XFE key for team %s", team)
 		}
 	} else if len(parts) == 3 {
 		sub.team.XFEKey, sub.team.XFEPass = parts[1], parts[2]
 		err := b.r.SetTeam(sub.team)
 		if err == nil {
-			postMessage.Text = "XFE key set."
+			postMessage["text"] = "XFE key set."
 		} else {
-			postMessage.Text = "Error setting XFE key - no worries, we are handling it"
+			postMessage["text"] = "Error setting XFE key - no worries, we are handling it"
 			logrus.WithError(err).Warnf("Unable to set XFE key for team %s", team)
 		}
 	} else {
-		postMessage.Text = "Sorry, I could not understand you."
+		postMessage["text"] = "Sorry, I could not understand you."
 	}
-	if _, err := sub.s.PostMessage(postMessage, false); err != nil {
+	if _, err := sub.s.Do("POST", "chat.postMessage", postMessage); err != nil {
 		logrus.Warnf("Error posting config message - %v", err)
 	}
 }
 
 func (b *Bot) showHelp(team, channel string) {
-	postMessage := &slack.PostMessageRequest{
-		Channel: channel,
-		AsUser:  true,
-		Text: `Here are the commands I understand:
-*config*: list the current channels I'm listening on
-*join all/#channel1,#channel2...*: I will join all/specified public channels and start monitoring them.
-*verbose on/off #channel1,#channel2,private1...* - turn on verbose mode on the specified channels or private groups
-verbose mode is usually used by security professionals. When in verbose mode, dbot will display reputation details about any URL, IP or file including clean ones.
-
-*vt the-api-key-you-got-from-vt*: add your own VirusTotal key to use. Accepts "-" to return to default. You can get a key at https://www.virustotal.com/en/documentation/public-api/
-*xfe the-api-key-you-got-from-xfe the-password-you-got*: add your own IBM X-Force Exchange credentials to use. Accepts "-" to return to default. You can get credentials at https://exchange.xforce.ibmcloud.com/
-- It's important to specify your own keys to get reliable results as our public API keys are rate limited.`}
+	postMessage := map[string]interface{}{
+		"channel": channel,
+		"as_user": true,
+		"text":    conf.DefaultHelpMessage}
 	sub := b.subscriptions[team]
-	var err error
-	_, err = sub.s.PostMessage(postMessage, false)
-	if err != nil {
+	if _, err := sub.s.Do("POST", "chat.postMessage", postMessage); err != nil {
 		logrus.Warnf("Error posting config message - %v", err)
 	}
 }

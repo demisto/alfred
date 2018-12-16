@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/md5"
 	"debug/pe"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -19,7 +18,6 @@ import (
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/queue"
-	"github.com/demisto/alfred/repo"
 	"github.com/demisto/goxforce"
 	"github.com/demisto/infinigo"
 	stackerr "github.com/go-errors/errors"
@@ -37,7 +35,6 @@ const (
 type Worker struct {
 	q    queue.Queue
 	c    chan *domain.WorkRequest
-	r    repo.Repo
 	xfe  *goxforce.Client
 	vt   *govt.Client
 	cy   *infinigo.Client
@@ -45,7 +42,7 @@ type Worker struct {
 }
 
 // NewWorker that loads work messages from the queue
-func NewWorker(r repo.Repo, q queue.Queue) (*Worker, error) {
+func NewWorker(q queue.Queue) (*Worker, error) {
 	xfe, err := goxforce.New(
 		goxforce.SetCredentials(conf.Options.XFE.Key, conf.Options.XFE.Password),
 		goxforce.SetErrorLog(log.New(conf.LogWriter, "XFE:", log.Lshortfile)))
@@ -69,7 +66,6 @@ func NewWorker(r repo.Repo, q queue.Queue) (*Worker, error) {
 		return nil, err
 	}
 	return &Worker{
-		r:    r,
 		q:    q,
 		c:    make(chan *domain.WorkRequest, runtime.NumCPU()),
 		xfe:  xfe,
@@ -112,7 +108,7 @@ func (w *Worker) handle() {
 
 // Start the worker process. To stop, just close the queue.
 func (w *Worker) Start() {
-	// Right now, just use the numebr of CPUs
+	// Right now, just use the number of CPUs
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go w.handle()
 	}
@@ -125,30 +121,6 @@ func (w *Worker) Start() {
 		}
 		logrus.Debugf("Working on message - %+v", msg)
 		w.c <- msg
-	}
-}
-
-func contextFromMap(c map[string]interface{}) *domain.Context {
-	return &domain.Context{
-		Team:         c["team"].(string),
-		User:         c["user"].(string),
-		OriginalUser: c["original_user"].(string),
-		Channel:      c["channel"].(string),
-		Type:         c["type"].(string),
-	}
-}
-
-// GetContext from a message based on actual type
-func GetContext(context interface{}) (*domain.Context, error) {
-	switch c := context.(type) {
-	case *domain.Context:
-		// Hack to duplicate the context so if we are using channels not to override it
-		cx := *c
-		return &cx, nil
-	case map[string]interface{}:
-		return contextFromMap(c), nil
-	default:
-		return nil, errors.New("Unknown context")
 	}
 }
 

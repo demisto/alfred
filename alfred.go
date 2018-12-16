@@ -37,27 +37,21 @@ func (b *botCloser) Close() error {
 func run(signalCh chan os.Signal) {
 	var closers []closer
 	// If we are on DEV, let's use embedded DB. On test and prod we will use MySQL
-	var r repo.Repo
-	var err error
-	if conf.Options.DB.Username == "" {
-		r, err = repo.New()
-	} else {
-		r, err = repo.NewMySQL()
-	}
+	r, err := repo.NewMySQL()
 	if err != nil {
 		logrus.Fatal(err)
 	}
 	closers = append(closers, r)
 
 	// Create the queue for the various message exchanges
-	q, err := queue.New()
+	q, err := queue.New(r)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 	closers = append(closers, q)
 
 	serviceChannel := make(chan bool)
-	if conf.Options.Bot {
+	if conf.Options.Web {
 		b, err := bot.New(r, q)
 		if err != nil {
 			logrus.Fatal(err)
@@ -70,10 +64,16 @@ func run(signalCh chan os.Signal) {
 			serviceChannel <- true
 		}()
 		closers = append(closers, &botCloser{b})
+		appC := web.NewContext(r, q, b)
+		router := web.New(appC)
+		go func() {
+			router.Serve()
+			serviceChannel <- true
+		}()
 	}
 
 	if conf.Options.Worker {
-		worker, err := bot.NewWorker(r, q)
+		worker, err := bot.NewWorker(q)
 		if err != nil {
 			logrus.Fatal(err)
 		}
@@ -83,14 +83,6 @@ func run(signalCh chan os.Signal) {
 		}()
 	}
 
-	if conf.Options.Web {
-		appC := web.NewContext(r, q)
-		router := web.New(appC)
-		go func() {
-			router.Serve()
-			serviceChannel <- true
-		}()
-	}
 	// Block until one of the signals above is received
 	select {
 	case <-signalCh:

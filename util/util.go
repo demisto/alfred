@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/url"
@@ -106,4 +107,22 @@ func Substr(s string, from int, to int) string {
 		to = l
 	}
 	return string(r[from:to])
+}
+
+// ToJSONString return a json string representation of the given object for pretty printing
+func ToJSONString(in interface{}) string {
+	b, err := json.MarshalIndent(in, "", "  ")
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+// ToJSONStringNoIndent will stringify json into single line without indentation
+func ToJSONStringNoIndent(in interface{}) string {
+	b, err := json.Marshal(in)
+	if err != nil {
+		return ""
+	}
+	return string(b)
 }

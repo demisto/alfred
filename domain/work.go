@@ -1,9 +1,12 @@
 package domain
 
 import (
+	"errors"
+	"time"
+
+	"github.com/demisto/alfred/slack"
 	"github.com/demisto/goxforce"
 	"github.com/demisto/infinigo"
-	"github.com/demisto/slack"
 	"github.com/slavikm/govt"
 )
 
@@ -14,6 +17,31 @@ type Context struct {
 	OriginalUser string `json:"original_user"`
 	Channel      string `json:"channel"`
 	Type         string `json:"type"`
+}
+
+// contextFromMap ...
+func contextFromMap(c map[string]interface{}) *Context {
+	return &Context{
+		Team:         c["team"].(string),
+		User:         c["user"].(string),
+		OriginalUser: c["original_user"].(string),
+		Channel:      c["channel"].(string),
+		Type:         c["type"].(string),
+	}
+}
+
+// GetContext from a message based on actual type
+func GetContext(context interface{}) (*Context, error) {
+	switch c := context.(type) {
+	case *Context:
+		// Hack to duplicate the context so if we are using channels not to override it
+		cx := *c
+		return &cx, nil
+	case map[string]interface{}:
+		return contextFromMap(c), nil
+	default:
+		return nil, errors.New("Unknown context")
+	}
 }
 
 // File details for a request
@@ -40,23 +68,23 @@ type WorkRequest struct {
 }
 
 // WorkRequestFromMessage converts a message to a work request
-func WorkRequestFromMessage(msg *slack.Message, token, vtKey, xfeKey, xfePass string) *WorkRequest {
+func WorkRequestFromMessage(msg slack.Response, token, vtKey, xfeKey, xfePass string) *WorkRequest {
 	req := &WorkRequest{VTKey: vtKey, XFEKey: xfeKey, XFEPass: xfePass}
-	switch msg.Type {
+	switch msg.S("type") {
 	case "message":
-		switch msg.Subtype {
+		switch msg.S("subtype") {
 		case "":
-			req.MessageID, req.Type, req.Text = msg.Timestamp, "message", msg.Text
+			req.MessageID, req.Type, req.Text = msg.S("ts"), "message", msg.S("text")
 		case "message_changed":
-			req.MessageID, req.Type, req.Text = msg.Message.Timestamp, "message", msg.Message.Text
+			req.MessageID, req.Type, req.Text = msg.S("message.ts"), "message", msg.S("message.text")
 		case "file_share", "file_mention":
-			req.MessageID, req.Type, req.File = msg.Timestamp, "file", File{ID: msg.File.ID, URL: msg.File.URLPrivate, Name: msg.File.Name, Size: msg.File.Size, Token: token}
+			req.MessageID, req.Type, req.File = msg.S("ts"), "file", File{ID: msg.S("file.id"), URL: msg.S("file.url_private"), Name: msg.S("file.name"), Size: msg.I("file.size"), Token: token}
 		case "file_comment":
-			req.MessageID, req.Type, req.Text = msg.Timestamp, "message", msg.Comment.Comment
+			req.MessageID, req.Type, req.Text = msg.S("ts"), "message", msg.S("comment.comment")
 		}
 	// If this message is file upload and we got it (meaning the user is ours)
 	case "file_created":
-		req.Type, req.File = "file", File{ID: msg.File.ID, URL: msg.File.URL, Name: msg.File.Name, Size: msg.File.Size}
+		req.Type, req.File = "file", File{ID: msg.S("file.id"), URL: msg.S("file.url"), Name: msg.S("file.name"), Size: msg.I("file.size")}
 	}
 	return req
 }
@@ -171,4 +199,13 @@ type MaliciousContent struct {
 // UniqueID of the message
 func (mc *MaliciousContent) UniqueID() string {
 	return mc.Team + "," + mc.Channel + "," + mc.MessageID
+}
+
+// DBQueueMessage holds a message passed via the database
+type DBQueueMessage struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	MessageType string    `json:"message_type" db:"message_type"`
+	Message     string    `json:"message"`
+	Timestamp   time.Time `json:"ts" db:"ts"`
 }

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"crypto/tls"
 	"net"
 	"net/http"
@@ -9,13 +10,54 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
-	"github.com/gorilla/context"
+	"github.com/demisto/alfred/slack"
 	"github.com/julienschmidt/httprouter"
 	"github.com/justinas/alice"
 )
 
 // Main handlers
 var public string
+
+type requestContextKey string
+
+const (
+	contextUser    = requestContextKey("user")
+	contextBody    = requestContextKey("body")
+	contextSession = requestContextKey("session")
+	contextParams  = requestContextKey("params")
+)
+
+func setRequestContext(r *http.Request, key requestContextKey, val interface{}) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), key, val))
+}
+
+func getRequestBody(r *http.Request) interface{} {
+	return r.Context().Value(contextBody)
+}
+
+func getRequestUser(r *http.Request) *domain.User {
+	v := r.Context().Value(contextUser)
+	if v == nil {
+		return nil
+	}
+	return v.(*domain.User)
+}
+
+func getRequestParams(r *http.Request) httprouter.Params {
+	v := r.Context().Value(contextParams)
+	if v == nil {
+		return nil
+	}
+	return v.(httprouter.Params)
+}
+
+func getRequestSession(r *http.Request) *session {
+	v := r.Context().Value(contextSession)
+	if v == nil {
+		return nil
+	}
+	return v.(*session)
+}
 
 func pageHandler(file string) func(w http.ResponseWriter, r *http.Request) {
 	m := func(w http.ResponseWriter, r *http.Request) {
@@ -28,7 +70,7 @@ func pageHandler(file string) func(w http.ResponseWriter, r *http.Request) {
 		}
 		stat, err := f.Stat()
 		if err != nil {
-			log.Warn("Could not stat file %s - %v", file, err)
+			log.Warnf("Could not stat file %s - %v", file, err)
 			WriteError(w, ErrNotFound)
 			return
 		}
@@ -67,9 +109,10 @@ func (r *Router) Delete(path string, handler http.Handler) {
 // New creates a new router
 func New(appC *AppContext) *Router {
 	r := &Router{httprouter.New()}
-	staticHandlers := alice.New(context.ClearHandler, loggingHandler, csrfHandler, recoverHandler)
+	staticHandlers := alice.New(loggingHandler, csrfHandler, recoverHandler)
 	commonHandlers := staticHandlers.Append(acceptHandler)
 	authHandlers := commonHandlers.Append(appC.authHandler)
+	eventsHandler := alice.New(loggingHandler, recoverHandler)
 	// Security
 	r.Get("/oauth", staticHandlers.ThenFunc(appC.initiateOAuth))
 	r.Get("/auth", staticHandlers.ThenFunc(appC.loginOAuth))
@@ -81,6 +124,7 @@ func New(appC *AppContext) *Router {
 	r.Get("/work", commonHandlers.ThenFunc(appC.work))
 	r.Post("/join", commonHandlers.Append(contentTypeHandler, bodyHandler(join{})).ThenFunc(appC.joinSlack))
 	r.Get("/messages", commonHandlers.ThenFunc(appC.totalMessages))
+	r.Post("/events", eventsHandler.Append(contentTypeHandler, bodyHandler(slack.Response{})).ThenFunc(appC.events))
 	// Static
 	r.Get("/", staticHandlers.ThenFunc(pageHandler("/index.html")))
 	r.Get("/analyst", staticHandlers.ThenFunc(pageHandler("/index.html")))
@@ -161,7 +205,7 @@ func (r *Router) Serve() {
 
 func wrapHandler(h http.Handler) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		context.Set(r, "params", ps)
+		setRequestContext(r, contextParams, ps)
 		h.ServeHTTP(w, r)
 	}
 }

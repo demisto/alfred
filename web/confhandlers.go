@@ -14,7 +14,6 @@ import (
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/util"
 	"github.com/demisto/slack"
-	"github.com/gorilla/context"
 )
 
 type idName struct {
@@ -39,7 +38,7 @@ type join struct {
 }
 
 func (ac *AppContext) info(w http.ResponseWriter, r *http.Request) {
-	u := context.Get(r, "user").(*domain.User)
+	u := getRequestUser(r)
 	var res infoResponse
 	// First, get the current selection (if at all)
 	savedChannels, err := ac.r.ChannelsAndGroups(u.Team)
@@ -83,8 +82,8 @@ type regexpMatch struct {
 
 // match the regular expression to all channels / groups from
 func (ac *AppContext) match(w http.ResponseWriter, r *http.Request) {
-	req := context.Get(r, "body").(*regexpMatch)
-	u := context.Get(r, "user").(*domain.User)
+	req := getRequestBody(r).(*regexpMatch)
+	u := getRequestUser(r)
 	var res []string
 	res = make([]string, 0)
 	if req.Regexp != "" {
@@ -123,8 +122,9 @@ func (ac *AppContext) match(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ac *AppContext) save(w http.ResponseWriter, r *http.Request) {
-	req := context.Get(r, "body").(*domain.Configuration)
-	u := context.Get(r, "user").(*domain.User)
+	req := getRequestBody(r).(*domain.Configuration)
+	u := getRequestUser(r)
+	req.Team = u.Team
 	// Before saving, validate that the regexp is valid
 	if req.Regexp != "" {
 		_, err := regexp.Compile(req.Regexp)
@@ -133,11 +133,11 @@ func (ac *AppContext) save(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	err := ac.r.SetChannelsAndGroups(u.Team, req)
+	err := ac.r.SetChannelsAndGroups(req)
 	if err != nil {
 		panic(err)
 	}
-	ac.q.PushConf(u.Team, req)
+	ac.q.PushConf(req)
 	w.WriteHeader(http.StatusNoContent)
 	w.Write([]byte("\n"))
 }
@@ -149,7 +149,7 @@ type googleResponse struct {
 }
 
 func (ac *AppContext) joinSlack(w http.ResponseWriter, r *http.Request) {
-	req := context.Get(r, "body").(*join)
+	req := getRequestBody(r).(*join)
 	if !govalidator.IsEmail(req.Email) || req.CaptchaResponse == "" || len(req.Email) > 128 {
 		WriteError(w, ErrBadRequest)
 		return

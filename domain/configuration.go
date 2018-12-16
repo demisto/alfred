@@ -9,6 +9,7 @@ import (
 
 // Configuration holds the user configuration
 type Configuration struct {
+	Team            string   `json:"team"`
 	Channels        []string `json:"channels"`
 	Groups          []string `json:"groups"`
 	IM              bool     `json:"im"`
@@ -55,7 +56,7 @@ func (c *Configuration) IsInterestedIn(channel, channelName string) bool {
 }
 
 // IsVerbose checks if the channel is verbose
-func (c *Configuration) IsVerbose(channel, channelName string) bool {
+func (c *Configuration) IsVerbose(channel string) bool {
 	if len(channel) == 0 {
 		return false
 	}

@@ -12,7 +12,6 @@ import (
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/util"
-	"github.com/gorilla/context"
 )
 
 func recoverHandler(next http.Handler) http.Handler {
@@ -148,7 +147,7 @@ func bodyHandler(v interface{}) func(http.Handler) http.Handler {
 			}
 
 			if next != nil {
-				context.Set(r, "body", val)
+				setRequestContext(r, contextBody, val)
 				next.ServeHTTP(w, r)
 			}
 		}
@@ -228,7 +227,7 @@ func (ac *AppContext) authHandler(next http.Handler) http.Handler {
 			WriteError(w, ErrAuth)
 			return
 		}
-		context.Set(r, "session", &sess)
+		setRequestContext(r, contextSession, &sess)
 		log.Debugf("User %v in request", sess.User)
 		u, err := ac.r.User(sess.UserID)
 		if err != nil {
@@ -240,7 +239,7 @@ func (ac *AppContext) authHandler(next http.Handler) http.Handler {
 			WriteError(w, ErrAuth)
 			return
 		}
-		context.Set(r, "user", u)
+		setRequestContext(r, contextUser, u)
 		// Set the new cookie for the user with the new timeout
 		sess.When = time.Now()
 		secure := conf.Options.SSL.Key != ""

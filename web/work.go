@@ -6,8 +6,14 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/domain"
-	"github.com/demisto/slack"
+	"github.com/demisto/alfred/slack"
 )
+
+func (ac *AppContext) events(w http.ResponseWriter, r *http.Request) {
+	msg := getRequestBody(r).(*slack.Response)
+	ac.b.HandleMessage(*msg)
+	w.Write([]byte{'\n'})
+}
 
 func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 	team := r.FormValue("t")
@@ -51,19 +57,15 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		for i := range users {
 			if users[i].Status == domain.UserStatusActive {
 				// The first one that can retrieve the info...
-				s, err := slack.New(slack.SetToken(users[i].Token))
-				if err != nil {
-					logrus.Infof("Error creating Slack client for user %s (%s) - %v\n", users[i].ID, users[i].Name, err)
-					continue
-				}
-				info, err := s.FileInfo(file, 0, 0)
+				s := &slack.Client{Token: users[i].Token}
+				info, err := s.Do("GET", "files.info", map[string]string{"file": file, "count": "0", "page": "0"})
 				if err != nil {
 					logrus.Infof("Error retrieving file info - %v\n", err)
 					continue
 				}
 				workReq = &domain.WorkRequest{
 					Type:       "file",
-					File:       domain.File{URL: info.File.URLPrivate, Name: info.File.Name, Size: info.File.Size, Token: t.BotToken},
+					File:       domain.File{URL: info.S("file.url_private"), Name: info.S("file.name"), Size: info.I("file.size"), Token: t.BotToken},
 					ReplyQueue: ac.replyQueue,
 					Context:    nil,
 					Online:     true,
