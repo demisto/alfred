@@ -1,12 +1,13 @@
 package slack
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestClient_Conversations(t *testing.T) {
-	s := Client{Token: "xoxp-3435591503-3435591511-6060683735-fcce7d"}
+	s := Client{Token: ""}
 	conversations, err := s.Conversations("")
 	assert.NoError(t, err)
 	found := false
