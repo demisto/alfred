@@ -698,7 +698,7 @@ sum(ips_clean) as ips_clean, sum(ips_dirty) as ips_dirty, sum(ips_unknown) as ip
 
 func (r *MySQL) TotalMessages() (int, error) {
 	var sum int
-	err := r.db.Get(&sum, `SELECT sum(messages) FROM team_statistics`)
+	err := r.db.Get(&sum, `SELECT count(messages) FROM team_statistics`)
 	return sum, err
 }
 

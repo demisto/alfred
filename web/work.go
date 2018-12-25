@@ -49,7 +49,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		// Bot scope does not have file info and history permissions so we need to iterate users
 		users, err := ac.r.TeamMembers(team)
 		if err != nil {
-			logrus.Warnf("Error loading team members - %v\n", err)
+			logrus.Errorf("Error loading team members - %v\n", err)
 			WriteError(w, ErrInternalServer)
 			return
 		}
@@ -91,13 +91,13 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if workReq == nil {
-		logrus.Infof("Unable to find a suitable user with credentials for team %s\n", team)
+		logrus.Errorf("Unable to find a suitable user with credentials for team %s\n", team)
 		WriteError(w, ErrInternalServer)
 		return
 	}
 	err = ac.q.PushWork(workReq)
 	if err != nil {
-		logrus.Warnf("Error pushing work - %v\n", err)
+		logrus.Errorf("Error pushing work - %v\n", err)
 		WriteError(w, ErrInternalServer)
 		return
 	}
@@ -113,7 +113,9 @@ type messageCount struct {
 func (ac *AppContext) totalMessages(w http.ResponseWriter, r *http.Request) {
 	cnt, err := ac.r.TotalMessages()
 	if err != nil {
-		panic(err)
+		logrus.WithError(err).Error("Failed getting total messages")
+		WriteError(w, ErrInternalServer)
+		return
 	}
 	json.NewEncoder(w).Encode(messageCount{cnt})
 }
