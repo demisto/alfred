@@ -10,8 +10,6 @@
 // Helper Functions
 //======================================================================
 
-console.log('@@@ main.js starting');
-
 //-----------------------------------------------------
 // NAVIGATION - Adds support for Mobile Navigation
 // Detect screen size, add / subtract data-toggle
@@ -548,10 +546,8 @@ var nice = false;
 //======================================================================
 // Executes when HTML-Document is loaded and DOM is ready
 //======================================================================
-console.log('@@@ adding ready hook', );
 jQuery(document).ready(function($) {
 	"use strict";
-	console.log('@@@ document ready starts');
 	timeline();
 	setNewsPostsHeight();
 	setPartnersPostsHeight();
@@ -566,7 +562,6 @@ jQuery(document).ready(function($) {
 	// If flex slider loading then wait a max of 5 seconds.
 	// else check if images are loaded
 	if (jQuery("#main-flex-slider")[0]){
-		console.log('@@@ if', );
 		// Do nothing / flex will figure it out.
 		//console.log('Let Flex Take Care of It');
 		setTimeout(function(){
@@ -574,11 +569,8 @@ jQuery(document).ready(function($) {
 			jQuery('body').addClass('loaded');
 		}, 10000);
 	}else{
-        console.log('@@@ else', );
         jQuery('body').addClass('loaded');
 	}
-
-    console.log('@@@ document ready end');
 
     // Add support for mobile navigation
 	themo_support_mobile_navigation($);
@@ -643,8 +635,6 @@ jQuery(document).ready(function($) {
 	});
 
 });
-
-console.log('@@@ Done adding ready hook', );
 
 
 
