@@ -67,6 +67,7 @@ tags
 /client/node_modules
 /client/.pnp
 .pnp.js
+package-lock.json
 
 # testing
 /client/coverage
