@@ -145,21 +145,25 @@ type URLReply struct {
 	} `json:"vt"`
 }
 
+type XfeIPReply struct {
+	NotFound     bool                  `json:"not_found"`
+	Error        string                `json:"error"`
+	IPReputation goxforce.IPReputation `json:"ip_reputation"`
+	IPHistory    goxforce.IPHistory    `json:"ip_history"`
+}
+
+type VtIPReply struct {
+	Error    string        `json:"error"`
+	IPReport govt.IpReport `json:"ip_report"`
+}
+
 // IPReply holds the information about an IP
 type IPReply struct {
 	Details string `json:"details"`
 	Result  int
-	Private bool `json:"private"`
-	XFE     struct {
-		NotFound     bool                  `json:"not_found"`
-		Error        string                `json:"error"`
-		IPReputation goxforce.IPReputation `json:"ip_reputation"`
-		IPHistory    goxforce.IPHistory    `json:"ip_history"`
-	} `json:"xfe"`
-	VT struct {
-		Error    string        `json:"error"`
-		IPReport govt.IpReport `json:"ip_report"`
-	} `json:"vt"`
+	Private bool       `json:"private"`
+	XFE     XfeIPReply `json:"xfe"`
+	VT      VtIPReply  `json:"vt"`
 }
 
 // FileReply holds the information about a File
