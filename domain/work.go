@@ -146,10 +146,10 @@ type URLReply struct {
 }
 
 type XfeIPReply struct {
-	NotFound     bool                  `json:"not_found"`
+	NotFound     bool                  `json:"notFound"`
 	Error        string                `json:"error"`
-	IPReputation goxforce.IPReputation `json:"ip_reputation"`
-	IPHistory    goxforce.IPHistory    `json:"ip_history"`
+	IPReputation goxforce.IPReputation `json:"ipReputation"`
+	IPHistory    goxforce.IPHistory    `json:"ipHistory"`
 }
 
 type VtIPReply struct {
@@ -160,8 +160,8 @@ type VtIPReply struct {
 // IPReply holds the information about an IP
 type IPReply struct {
 	Details string `json:"details"`
-	Result  int
-	Private bool       `json:"private"`
+	Result  int     `json:"result"`
+	Private bool       `json:"isPrivate"`
 	XFE     XfeIPReply `json:"xfe"`
 	VT      VtIPReply  `json:"vt"`
 }

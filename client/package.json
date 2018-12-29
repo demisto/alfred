@@ -5,6 +5,7 @@
   "dependencies": {
     "@babel/core": "7.1.6",
     "@svgr/webpack": "2.4.1",
+    "autobind-decorator": "2.4.0",
     "babel-core": "7.0.0-bridge.0",
     "babel-eslint": "9.0.0",
     "babel-jest": "23.6.0",
@@ -14,6 +15,7 @@
     "bfj": "6.1.1",
     "case-sensitive-paths-webpack-plugin": "2.1.2",
     "chalk": "2.4.1",
+    "classnames": "2.2.6",
     "css-loader": "1.0.0",
     "dotenv": "6.0.0",
     "dotenv-expand": "4.2.0",
@@ -32,6 +34,7 @@
     "jest": "23.6.0",
     "jest-pnp-resolver": "1.0.1",
     "jest-resolve": "23.6.0",
+    "lodash": "4.17.11",
     "mini-css-extract-plugin": "0.4.3",
     "optimize-css-assets-webpack-plugin": "5.0.1",
     "pnp-webpack-plugin": "1.1.0",
@@ -39,6 +42,7 @@
     "postcss-loader": "3.0.0",
     "postcss-preset-env": "6.3.1",
     "postcss-safe-parser": "4.0.1",
+    "prop-types": "15.6.2",
     "react": "16.7.0",
     "react-app-polyfill": "0.2.0",
     "react-dev-utils": "7.0.0",
@@ -111,6 +115,41 @@
   "babel": {
     "presets": [
       "react-app"
-    ]
+    ],
+    "env": {
+      "development": {
+        "plugins": [
+          [
+            "@babel/plugin-proposal-decorators",
+            {
+              "legacy": true
+            }
+          ]
+        ],
+        "ignore": [
+          "node_modules",
+          "vendors",
+          "build"
+        ]
+      },
+      "production": {
+        "plugins": [
+          [
+            "@babel/plugin-proposal-decorators",
+            {
+              "legacy": true
+            }
+          ]
+        ],
+        "ignore": [
+          "node_modules",
+          "vendors",
+          "build"
+        ]
+      }
+    }
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-decorators": "^7.2.3"
   }
 }

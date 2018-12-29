@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import Details from './Details';
+import Details from './components/Details/Details';
 import * as serviceWorker from './serviceWorker';
 
 ReactDOM.render(<Details />, document.getElementById('details-container'));

@@ -1,8 +1,4 @@
-export const API_RESPONSE_STATUS = {
-  success: 'success',
-  error: 'err',
-};
-
+import { API_RESPONSE_STATUS } from './constants';
 
 export async function get(url) {
   try {
@@ -11,8 +7,13 @@ export async function get(url) {
     });
 
     const data = await response.json();
+
+    // convert response status to success/fail
+    const status = (response.status >= 200 && response.status < 400) ? API_RESPONSE_STATUS.success
+      : API_RESPONSE_STATUS.error;
+
     return {
-      status: API_RESPONSE_STATUS.success,
+      status,
       data
     }
   } catch (err) {
