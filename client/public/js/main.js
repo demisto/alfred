@@ -575,8 +575,8 @@ jQuery(document).ready(function($) {
     // Add support for mobile navigation
 	themo_support_mobile_navigation($);
 
-	$(window).on("scroll", function() {
 
+  $(window).on("scroll", function() {
 		if ($(this).scrollTop() < $('.site-header').height()) {
 			$('.site-header').removeClass("fixed-header-menu");
 		} else if ($(this).scrollTop() > $('.site-header').height()) {

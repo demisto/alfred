@@ -21,8 +21,8 @@ class IPDetails extends Component {
     super(props);
 
     this.state = {
-      expandXFE: false,
-      expandVT: false
+      expandXFE: true,
+      expandVT: true
     };
   }
 
