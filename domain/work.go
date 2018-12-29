@@ -154,7 +154,7 @@ type XfeIPReply struct {
 
 type VtIPReply struct {
 	Error    string        `json:"error"`
-	IPReport govt.IpReport `json:"ip_report"`
+	IPReport govt.IpReport `json:"ipReport"`
 }
 
 // IPReply holds the information about an IP

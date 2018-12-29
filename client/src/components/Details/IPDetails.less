@@ -1,0 +1,29 @@
+@import url('../Application.less');
+@import url('../variables.less');
+
+.ip-details {
+  width: 100%;
+
+  .ip-reputation-header {
+    border-width: medium;
+    width: 50%;
+    margin: 15px auto;
+
+    &.clean {
+      background: @clean-rep-bg-color;
+    }
+
+    &.dirty {
+      background: @dirty-rep-bg-color;
+    }
+
+    &.unknown {
+      background: @unknown-rep-bg-color;
+    }
+  }
+  .vendor-toggle-button {
+    cursor: pointer;
+    font-size: large;
+    color: @anchor-color;
+  }
+}

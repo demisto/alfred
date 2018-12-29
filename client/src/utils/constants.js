@@ -9,3 +9,5 @@ export const REPUTATION_RESULT = {
   unknown: 2
 };
 
+export const TABLE_DATE_FORMAT = 'MMMM Do YYYY, h:mm a';
+

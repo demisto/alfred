@@ -31,15 +31,12 @@ class Details extends Component {
     return (
       <div className="ui centered grid">
         <div className="raw">
-          <h1 className="text-center">D<small>BOT</small> Analysis Report:</h1>
+          <h3 className="text-center">D<small>BOT</small> Analysis Report:</h3>
         </div>
         <div className="row">
           {
             isIP && ips && ips[0] && <IPDetails {...ips[0]}/>
           }
-        </div>
-        <div className="row">
-          Data: { JSON.stringify(data, null, 2) }
         </div>
       </div>
     );

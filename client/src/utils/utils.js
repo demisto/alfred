@@ -1,3 +1,6 @@
+import moment from 'moment';
+import { TABLE_DATE_FORMAT } from './constants';
+
 const MD5Mask = 1;
 const URLMask = 2;
 const IPMask = 4;
@@ -20,3 +23,13 @@ export function keysToString(obj, defaultVal = 'Unknown') {
   return Object.keys(obj).join(', ') || defaultVal;
 }
 
+export function dateToString(date) {
+  return moment(date).format(
+    TABLE_DATE_FORMAT);
+}
+
+// "field_name" => "Field nNme"
+export function fieldToTitle(str) {
+  return str.replace(/_/g, ' ').replace(/(?: |\b)(\w)/g, key => key.toUpperCase());
+
+}
