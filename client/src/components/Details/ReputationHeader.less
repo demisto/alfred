@@ -1,0 +1,20 @@
+@import url('../Application.less');
+@import url('../variables.less');
+
+.reputation-header {
+  border-width: medium !important;
+  width: 50%;
+  margin: 15px auto !important;
+
+  &.clean {
+    background: @clean-rep-bg-color;
+  }
+
+  &.dirty {
+    background: @dirty-rep-bg-color;
+  }
+
+  &.unknown {
+    background: @unknown-rep-bg-color;
+  }
+}

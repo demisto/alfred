@@ -33,3 +33,11 @@ export function fieldToTitle(str) {
   return str.replace(/_/g, ' ').replace(/(?: |\b)(\w)/g, key => key.toUpperCase());
 
 }
+
+export function compareDate(fieldName) {
+  return function compare(a, b) {
+    const dateA = new Date(a[fieldName]);
+    const dateB = new Date(b[fieldName]);
+    return dateA - dateB;
+  }
+}

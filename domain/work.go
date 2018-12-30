@@ -112,7 +112,7 @@ const (
 // HashReply holds the information about a hash
 type HashReply struct {
 	Details string `json:"details"`
-	Result  int
+	Result  int  `json:"result"`
 	XFE     struct {
 		NotFound bool             `json:"not_found"`
 		Error    string           `json:"error"`
@@ -128,23 +128,28 @@ type HashReply struct {
 	} `json:"cy"`
 }
 
+type XfeURLReply struct {
+	NotFound   bool                    `json:"notFound"`
+	Error      string                  `json:"error"`
+	Resolve    goxforce.ResolveResp    `json:"resolve"`
+	URLDetails goxforce.URL            `json:"urlDetails"`
+	URLMalware goxforce.URLMalwareResp `json:"urlMalware"`
+}
+
+type VtURLReply struct {
+	Error     string         `json:"error"`
+	URLReport govt.UrlReport `json:"urlReport"`
+}
+
 // URLReply holds the information about a URL
 type URLReply struct {
 	Details string `json:"details"`
-	Result  int
-	XFE     struct {
-		NotFound   bool                    `json:"not_found"`
-		Error      string                  `json:"error"`
-		Resolve    goxforce.ResolveResp    `json:"resolve"`
-		URLDetails goxforce.URL            `json:"url_details"`
-		URLMalware goxforce.URLMalwareResp `json:"url_malware"`
-	} `json:"xfe"`
-	VT struct {
-		Error     string         `json:"error"`
-		URLReport govt.UrlReport `json:"url_report"`
-	} `json:"vt"`
+	Result   int  `json:"result"`
+	XFE     XfeURLReply `json:"xfe"`
+	VT      VtURLReply`json:"vt"`
 }
 
+// XfeIPReply ...
 type XfeIPReply struct {
 	NotFound     bool                  `json:"notFound"`
 	Error        string                `json:"error"`
@@ -152,6 +157,7 @@ type XfeIPReply struct {
 	IPHistory    goxforce.IPHistory    `json:"ipHistory"`
 }
 
+// VtIPReply ...
 type VtIPReply struct {
 	Error    string        `json:"error"`
 	IPReport govt.IpReport `json:"ipReport"`
@@ -159,8 +165,8 @@ type VtIPReply struct {
 
 // IPReply holds the information about an IP
 type IPReply struct {
-	Details string `json:"details"`
-	Result  int     `json:"result"`
+	Details string     `json:"details"`
+	Result  int        `json:"result"`
 	Private bool       `json:"isPrivate"`
 	XFE     XfeIPReply `json:"xfe"`
 	VT      VtIPReply  `json:"vt"`
@@ -168,7 +174,7 @@ type IPReply struct {
 
 // FileReply holds the information about a File
 type FileReply struct {
-	Result       int
+	Result       int  `json:"result"`
 	FileTooLarge bool   `json:"file_too_large"`
 	Virus        string `json:"virus"`
 	Error        string `json:"error"`

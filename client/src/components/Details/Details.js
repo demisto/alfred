@@ -4,6 +4,7 @@ import { API_RESPONSE_STATUS } from '../../utils/constants';
 import { parseType } from '../../utils/utils';
 import { get } from '../../utils/api';
 import IPDetails from "./IPDetails";
+import URLDetails from './URLDetails';
 
 class Details extends Component {
 
@@ -26,7 +27,7 @@ class Details extends Component {
   }
 
   getDetailsSection(data) {
-    const { type, ips } = data;
+    const { type, ips, urls } = data;
     const { isIP, isURL, isFile, isMD5 } = parseType(type);
     return (
       <div className="ui centered grid">
@@ -36,6 +37,9 @@ class Details extends Component {
         <div className="row">
           {
             isIP && ips && ips[0] && <IPDetails {...ips[0]}/>
+          }
+          {
+            isURL && urls && urls[0] && <URLDetails {...urls[0]}/>
           }
         </div>
       </div>
