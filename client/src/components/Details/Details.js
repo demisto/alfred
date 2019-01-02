@@ -5,6 +5,7 @@ import { parseType } from '../../utils/utils';
 import { get } from '../../utils/api';
 import IPDetails from "./IPDetails";
 import URLDetails from './URLDetails';
+import FileDetails from './FileDetails';
 
 class Details extends Component {
 
@@ -27,7 +28,7 @@ class Details extends Component {
   }
 
   getDetailsSection(data) {
-    const { type, ips, urls } = data;
+    const { type, ips, urls, file, hashes  } = data;
     const { isIP, isURL, isFile, isMD5 } = parseType(type);
     return (
       <div className="ui centered grid">
@@ -40,6 +41,9 @@ class Details extends Component {
           }
           {
             isURL && urls && urls[0] && <URLDetails {...urls[0]}/>
+          }
+          {
+            (isMD5 || isFile) && hashes && hashes[0] && <FileDetails {...hashes[0]} file={isFile ? file : null}  />
           }
         </div>
       </div>

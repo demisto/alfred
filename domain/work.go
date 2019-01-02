@@ -109,23 +109,32 @@ const (
 	ResultUnknown
 )
 
+// XfeHashReply ...
+type XfeHashReply  struct {
+	NotFound bool             `json:"notFound"`
+	Error    string           `json:"error"`
+	Malware  goxforce.Malware `json:"malware"`
+}
+
+// VtHashReply ...
+type VtHashReply struct {
+	Error      string          `json:"error"`
+	FileReport govt.FileReport `json:"fileReport"`
+}
+
+// CyHashReply ....
+type CyHashReply struct {
+	Error  string                 `json:"error"`
+	Result infinigo.QueryResponse `json:"result"`
+}
+
 // HashReply holds the information about a hash
 type HashReply struct {
 	Details string `json:"details"`
 	Result  int  `json:"result"`
-	XFE     struct {
-		NotFound bool             `json:"not_found"`
-		Error    string           `json:"error"`
-		Malware  goxforce.Malware `json:"malware"`
-	} `json:"xfe"`
-	VT struct {
-		Error      string          `json:"error"`
-		FileReport govt.FileReport `json:"file_report"`
-	} `json:"vt"`
-	Cy struct {
-		Error  string                 `json:"error"`
-		Result infinigo.QueryResponse `json:"result"`
-	} `json:"cy"`
+	XFE XfeHashReply `json:"xfe"`
+	VT  VtHashReply `json:"vt"`
+	Cy  CyHashReply `json:"cy"`
 }
 
 type XfeURLReply struct {

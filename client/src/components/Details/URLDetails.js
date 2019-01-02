@@ -18,7 +18,6 @@ class URLDetails extends Component {
   static propTypes = {
     details: PropTypes.string,
     result: PropTypes.number,
-    isPrivate: PropTypes.bool,
     xfe: PropTypes.object,
     vt: PropTypes.object
   };
@@ -45,10 +44,11 @@ class URLDetails extends Component {
   getXFESection() {
     const { xfe } = this.props;
     const { expandXFE } = this.state;
-    const { resolve, urlDetails, urlMalware } = xfe || {};
     if (!foundXFE(xfe)) {
       return null;
     }
+
+    const { resolve, urlDetails, urlMalware } = xfe;
 
     const headers = [{
       label: 'Risk Score:',
@@ -99,6 +99,7 @@ class URLDetails extends Component {
                   title="Records"
                   data={tableData}
                   keys={['name', 'value']}
+                  style={{ width: '80%' }}
                 />
                 <Table
                   title="Malware detected on URL"
@@ -164,6 +165,7 @@ class URLDetails extends Component {
                   }))}
                 keys={['engine', 'result']}
                 headers={['Scan Engine', 'Result']}
+                style={{ width: '50%' }}
               />
             </div>
           </div>
@@ -177,7 +179,7 @@ class URLDetails extends Component {
   render() {
     const { details, result } = this.props;
     return (
-      <div className="ip-details">
+      <div className="url-details">
         <h2>URL: {details}</h2>
         <ReputationHeader
           indicatorName="URL"

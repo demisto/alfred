@@ -8,10 +8,10 @@ const FILEMask = 8;
 
 export function parseType(type) {
   return {
-    isMD5: !!(type && MD5Mask),
-    isURL: !!(type && URLMask),
-    isIP: !!(type && IPMask),
-    isFile: !!(type && FILEMask),
+    isMD5: !!(type & MD5Mask),
+    isURL: !!(type & URLMask),
+    isIP: !!(type & IPMask),
+    isFile: !!(type & FILEMask),
   };
 }
 
