@@ -48,7 +48,7 @@ func (dq *dbQueue) PushWork(work *domain.WorkRequest) error {
 	if err != nil {
 		return err
 	}
-	m := domain.DBQueueMessage{MessageType: "work", Message: util.ToJSONStringNoIndent(work)}
+	m := domain.DBQueueMessage{MessageType: "work", Message: util.ToJSONStringNoIndent(work), Name: work.ReplyQueue}
 	return dq.d.PostMessage(&m)
 }
 
@@ -63,7 +63,7 @@ func (dq *dbQueue) PushWorkReply(replyQueue string, reply *domain.WorkReply) err
 	if err != nil {
 		return err
 	}
-	m := domain.DBQueueMessage{MessageType: "workr", Message: util.ToJSONStringNoIndent(reply)}
+	m := domain.DBQueueMessage{MessageType: "workr", Message: util.ToJSONStringNoIndent(reply), Name: replyQueue}
 	return dq.d.PostMessage(&m)
 }
 
@@ -88,7 +88,7 @@ func (dq *dbQueue) getMessages() {
 			if conf.Options.Worker {
 				messages, err := dq.d.QueueMessages(false, "work")
 				if err != nil {
-					logrus.WithError(err).Error("Unable to load messages - going to retry")
+					logrus.WithError(err).Error("Unable to load worker messages - going to retry")
 				}
 				for _, m := range messages {
 					wr := &domain.WorkRequest{}
@@ -102,7 +102,7 @@ func (dq *dbQueue) getMessages() {
 			if conf.Options.Web {
 				messages, err := dq.d.QueueMessages(true, "workr")
 				if err != nil {
-					logrus.WithError(err).Error("Unable to load messages - going to retry")
+					logrus.WithError(err).Error("Unable to load web workr messages - going to retry")
 				}
 				for _, m := range messages {
 					wr := &domain.WorkReply{}
@@ -116,7 +116,7 @@ func (dq *dbQueue) getMessages() {
 			if conf.Options.Web {
 				messages, err := dq.d.QueueMessages(true, "conf")
 				if err != nil {
-					logrus.WithError(err).Error("Unable to load messages - going to retry")
+					logrus.WithError(err).Error("Unable to load web conf messages - going to retry")
 				}
 				for _, m := range messages {
 					cr := &domain.Configuration{}

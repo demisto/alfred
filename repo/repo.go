@@ -727,7 +727,7 @@ func (r *MySQL) QueueMessages(host bool, messageType string) (messages []*domain
 	query := "SELECT id, name, message_type, message, ts FROM queue WHERE message_type = ? AND name = ?"
 	args := []interface{}{messageType, r.hostname}
 	if !host {
-		query = "SELECT id, team, message_type, message, ts FROM queue WHERE message_type = ?"
+		query = "SELECT id, name, message_type, message, ts FROM queue WHERE message_type = ?"
 		args = []interface{}{messageType}
 	}
 	rows, err := r.db.Query(query, args...)

@@ -100,7 +100,7 @@ func ReplyQueueName() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "Q" + host, nil
+	return host, nil
 }
 
 func (q *queueChannel) Close() error {

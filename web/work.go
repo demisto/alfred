@@ -25,6 +25,9 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, ErrBadRequest)
 		return
 	}
+
+	logrus.Debugf("Working on request for team - %s, file - %s, message - %s, channel - %s, text - %s.", team, file, message, channel, text)
+
 	// We need this just for a small verification that the team is one of ours
 	t, err := ac.r.Team(team)
 	if err != nil {
@@ -44,6 +47,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 			VTKey:      t.VTKey,
 			XFEKey:     t.XFEKey,
 			XFEPass:    t.XFEPass,
+			Context:    &domain.Context{},
 		}
 	} else {
 		// Bot scope does not have file info and history permissions so we need to iterate users
@@ -67,7 +71,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 					Type:       "file",
 					File:       domain.File{URL: info.S("file.url_private"), Name: info.S("file.name"), Size: info.I("file.size"), Token: t.BotToken},
 					ReplyQueue: ac.replyQueue,
-					Context:    nil,
+					Context:    &domain.Context{},
 					Online:     true,
 					VTKey:      t.VTKey,
 					XFEKey:     t.XFEKey,
@@ -82,6 +86,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 				MessageID:  "file-message",
 				Type:       "message",
 				Text:       text,
+				Context:    &domain.Context{},
 				ReplyQueue: ac.replyQueue,
 				Online:     true,
 				VTKey:      t.VTKey,
@@ -97,7 +102,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 	}
 	err = ac.q.PushWork(workReq)
 	if err != nil {
-		logrus.Errorf("Error pushing work - %v\n", err)
+		logrus.WithError(err).Error("Error pushing work")
 		WriteError(w, ErrInternalServer)
 		return
 	}
