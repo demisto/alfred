@@ -4,11 +4,15 @@ package queue
 import (
 	"errors"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/Sirupsen/logrus"
 
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/repo"
+	"github.com/demisto/alfred/util"
 )
 
 var (
@@ -26,6 +30,7 @@ type Queue interface {
 	PopWork(timeout time.Duration) (*domain.WorkRequest, error)
 	PushWorkReply(replyQueue string, reply *domain.WorkReply) error
 	PopWorkReply(replyQueue string, timeout time.Duration) (*domain.WorkReply, error)
+	PopWebReply(replyQueue string, timeout time.Duration) (*domain.WorkReply, error)
 	Close() error
 }
 
@@ -41,6 +46,7 @@ func New(r *repo.MySQL) (Queue, error) {
 			Conf:      make(chan *domain.Configuration, 1000),
 			Work:      make(chan *domain.WorkRequest, 1000),
 			WorkReply: make(chan *domain.WorkReply, 1000),
+			WebReply:  make(chan *domain.WorkReply, 1000),
 		}
 	}
 	return q, err
@@ -49,7 +55,8 @@ func New(r *repo.MySQL) (Queue, error) {
 type queueChannel struct {
 	Conf      chan *domain.Configuration
 	Work      chan *domain.WorkRequest
-	WorkReply chan *domain.WorkReply
+	WorkReply chan *domain.WorkReply // stores non-web replies
+	WebReply  chan *domain.WorkReply // stores web replies
 	closed    bool
 }
 
@@ -82,12 +89,25 @@ func (q *queueChannel) PopWork(timeout time.Duration) (*domain.WorkRequest, erro
 }
 
 func (q *queueChannel) PushWorkReply(replyQueue string, reply *domain.WorkReply) error {
-	q.WorkReply <- reply
+	logrus.Debugf("Pushing work reply %s", replyQueue)
+	if strings.HasSuffix(replyQueue, util.WebReplySuffix) {
+		q.WebReply <- reply
+	} else {
+		q.WorkReply <- reply
+	}
 	return nil
 }
 
 func (q *queueChannel) PopWorkReply(replyQueue string, timeout time.Duration) (*domain.WorkReply, error) {
 	work := <-q.WorkReply
+	if work == nil {
+		return nil, ErrClosed
+	}
+	return work, nil
+}
+
+func (q *queueChannel) PopWebReply(replyQueue string, timeout time.Duration) (*domain.WorkReply, error) {
+	work := <-q.WebReply
 	if work == nil {
 		return nil, ErrClosed
 	}
@@ -108,6 +128,7 @@ func (q *queueChannel) Close() error {
 		close(q.Conf)
 		close(q.Work)
 		close(q.WorkReply)
+		close(q.WebReply)
 	}
 	q.closed = true
 	return nil

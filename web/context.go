@@ -7,6 +7,7 @@ import (
 	"github.com/demisto/alfred/bot"
 	"github.com/demisto/alfred/queue"
 	"github.com/demisto/alfred/repo"
+	"github.com/demisto/alfred/util"
 )
 
 // AppContext holds the web context for the handlers
@@ -23,7 +24,7 @@ func NewContext(r *repo.MySQL, q queue.Queue, b *bot.Bot) *AppContext {
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	return &AppContext{r: r, q: q, replyQueue: host + "-web", b: b}
+	return &AppContext{r: r, q: q, replyQueue: host + util.WebReplySuffix, b: b}
 }
 
 type session struct {

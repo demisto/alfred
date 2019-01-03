@@ -54,7 +54,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		users, err := ac.r.TeamMembers(team)
 		if err != nil {
 			logrus.Errorf("Error loading team members - %v\n", err)
-			WriteError(w, ErrInternalServer)
+			WriteError(w, ErrCouldNotFindTeam)
 			return
 		}
 		users = append([]domain.User{{Name: "dbot", Token: t.BotToken, ID: t.BotUserID, Status: domain.UserStatusActive}}, users...)
@@ -106,7 +106,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, ErrInternalServer)
 		return
 	}
-	workReply, err := ac.q.PopWorkReply(ac.replyQueue, 0)
+	workReply, err := ac.q.PopWebReply(ac.replyQueue, 0)
 	json.NewEncoder(w).Encode(workReply)
 }
 

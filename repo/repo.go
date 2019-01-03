@@ -724,8 +724,8 @@ func (r *MySQL) JoinSlackChannel(email string) error {
 }
 
 func (r *MySQL) QueueMessages(host bool, messageType string) (messages []*domain.DBQueueMessage, err error) {
-	query := "SELECT id, name, message_type, message, ts FROM queue WHERE message_type = ? AND name = ?"
-	args := []interface{}{messageType, r.hostname}
+	query := "SELECT id, name, message_type, message, ts FROM queue WHERE message_type = ? AND name LIKE ?"
+	args := []interface{}{messageType, r.hostname + "%"} // looking for host name or hostname prefix (for '-web' messages)
 	if !host {
 		query = "SELECT id, name, message_type, message, ts FROM queue WHERE message_type = ?"
 		args = []interface{}{messageType}

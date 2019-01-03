@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+const WebReplySuffix = "-web"
+
 // Max returns the max between 2 ints
 func Max(a int, b int) int {
 	if a < b {

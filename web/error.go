@@ -52,4 +52,6 @@ var (
 	ErrForbidden = &Error{"forbidden", 403, "Forbidden", "Forbidden"}
 	// ErrInternalServer if things go wrong on our side
 	ErrInternalServer = &Error{"internal_server_error", 500, "Internal Server Error", "Something went wrong."}
+	// ErrCouldNotFindTeam ...
+	ErrCouldNotFindTeam = &Error{"could_find_team", 400, "Could not find slack team", "Could not find slack team"}
 )

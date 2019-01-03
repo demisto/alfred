@@ -130,6 +130,7 @@ class IPDetails extends Component {
       );
     }
 
+    const { Resolutions, detected_urls } = ipReport || {};
     return (
       <div className="ui left aligned grid">
         <div className="row">
@@ -142,16 +143,22 @@ class IPDetails extends Component {
         {
           expandVT &&
           <div className="row ui left aligned padded grid">
+            {
+              !(Resolutions && Resolutions.length > 0) && !(detected_urls && detected_urls.length > 0) &&
+                <div className="h5 no-padding no-margin">
+                  No results
+                </div>
+            }
             <div className="row">
               <Table
                 title="Historical Resolutions"
-                data={(ipReport && ipReport.Resolutions  || []).sort(compareDate('last_resolved'))}
+                data={(Resolutions || []).sort(compareDate('last_resolved'))}
                 keys={['hostname', 'last_resolved']}
                 style={{ width: '40%' }}
               />
               <Table
                 title="Detected URLs"
-                data={(ipReport && ipReport.detected_urls  || []).sort(compareDate('scan_date')).map(detected => ({
+                data={(detected_urls || []).sort(compareDate('scan_date')).map(detected => ({
                   ...detected,
                   positives: `${detected.positives} / ${detected.total}`
                 }))}

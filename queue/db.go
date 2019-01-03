@@ -25,6 +25,7 @@ func NewDBQueue(r *repo.MySQL) *dbQueue {
 			Conf:      make(chan *domain.Configuration, 1000),
 			Work:      make(chan *domain.WorkRequest, 1000),
 			WorkReply: make(chan *domain.WorkReply, 1000),
+			WebReply:  make(chan *domain.WorkReply, 1000),
 		},
 	}
 	go q.getMessages()
@@ -72,6 +73,11 @@ func (dq *dbQueue) PopWorkReply(replyQueue string, timeout time.Duration) (*doma
 	return dq.qc.PopWorkReply(replyQueue, timeout)
 }
 
+// PopWebReply ...
+func (dq *dbQueue) PopWebReply(replyQueue string, timeout time.Duration) (*domain.WorkReply, error) {
+	return dq.qc.PopWebReply(replyQueue, timeout)
+}
+
 func (dq *dbQueue) Close() error {
 	dq.done <- true
 	return dq.qc.Close()
@@ -107,10 +113,10 @@ func (dq *dbQueue) getMessages() {
 				for _, m := range messages {
 					wr := &domain.WorkReply{}
 					if err := json.Unmarshal([]byte(m.Message), wr); err != nil {
-						logrus.WithError(err).Error("Unable to parse work reply message")
+						logrus.WithError(err).Errorf("Unable to parse work reply message. got message -%s", m.Message)
 						continue
 					}
-					dq.qc.PushWorkReply("", wr)
+					dq.qc.PushWorkReply(m.Name, wr)
 				}
 			}
 			if conf.Options.Web {
