@@ -1,5 +1,5 @@
+import './Details.less';
 import React, { Component } from 'react';
-import './Details.css';
 import { API_RESPONSE_STATUS } from '../../utils/constants';
 import { parseType } from '../../utils/utils';
 import { get } from '../../utils/api';
@@ -32,7 +32,7 @@ class Details extends Component {
     const { isIP, isURL, isFile, isMD5 } = parseType(type);
     return (
       <div className="ui centered grid">
-        <div className="raw">
+        <div className="row">
           <h3 className="text-center">D<small>BOT</small> Analysis Report:</h3>
         </div>
         <div className="row">
@@ -45,6 +45,9 @@ class Details extends Component {
           {
             (isMD5 || isFile) && hashes && hashes[0] && <FileDetails {...hashes[0]} file={isFile ? file : null}  />
           }
+          {
+            !type && <div className="h5"> Could not find any result. Sorry... </div>
+          }
         </div>
       </div>
     );
@@ -55,12 +58,22 @@ class Details extends Component {
     return (
       <div className="details-page">
         {loading &&
-          <div className="ui centered grid">
-            <div className="raw">
-              <div className="ui active centered inline loader"></div>
+          <div className="ui centered grid loading-wrapper">
+            <div className="row">
+              <div className="h2">D<small>BOT</small> is collecting security details for your query. It might take up to a minute!</div>
             </div>
             <div className="row">
-              <h2>D<small>BOT</small> is collecting security details for your query. It might take up to a minute!</h2>
+              <div className="sk-cube-grid">
+                <div className="sk-cube sk-cube1"></div>
+                <div className="sk-cube sk-cube2"></div>
+                <div className="sk-cube sk-cube3"></div>
+                <div className="sk-cube sk-cube4"></div>
+                <div className="sk-cube sk-cube5"></div>
+                <div className="sk-cube sk-cube6"></div>
+                <div className="sk-cube sk-cube7"></div>
+                <div className="sk-cube sk-cube8"></div>
+                <div className="sk-cube sk-cube9"></div>
+              </div>
             </div>
           </div>
         }

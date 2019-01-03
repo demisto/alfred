@@ -68,6 +68,8 @@ While developing, you don't need to run esc unless adding new files to the site.
 ### Configuration
 - Make sure to specify the Slack client ID and secret in a configuration file
 - To get VirusTotal reputation, you must specify the VirusTotal key. See conf/conf.go for more details.
+- Add `"Web": true` to configuration file to support web service (access reputation data from the browser)
+- Add `"Worker": true` to configuration file to support web service (process work by the bot)
 - Configure mysql database configuration under `"DB"` key (See conf/conf.go for more detail):
 ```
 {
