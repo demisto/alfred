@@ -759,7 +759,7 @@ func (b *Bot) handleVerbose(team, text, channel string, sub *subscription) {
 
 func (b *Bot) handleConfig(team string, msg slack.Response, sub *subscription) {
 	postMessage := map[string]interface{}{
-		"channel": msg["event.channel"],
+		"channel": msg.S("channel"),
 		"as_user": true,
 	}
 	ch, err := sub.s.Conversations("public_channel,private_channel")
