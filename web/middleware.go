@@ -145,9 +145,8 @@ func bodyHandler(v interface{}) func(http.Handler) http.Handler {
 				WriteError(w, ErrBadRequest)
 				return
 			}
-
 			if next != nil {
-				setRequestContext(r, contextBody, val)
+				r = setRequestContext(r, contextBody, val)
 				next.ServeHTTP(w, r)
 			}
 		}

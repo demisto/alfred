@@ -38,16 +38,12 @@ type Bot struct {
 
 // New returns a new bot
 func New(r *repo.MySQL, q queue.Queue) (*Bot, error) {
-	host, err := queue.ReplyQueueName()
-	if err != nil {
-		return nil, err
-	}
 	return &Bot{
 		stop:          make(chan bool, 1),
 		r:             r,
 		subscriptions: make(map[string]*subscription),
 		q:             q,
-		replyQueue:    host,
+		replyQueue:    util.Hostname,
 		stats:         make(map[string]*domain.Statistics),
 		firstMessages: make(map[string]bool),
 	}, nil
@@ -69,7 +65,7 @@ func (b *Bot) loadSubscriptions() error {
 			continue
 		}
 		teamSub.s = &slack.Client{Token: teams[i].BotToken}
-		b.subscriptions[teams[i].ID] = teamSub
+		b.subscriptions[teams[i].ExternalID] = teamSub
 	}
 	return nil
 }
@@ -143,7 +139,7 @@ func (b *Bot) HandleMessage(msg slack.Response) {
 			logrus.Debugf("Handling message - %+v\n", msg)
 			workReq := domain.WorkRequestFromMessage(msg, sub.team.BotToken, sub.team.VTKey, sub.team.XFEKey, sub.team.XFEPass)
 			logrus.Debug("Pushing to queue")
-			ctx := &domain.Context{Team: team, User: msgUser, Type: msgType, Channel: channel, OriginalUser: msgUser}
+			ctx := &domain.Context{Team: sub.team.ID, User: msgUser, Type: msgType, Channel: channel, OriginalUser: msgUser}
 			workReq.ReplyQueue, workReq.Context = b.replyQueue, ctx
 			b.q.PushWork(workReq)
 		} else {
@@ -166,8 +162,8 @@ func (b *Bot) HandleMessage(msg slack.Response) {
 			}
 			b.smu.Lock()
 			defer b.smu.Unlock()
-			stats := b.stats[team]
-			if stats == nil {
+			stats, ok := b.stats[team]
+			if !ok {
 				stats = &domain.Statistics{Team: team}
 				b.stats[team] = stats
 			}

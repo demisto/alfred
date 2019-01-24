@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -33,7 +32,8 @@ CREATE TABLE IF NOT EXISTS teams (
 	vt_key VARCHAR(512),
 	xfe_key VARCHAR(512),
 	xfe_pass VARCHAR(512),
-	CONSTRAINT teams_pk PRIMARY KEY (id)
+	CONSTRAINT teams_pk PRIMARY KEY (id),
+	CONSTRAINT teams_external_id_uk UNIQUE (external_id)
 );
 CREATE TABLE IF NOT EXISTS users (
 	id VARCHAR(64) NOT NULL,
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS queue (
 	id BIGINT NOT NULL AUTO_INCREMENT,
 	name VARCHAR(64) NOT NULL,
 	message_type VARCHAR(10) NOT NULL,
-	message VARCHAR(20000) NOT NULL,
+	message LONGTEXT NOT NULL,
 	ts TIMESTAMP NOT NULL,
 	CONSTRAINT queue_pk PRIMARY KEY (id)
 )
@@ -137,9 +137,8 @@ var (
 )
 
 type MySQL struct {
-	db       *sqlx.DB
-	hostname string
-	stop     chan bool
+	db   *sqlx.DB
+	stop chan bool
 }
 
 // NewMySQL repo is returned
@@ -154,10 +153,6 @@ type MySQL struct {
 // The last command drops the anonymous user
 func NewMySQL() (*MySQL, error) {
 	logrus.Infof("Using MySQL at %s with user %s\n", conf.Options.DB.ConnectString, conf.Options.DB.Username)
-	name, err := os.Hostname()
-	if err != nil {
-		return nil, err
-	}
 	// If we specified TLS connection, we need the certificate files
 	if conf.Options.DB.ServerCA != "" {
 		rootCertPool := x509.NewCertPool()
@@ -170,11 +165,13 @@ func NewMySQL() (*MySQL, error) {
 			return nil, err
 		}
 		clientCert = append(clientCert, certs)
-		mysql.RegisterTLSConfig("dbot", &tls.Config{
+		if err := mysql.RegisterTLSConfig("dbot", &tls.Config{
 			RootCAs:            rootCertPool,
 			Certificates:       clientCert,
 			InsecureSkipVerify: true,
-		})
+		}); err != nil {
+			return nil, err
+		}
 	}
 	db, err := sqlx.Connect("mysql", fmt.Sprintf("%s:%s@%s", conf.Options.DB.Username, conf.Options.DB.Password, conf.Options.DB.ConnectString))
 	if err != nil {
@@ -199,9 +196,8 @@ func NewMySQL() (*MySQL, error) {
 		return nil, err
 	}
 	r := &MySQL{
-		db:       db,
-		hostname: name,
-		stop:     make(chan bool, 1),
+		db:   db,
+		stop: make(chan bool, 1),
 	}
 	if conf.Options.Web {
 		go r.cleanOAuthStateAndQueue()
@@ -215,7 +211,7 @@ func (r *MySQL) Close() error {
 }
 
 func (r *MySQL) BotName() string {
-	return r.hostname
+	return util.Hostname
 }
 
 func (r *MySQL) get(tableName, field, id string, data interface{}) error {
@@ -599,7 +595,7 @@ func (r *MySQL) IsVerboseChannel(team, channel string) (bool, error) {
 
 // BotHeartbeat updates the bot keep-alive timestamp
 func (r *MySQL) BotHeartbeat() error {
-	_, err := r.db.Exec("INSERT INTO bots (bot, ts) VALUES (?, now()) ON DUPLICATE KEY UPDATE ts = now()", r.hostname)
+	_, err := r.db.Exec("INSERT INTO bots (bot, ts) VALUES (?, now()) ON DUPLICATE KEY UPDATE ts = now()", util.Hostname)
 	return err
 }
 
@@ -724,8 +720,8 @@ func (r *MySQL) JoinSlackChannel(email string) error {
 }
 
 func (r *MySQL) QueueMessages(host bool, messageType string) (messages []*domain.DBQueueMessage, err error) {
-	query := "SELECT id, name, message_type, message, ts FROM queue WHERE message_type = ? AND name LIKE ?"
-	args := []interface{}{messageType, r.hostname + "%"} // looking for host name or hostname prefix (for '-web' messages)
+	query := "SELECT id, name, message_type, message, ts FROM queue WHERE message_type = ? AND name = ?"
+	args := []interface{}{messageType, util.Hostname}
 	if !host {
 		query = "SELECT id, name, message_type, message, ts FROM queue WHERE message_type = ?"
 		args = []interface{}{messageType}

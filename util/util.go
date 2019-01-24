@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
-)
 
-const WebReplySuffix = "-web"
+	"github.com/Sirupsen/logrus"
+)
 
 // Max returns the max between 2 ints
 func Max(a int, b int) int {
@@ -127,4 +128,16 @@ func ToJSONStringNoIndent(in interface{}) string {
 		return ""
 	}
 	return string(b)
+}
+
+// Hostname serves as the default queue name for work queues
+var Hostname string
+
+// Get hostname
+func init() {
+	var err error
+	Hostname, err = os.Hostname()
+	if err != nil {
+		logrus.Fatal(err)
+	}
 }

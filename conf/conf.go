@@ -94,9 +94,10 @@ var Options struct {
 			Type         string `json:"type"`
 		}
 	}
-	Web     bool
-	Worker  bool
-	ClamCtl string
+	Web       bool
+	Worker    bool
+	ClamCtl   string
+	QueuePoll int
 }
 
 // The pipe writer to wrap around standard logger. It is configured in main.
@@ -123,6 +124,7 @@ func Load(filename string, useDefault bool) error {
 	"Bot": true,
 	"Worker": true,
 	"ClamCtl": "/var/run/clamav/clamd.ctl",
+	"QueuePoll": 10,
 	"Security": {
 		"SessionKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 		"Timeout": 525600,

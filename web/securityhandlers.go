@@ -34,11 +34,11 @@ func (ac *AppContext) initiateOAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Now, generate a random state
-	uuid, err := uuid.NewRandom()
+	uid, err := uuid.NewRandom()
 	if err != nil {
 		panic(err)
 	}
-	conf := &oauth2.Config{
+	con := &oauth2.Config{
 		ClientID:     conf.Options.Slack.ClientID,
 		ClientSecret: conf.Options.Slack.ClientSecret,
 		Scopes: []string{
@@ -49,8 +49,8 @@ func (ac *AppContext) initiateOAuth(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	// Store state
-	ac.r.SetOAuthState(&domain.OAuthState{State: uuid.String(), Timestamp: time.Now()})
-	url := conf.AuthCodeURL(uuid.String())
+	ac.r.SetOAuthState(&domain.OAuthState{State: uid.String(), Timestamp: time.Now()})
+	url := con.AuthCodeURL(uid.String())
 	logrus.Debugf("Redirecting to URL - %s", url)
 	http.Redirect(w, r, url, http.StatusFound)
 }
@@ -67,7 +67,7 @@ func sendThanks(team *domain.Team, user *domain.User) {
 			_, err = s.Do("POST", "chat.postMessage", map[string]interface{}{
 				"channel": channel.S("id"),
 				"as_user": true,
-				"test": fmt.Sprintf(`Hi %s, thanks for inviting me to this team.
+				"text": fmt.Sprintf(`Hi %s, thanks for inviting me to this team.
 If you want me to monitor conversations, please add me to the relevant channels and groups.
 `+conf.DefaultHelpMessage, user.Name),
 			})
@@ -219,6 +219,10 @@ func (ac *AppContext) logout(w http.ResponseWriter, r *http.Request) {
 
 func (ac *AppContext) currUser(w http.ResponseWriter, r *http.Request) {
 	u := getRequestUser(r)
+	if u == nil {
+		WriteError(w, ErrAuth)
+		return
+	}
 	t, err := ac.r.Team(u.Team)
 	if err != nil {
 		panic(err)

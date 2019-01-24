@@ -176,8 +176,8 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 func (b *Bot) handleReplyStats(reply *domain.WorkReply, ctx *domain.Context) {
 	b.smu.Lock()
 	defer b.smu.Unlock()
-	stats := b.stats[ctx.Team]
-	if stats == nil {
+	stats, ok := b.stats[ctx.Team]
+	if !ok {
 		stats = &domain.Statistics{Team: ctx.Team}
 		b.stats[ctx.Team] = stats
 	}
@@ -766,7 +766,7 @@ func (b *Bot) handleConfig(team string, msg slack.Response) {
 	}
 	sub := b.subscriptions[team]
 	if sub == nil {
-		logrus.Warnf("Got message but do not have subsciption for team %s", team)
+		logrus.Warnf("Got message but do not have subscription for team %s", team)
 		return
 	}
 	ch, err := sub.s.Conversations("public_channel,private_channel")

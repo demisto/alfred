@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/wayn3h0/go-uuid"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/slack"
@@ -11,8 +13,12 @@ import (
 
 func (ac *AppContext) events(w http.ResponseWriter, r *http.Request) {
 	msg := getRequestBody(r).(*slack.Response)
-	ac.b.HandleMessage(*msg)
-	w.Write([]byte{'\n'})
+	if msg.S("type") == "url_verification" {
+		w.Write([]byte(msg.S("challenge")))
+	} else {
+		ac.b.HandleMessage(*msg)
+		w.Write([]byte{'\n'})
+	}
 }
 
 func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
@@ -35,6 +41,11 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, ErrInternalServer)
 		return
 	}
+	uuid, err := uuid.NewRandom()
+	if err != nil {
+		panic(err)
+	}
+	replyQueue := uuid.String()
 	var workReq *domain.WorkRequest
 	// If we have the actual text to show details for
 	if file == "" {
@@ -42,7 +53,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 			MessageID:  message,
 			Type:       "message",
 			Text:       text,
-			ReplyQueue: ac.replyQueue,
+			ReplyQueue: replyQueue,
 			Online:     true,
 			VTKey:      t.VTKey,
 			XFEKey:     t.XFEKey,
@@ -70,7 +81,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 				workReq = &domain.WorkRequest{
 					Type:       "file",
 					File:       domain.File{URL: info.S("file.url_private"), Name: info.S("file.name"), Size: info.I("file.size"), Token: t.BotToken},
-					ReplyQueue: ac.replyQueue,
+					ReplyQueue: replyQueue,
 					Context:    &domain.Context{},
 					Online:     true,
 					VTKey:      t.VTKey,
@@ -87,7 +98,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 				Type:       "message",
 				Text:       text,
 				Context:    &domain.Context{},
-				ReplyQueue: ac.replyQueue,
+				ReplyQueue: replyQueue,
 				Online:     true,
 				VTKey:      t.VTKey,
 				XFEKey:     t.XFEKey,
@@ -106,7 +117,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, ErrInternalServer)
 		return
 	}
-	workReply, err := ac.q.PopWebReply(ac.replyQueue, 0)
+	workReply, err := ac.q.PopWorkReply(replyQueue, 0)
 	json.NewEncoder(w).Encode(workReply)
 }
 

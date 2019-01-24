@@ -2,6 +2,7 @@ package queue
 
 import (
 	"encoding/json"
+	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -13,20 +14,24 @@ import (
 
 // dbQueue implements the queue functionality using a database backend
 type dbQueue struct {
-	d    *repo.MySQL
-	qc   *queueChannel
-	done chan bool
+	d            *repo.MySQL
+	done         chan bool
+	conf         chan *domain.Configuration
+	work         chan *domain.WorkRequest
+	workReply    chan *domain.WorkReply
+	webWorkReply map[string]chan *domain.WorkReply
+	mux          sync.Mutex
+	closed       bool
 }
 
 func NewDBQueue(r *repo.MySQL) *dbQueue {
 	q := &dbQueue{
-		d: r,
-		qc: &queueChannel{
-			Conf:      make(chan *domain.Configuration, 1000),
-			Work:      make(chan *domain.WorkRequest, 1000),
-			WorkReply: make(chan *domain.WorkReply, 1000),
-			WebReply:  make(chan *domain.WorkReply, 1000),
-		},
+		d:            r,
+		conf:         make(chan *domain.Configuration, 1000),
+		work:         make(chan *domain.WorkRequest, 1000),
+		workReply:    make(chan *domain.WorkReply, 1000),
+		webWorkReply: make(map[string]chan *domain.WorkReply),
+		done:         make(chan bool),
 	}
 	go q.getMessages()
 	return q
@@ -40,7 +45,12 @@ func (dq *dbQueue) PushConf(c *domain.Configuration) error {
 
 // PopConf ...
 func (dq *dbQueue) PopConf(timeout time.Duration) (*domain.Configuration, error) {
-	return dq.qc.PopConf(timeout)
+	con := <-dq.conf
+	// If someone closed the channel
+	if con == nil {
+		return nil, ErrClosed
+	}
+	return con, nil
 }
 
 // PushWork ...
@@ -55,7 +65,11 @@ func (dq *dbQueue) PushWork(work *domain.WorkRequest) error {
 
 // PopWork ...
 func (dq *dbQueue) PopWork(timeout time.Duration) (*domain.WorkRequest, error) {
-	return dq.qc.PopWork(timeout)
+	work := <-dq.work
+	if work == nil {
+		return nil, ErrClosed
+	}
+	return work, nil
 }
 
 // PushWorkReply ...
@@ -69,22 +83,48 @@ func (dq *dbQueue) PushWorkReply(replyQueue string, reply *domain.WorkReply) err
 }
 
 // PopWorkReply ...
-func (dq *dbQueue) PopWorkReply(replyQueue string, timeout time.Duration) (*domain.WorkReply, error) {
-	return dq.qc.PopWorkReply(replyQueue, timeout)
-}
-
-// PopWebReply ...
-func (dq *dbQueue) PopWebReply(replyQueue string, timeout time.Duration) (*domain.WorkReply, error) {
-	return dq.qc.PopWebReply(replyQueue, timeout)
+func (dq *dbQueue) PopWorkReply(replyQueue string, timeout time.Duration) (work *domain.WorkReply, err error) {
+	if replyQueue == util.Hostname {
+		work = <-dq.workReply
+	} else {
+		var ch chan *domain.WorkReply
+		var ok bool
+		dq.mux.Lock()
+		if ch, ok = dq.webWorkReply[replyQueue]; !ok {
+			ch = make(chan *domain.WorkReply, 1)
+			dq.webWorkReply[replyQueue] = ch
+		}
+		dq.mux.Unlock()
+		work = <-ch
+		close(ch)
+		dq.mux.Lock()
+		delete(dq.webWorkReply, replyQueue)
+		dq.mux.Unlock()
+	}
+	if work == nil {
+		return nil, ErrClosed
+	}
+	return work, nil
 }
 
 func (dq *dbQueue) Close() error {
 	dq.done <- true
-	return dq.qc.Close()
+	if !dq.closed {
+		dq.closed = true
+		close(dq.conf)
+		close(dq.work)
+		close(dq.workReply)
+		dq.mux.Lock()
+		for _, ch := range dq.webWorkReply {
+			close(ch)
+		}
+		dq.mux.Unlock()
+	}
+	return nil
 }
 
 func (dq *dbQueue) getMessages() {
-	t := time.NewTicker(30 * time.Second)
+	t := time.NewTicker(time.Duration(conf.Options.QueuePoll) * time.Second)
 	defer t.Stop()
 	for {
 		select {
@@ -102,7 +142,7 @@ func (dq *dbQueue) getMessages() {
 						logrus.WithError(err).Error("Unable to parse work request message")
 						continue
 					}
-					dq.qc.PushWork(wr)
+					dq.work <- wr
 				}
 			}
 			if conf.Options.Web {
@@ -113,10 +153,24 @@ func (dq *dbQueue) getMessages() {
 				for _, m := range messages {
 					wr := &domain.WorkReply{}
 					if err := json.Unmarshal([]byte(m.Message), wr); err != nil {
-						logrus.WithError(err).Errorf("Unable to parse work reply message. got message -%s", m.Message)
+						logrus.WithError(err).Errorf("Unable to parse work reply message. got message - %s", m.Message)
 						continue
 					}
-					dq.qc.PushWorkReply(m.Name, wr)
+					// If this is a reply to Slack just push it to generic queue
+					if m.Name == util.Hostname {
+						dq.workReply <- wr
+					} else {
+						// Otherwise, make sure to push to the specific web waiter
+						var ch chan *domain.WorkReply
+						var ok bool
+						dq.mux.Lock()
+						if ch, ok = dq.webWorkReply[m.Name]; !ok {
+							ch = make(chan *domain.WorkReply, 1)
+							dq.webWorkReply[m.Name] = ch
+						}
+						dq.mux.Unlock()
+						ch <- wr
+					}
 				}
 			}
 			if conf.Options.Web {
@@ -130,7 +184,7 @@ func (dq *dbQueue) getMessages() {
 						logrus.WithError(err).Error("Unable to parse configuration message")
 						continue
 					}
-					dq.qc.PushConf(cr)
+					dq.conf <- cr
 				}
 			}
 		}

@@ -127,6 +127,7 @@ func New(appC *AppContext) *Router {
 	r.Post("/events", eventsHandler.Append(contentTypeHandler, bodyHandler(slack.Response{})).ThenFunc(appC.events))
 	// Static
 	r.Get("/", staticHandlers.ThenFunc(pageHandler("/index.html")))
+	r.Get("/conf", staticHandlers.ThenFunc(pageHandler("/conf.html")))
 	r.Get("/details", staticHandlers.ThenFunc(pageHandler("/details.html")))
 	r.Get("/faq", staticHandlers.ThenFunc(pageHandler("/faq.html")))
 	r.Get("/privacy", staticHandlers.ThenFunc(pageHandler("/privacy.html")))
@@ -154,8 +155,12 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	if err != nil {
 		return
 	}
-	tc.SetKeepAlive(true)
-	tc.SetKeepAlivePeriod(3 * time.Minute)
+	if err = tc.SetKeepAlive(true); err != nil {
+		return
+	}
+	if err = tc.SetKeepAlivePeriod(3 * time.Minute); err != nil {
+		return
+	}
 	return tc, nil
 }
 

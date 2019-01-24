@@ -110,7 +110,7 @@ const (
 )
 
 // XfeHashReply ...
-type XfeHashReply  struct {
+type XfeHashReply struct {
 	NotFound bool             `json:"notFound"`
 	Error    string           `json:"error"`
 	Malware  goxforce.Malware `json:"malware"`
@@ -130,11 +130,11 @@ type CyHashReply struct {
 
 // HashReply holds the information about a hash
 type HashReply struct {
-	Details string `json:"details"`
-	Result  int  `json:"result"`
-	XFE XfeHashReply `json:"xfe"`
-	VT  VtHashReply `json:"vt"`
-	Cy  CyHashReply `json:"cy"`
+	Details string       `json:"details"`
+	Result  int          `json:"result"`
+	XFE     XfeHashReply `json:"xfe"`
+	VT      VtHashReply  `json:"vt"`
+	Cy      CyHashReply  `json:"cy"`
 }
 
 type XfeURLReply struct {
@@ -152,10 +152,10 @@ type VtURLReply struct {
 
 // URLReply holds the information about a URL
 type URLReply struct {
-	Details string `json:"details"`
-	Result   int  `json:"result"`
+	Details string      `json:"details"`
+	Result  int         `json:"result"`
 	XFE     XfeURLReply `json:"xfe"`
-	VT      VtURLReply`json:"vt"`
+	VT      VtURLReply  `json:"vt"`
 }
 
 // XfeIPReply ...
@@ -183,7 +183,7 @@ type IPReply struct {
 
 // FileReply holds the information about a File
 type FileReply struct {
-	Result       int  `json:"result"`
+	Result       int    `json:"result"`
 	FileTooLarge bool   `json:"file_too_large"`
 	Virus        string `json:"virus"`
 	Error        string `json:"error"`
