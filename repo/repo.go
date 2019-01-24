@@ -719,12 +719,14 @@ func (r *MySQL) JoinSlackChannel(email string) error {
 	return err
 }
 
-func (r *MySQL) QueueMessages(host bool, messageType string) (messages []*domain.DBQueueMessage, err error) {
-	query := "SELECT id, name, message_type, message, ts FROM queue WHERE message_type = ? AND name = ?"
-	args := []interface{}{messageType, util.Hostname}
-	if !host {
-		query = "SELECT id, name, message_type, message, ts FROM queue WHERE message_type = ?"
-		args = []interface{}{messageType}
+func (r *MySQL) QueueMessages(names []string, messageType string) (messages []*domain.DBQueueMessage, err error) {
+	query := "SELECT id, name, message_type, message, ts FROM queue WHERE message_type = ?"
+	args := []interface{}{messageType}
+	if len(names) > 0 {
+		query = "SELECT id, name, message_type, message, ts FROM queue WHERE message_type = ? AND name IN (?" + strings.Repeat(",?", len(names)-1) + ")"
+		for _, name := range names {
+			args = append(args, name)
+		}
 	}
 	rows, err := r.db.Query(query, args...)
 	if err != nil {

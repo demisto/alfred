@@ -40,7 +40,7 @@ func GetContext(context interface{}) (*Context, error) {
 	case map[string]interface{}:
 		return contextFromMap(c), nil
 	default:
-		return nil, errors.New("Unknown context")
+		return nil, errors.New("unknown context")
 	}
 }
 

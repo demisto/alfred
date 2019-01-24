@@ -132,7 +132,7 @@ func (dq *dbQueue) getMessages() {
 			return
 		case <-t.C:
 			if conf.Options.Worker {
-				messages, err := dq.d.QueueMessages(false, "work")
+				messages, err := dq.d.QueueMessages(nil, "work")
 				if err != nil {
 					logrus.WithError(err).Error("Unable to load worker messages - going to retry")
 				}
@@ -146,7 +146,13 @@ func (dq *dbQueue) getMessages() {
 				}
 			}
 			if conf.Options.Web {
-				messages, err := dq.d.QueueMessages(true, "workr")
+				names := []string{util.Hostname}
+				dq.mux.Lock()
+				for k := range dq.webWorkReply {
+					names = append(names, k)
+				}
+				dq.mux.Unlock()
+				messages, err := dq.d.QueueMessages(names, "workr")
 				if err != nil {
 					logrus.WithError(err).Error("Unable to load web workr messages - going to retry")
 				}
@@ -174,7 +180,7 @@ func (dq *dbQueue) getMessages() {
 				}
 			}
 			if conf.Options.Web {
-				messages, err := dq.d.QueueMessages(true, "conf")
+				messages, err := dq.d.QueueMessages([]string{util.Hostname}, "conf")
 				if err != nil {
 					logrus.WithError(err).Error("Unable to load web conf messages - going to retry")
 				}

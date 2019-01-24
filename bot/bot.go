@@ -100,7 +100,7 @@ func (b *Bot) HandleMessage(msg slack.Response) {
 		logrus.Warnf("got empty team in message %s", util.ToJSONString(msg))
 		return
 	}
-	sub := b.subscriptions[team]
+	sub := b.relevantTeam(team)
 	if sub == nil {
 		var err error
 		sub, err = b.loadSubscription(team)
@@ -139,7 +139,7 @@ func (b *Bot) HandleMessage(msg slack.Response) {
 			logrus.Debugf("Handling message - %+v\n", msg)
 			workReq := domain.WorkRequestFromMessage(msg, sub.team.BotToken, sub.team.VTKey, sub.team.XFEKey, sub.team.XFEPass)
 			logrus.Debug("Pushing to queue")
-			ctx := &domain.Context{Team: sub.team.ID, User: msgUser, Type: msgType, Channel: channel, OriginalUser: msgUser}
+			ctx := &domain.Context{Team: team, User: msgUser, Type: msgType, Channel: channel, OriginalUser: msgUser}
 			workReq.ReplyQueue, workReq.Context = b.replyQueue, ctx
 			b.q.PushWork(workReq)
 		} else {
@@ -147,24 +147,24 @@ func (b *Bot) HandleMessage(msg slack.Response) {
 			if channel != "" && channel[0] == 'D' {
 				switch {
 				case strings.HasPrefix(text, "join "):
-					b.joinChannels(team, text, channel)
+					b.joinChannels(team, text, channel, sub)
 				case strings.HasPrefix(text, "verbose "):
-					b.handleVerbose(team, text, channel) // Need the actual channel IDs
+					b.handleVerbose(team, text, channel, sub) // Need the actual channel IDs
 				case text == "config":
-					b.handleConfig(team, msg)
+					b.handleConfig(team, msg, sub)
 				case text == "?" || strings.HasPrefix(text, "help"):
 					b.showHelp(team, channel)
 				case strings.HasPrefix(text, "vt "):
-					b.handleVT(team, text, channel)
+					b.handleVT(team, text, channel, sub)
 				case strings.HasPrefix(text, "xfe "):
-					b.handleXFE(team, text, channel)
+					b.handleXFE(team, text, channel, sub)
 				}
 			}
 			b.smu.Lock()
 			defer b.smu.Unlock()
 			stats, ok := b.stats[team]
 			if !ok {
-				stats = &domain.Statistics{Team: team}
+				stats = &domain.Statistics{Team: sub.team.ID}
 				b.stats[team] = stats
 			}
 			stats.Messages++
