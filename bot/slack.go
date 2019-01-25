@@ -711,20 +711,30 @@ func (b *Bot) handleVerbose(team, text, channel string, sub *subscription) {
 			if strings.ToLower(parts[1]) == "on" {
 				if ch[0] == 'C' {
 					if !util.In(sub.configuration.VerboseChannels, ch) {
+						sub.configuration.VerboseChannels = append(sub.configuration.VerboseChannels, ch)
 						changed = true
 					}
 				} else if ch[0] == 'G' {
 					if !util.In(sub.configuration.VerboseGroups, ch) {
+						sub.configuration.VerboseGroups = append(sub.configuration.VerboseGroups, ch)
 						changed = true
 					}
 				}
 			} else if strings.ToLower(parts[1]) == "off" {
 				if ch[0] == 'C' {
 					if util.In(sub.configuration.VerboseChannels, ch) {
+						index := util.Index(sub.configuration.VerboseChannels, ch)
+						if index >= 0 {
+							sub.configuration.VerboseChannels = sub.configuration.VerboseChannels[:index+copy(sub.configuration.VerboseChannels[index:], sub.configuration.VerboseChannels[index+1:])]
+						}
 						changed = true
 					}
 				} else if ch[0] == 'G' {
 					if util.In(sub.configuration.VerboseGroups, ch) {
+						index := util.Index(sub.configuration.VerboseGroups, ch)
+						if index >= 0 {
+							sub.configuration.VerboseGroups = sub.configuration.VerboseGroups[:index+copy(sub.configuration.VerboseGroups[index:], sub.configuration.VerboseGroups[index+1:])]
+						}
 						changed = true
 					}
 				}
