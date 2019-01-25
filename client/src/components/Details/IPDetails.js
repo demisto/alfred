@@ -181,7 +181,7 @@ class IPDetails extends Component {
       <div className="ip-details">
         <h2>IP: {details}</h2>
         <ReputationHeader
-          indicatorName="IP"
+          indicatorName="IP address"
           isPrivate={isPrivate}
           result={result}
         />

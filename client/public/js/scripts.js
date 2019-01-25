@@ -486,7 +486,7 @@ var CountUp = function(target, startVal, endVal, decimals, duration, options) {
 (function ($) {
   'use strict';
 
-  if ($('#details').length) {
+  if ($('#details').length || $('#faq').length) {
     $(window).on("scroll", function() {
       if ($(this).scrollTop() < $('.site-header').height()) {
         $('.site-header').removeClass("fixed-header-menu");
