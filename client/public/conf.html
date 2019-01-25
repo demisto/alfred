@@ -34,57 +34,51 @@
    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ropa+Sans">
    <!-- SITE CSS-->
    <link rel="stylesheet" href="css/styles.css" id="stylescss">
-   <!--[if lt IE 9]><script src="js/html5shiv.js"></script><script src="js/respond.min.js"></script><![endif]-->
+    <link rel="stylesheet" href="css/application.css">
+    <!--[if lt IE 9]><script src="js/html5shiv.js"></script><script src="js/respond.min.js"></script><![endif]-->
 </head>
 
 <body>
    <!-- START CONFIGURATION-->
    <section id="conf" class="config-page">
       <div class="full-screen-conf">
-         <!-- START STICKY NAVBAR-->
-         <div class="navbar navbar-default navbar-fixed-top navbar-fixed">
+         <header class="site-header banner navbar navbar-default navbar-static-top dark-header" role="banner"
+                 data-transparent-header="true">
             <div class="container">
                <div class="navbar-header">
-                  <button type="button" data-toggle="collapse" data-target="#navbar-main" class="navbar-toggle">
-                     <span class="sr-only">Toggle navigation</span>
+                  <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                     <span class="sr-only">Toggle naviFrequently Asked Questions
+gation</span>
                      <span class="icon-bar"></span>
                      <span class="icon-bar"></span>
                      <span class="icon-bar"></span>
                   </button>
-                  <a href="http://www.demisto.com" class="navbar-brand">
-                     <img src="img/logo.png" alt="">
-                  </a>
+                  <div id="logo">
+                     <a href="/">
+                        <img class="logo-reg" src="img/demisto-logo.png" alt="demisto"/>
+                     </a>
+                  </div>
                </div>
-               <!-- MENU-->
-               <div id="navbar-main" class="navbar-collapse collapse">
-                  <ul class="nav navbar-nav navbar-right main-navbar">
-                     <li><a href="/#">Home</a>
-                     </li>
-                     <li><a href="/faq" class="external">FAQ</a>
-                     </li>
-                     <li><a href="https://medium.com/the-incident-response-wall" class="external">Blog</a>
-                     </li>
-                     <li class="dropdown dropdown-list">
-                        <a id="namelink" href="#" data-toggle="dropdown" aria-expanded="true">
-                           <span id="realname" class="navbar-name"></span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-right">
-                           <li>
-                              <div id="userrealname"></div>
-                              <div id="useremail"></div>
-                              <div id="teamname"></div>
-                           </li>
-                           <li class="divider"></li>
-                           <li>
-                              <button onclick="logout()" name="logout" type="button" class="btn btn-link">LOGOUT</button>
-                           </li>
-                        </ul>
-                     </li>
-                  </ul>
-               </div>
+               <nav class="collapse navbar-collapse bs-navbar-collapse" role="navigation">
+                  <div class="menu-dbot-menu-container">
+                     <ul id="dbot-menu" class="nav navbar-nav">
+                        <li id="menu-item-1940"
+                            class="menu-item menu-item-type-post_type menu-item-object-page page_item page-item-1836 current_page_item menu-item-1940">
+                           <a href="/#section1">Home</a></li>
+                        <li id="menu-item-1944"
+                            class="menu-item menu-item-type-custom menu-item-object-custom menu-item-1944"><a
+                                href="/#features">Features</a></li>
+                        <li id="menu-item-1945"
+                            class="menu-item menu-item-type-custom menu-item-object-custom menu-item-1945"><a
+                                href="http://blog.demisto.com">Blog</a></li>
+                        <li id="menu-item-1965"
+                            class="menu-item menu-item-type-post_type menu-item-object-page menu-item-1965"><a
+                                href="/faq">FAQ</a></li>
+                     </ul>
+                  </div>
+               </nav>
             </div>
-         </div>
-         <!-- END STICKY NAVBAR-->
+         </header>
          <div class="container">
             <div class="row">
                <!-- INTRO MESSAGE-->
@@ -94,7 +88,9 @@
                      </h1>
                      <div id="configdiv">
                         <hr>
-                        <h3>To configure D<small>BOT</small>, you can send DIRECT MESSAGES to @dbot on Slack.</h3>Choose “dbot” from the “DIRECT MESSAGES” menu. @dbot understands the following commands:
+                        <h3>To configure D<small>BOT</small>, you can send DIRECT MESSAGES to @dbot on Slack.</h3>
+                        <br/>
+                        <h4>Choose “dbot” from the “DIRECT MESSAGES” menu. @dbot understands the following commands:</h4>
                         <ul>
                            <li>config - list the current channels @dbot is listening on</li>
                            <li>join all/#channel1,#channel2,... - @dbot will join all/specified public channels and start monitoring them</li>
@@ -127,7 +123,7 @@
       </div>
    </section>
    <!-- START FOOTER-->
-   <footer id="footer">
+   <footer id="footer" class="config-footer">
       <div class="container">
          <div class="row">
             <div class="col-sm-6">
