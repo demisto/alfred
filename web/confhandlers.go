@@ -137,7 +137,13 @@ func (ac *AppContext) save(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	ac.q.PushConf(req)
+	team, err := ac.r.Team(u.Team)
+	if err != nil {
+		panic(err)
+	}
+	if err = ac.q.PushConf(team.ExternalID); err != nil {
+		logrus.WithError(err).Warnf("Unable to push configuration reload for team [%s]", team.ExternalID)
+	}
 	w.WriteHeader(http.StatusNoContent)
 	w.Write([]byte("\n"))
 }

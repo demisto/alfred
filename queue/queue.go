@@ -18,8 +18,8 @@ var (
 
 // Queue abstracts the external / internal queues
 type Queue interface {
-	PushConf(c *domain.Configuration) error
-	PopConf(timeout time.Duration) (*domain.Configuration, error)
+	PushConf(team string) error
+	PopConf(timeout time.Duration) (string, error)
 	PushWork(work *domain.WorkRequest) error
 	PopWork(timeout time.Duration) (*domain.WorkRequest, error)
 	PushWorkReply(replyQueue string, reply *domain.WorkReply) error

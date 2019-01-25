@@ -694,7 +694,7 @@ sum(ips_clean) as ips_clean, sum(ips_dirty) as ips_dirty, sum(ips_unknown) as ip
 
 func (r *MySQL) TotalMessages() (int, error) {
 	var sum int
-	err := r.db.Get(&sum, `SELECT count(messages) FROM team_statistics`)
+	err := r.db.Get(&sum, `SELECT sum(messages) FROM team_statistics`)
 	return sum, err
 }
 
@@ -761,5 +761,11 @@ func (r *MySQL) QueueMessages(names []string, messageType string) (messages []*d
 func (r *MySQL) PostMessage(message *domain.DBQueueMessage) error {
 	_, err := r.db.Exec("INSERT INTO queue (name, message_type, message, ts) VALUES (?, ?, ?, now())",
 		message.Name, message.MessageType, message.Message)
+	return err
+}
+
+func (r *MySQL) PostMessageToAll(message *domain.DBQueueMessage) error {
+	_, err := r.db.Exec("INSERT INTO queue (name, message_type, message, ts) SELECT bot, ?, ?, now() FROM bots",
+		message.MessageType, message.Message)
 	return err
 }

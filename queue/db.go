@@ -16,7 +16,7 @@ import (
 type dbQueue struct {
 	d            *repo.MySQL
 	done         chan bool
-	conf         chan *domain.Configuration
+	conf         chan string
 	work         chan *domain.WorkRequest
 	workReply    chan *domain.WorkReply
 	webWorkReply map[string]chan *domain.WorkReply
@@ -27,7 +27,7 @@ type dbQueue struct {
 func NewDBQueue(r *repo.MySQL) *dbQueue {
 	q := &dbQueue{
 		d:            r,
-		conf:         make(chan *domain.Configuration, 1000),
+		conf:         make(chan string, 1000),
 		work:         make(chan *domain.WorkRequest, 1000),
 		workReply:    make(chan *domain.WorkReply, 1000),
 		webWorkReply: make(map[string]chan *domain.WorkReply),
@@ -38,19 +38,19 @@ func NewDBQueue(r *repo.MySQL) *dbQueue {
 }
 
 // PushConf ...
-func (dq *dbQueue) PushConf(c *domain.Configuration) error {
-	m := domain.DBQueueMessage{MessageType: "conf", Message: util.ToJSONStringNoIndent(c)}
-	return dq.d.PostMessage(&m)
+func (dq *dbQueue) PushConf(team string) error {
+	m := domain.DBQueueMessage{MessageType: "conf", Message: team}
+	return dq.d.PostMessageToAll(&m)
 }
 
 // PopConf ...
-func (dq *dbQueue) PopConf(timeout time.Duration) (*domain.Configuration, error) {
-	con := <-dq.conf
+func (dq *dbQueue) PopConf(timeout time.Duration) (string, error) {
+	team := <-dq.conf
 	// If someone closed the channel
-	if con == nil {
-		return nil, ErrClosed
+	if team == "" {
+		return "", ErrClosed
 	}
-	return con, nil
+	return team, nil
 }
 
 // PushWork ...
@@ -185,12 +185,7 @@ func (dq *dbQueue) getMessages() {
 					logrus.WithError(err).Error("Unable to load web conf messages - going to retry")
 				}
 				for _, m := range messages {
-					cr := &domain.Configuration{}
-					if err := json.Unmarshal([]byte(m.Message), cr); err != nil {
-						logrus.WithError(err).Error("Unable to parse configuration message")
-						continue
-					}
-					dq.conf <- cr
+					dq.conf <- m.Message
 				}
 			}
 		}
