@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/Sirupsen/logrus"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/Sirupsen/logrus"
 )
 
 // client to the Slack API.
@@ -122,7 +123,7 @@ func (s *Client) Do(method, path string, body interface{}) (Response, error) {
 		return nil, err
 	}
 	if method != "GET" {
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	}
 	req.Header.Set("Accept", "application/json")
 	if s.Token != "" {

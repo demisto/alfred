@@ -173,13 +173,13 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 	}
 }
 
-func (b *Bot) handleReplyStats(reply *domain.WorkReply, ctx *domain.Context) {
+func (b *Bot) handleReplyStats(reply *domain.WorkReply, sub *subscription) {
 	b.smu.Lock()
 	defer b.smu.Unlock()
-	stats := b.stats[ctx.Team]
-	if stats == nil {
-		stats = &domain.Statistics{Team: ctx.Team}
-		b.stats[ctx.Team] = stats
+	stats, ok := b.stats[sub.team.ExternalID]
+	if !ok {
+		stats = &domain.Statistics{Team: sub.team.ID}
+		b.stats[sub.team.ExternalID] = stats
 	}
 	stats.Messages++
 	if reply.Type&domain.ReplyTypeFile > 0 {
@@ -221,7 +221,7 @@ func (b *Bot) handleReplyStats(reply *domain.WorkReply, ctx *domain.Context) {
 	}
 }
 
-func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context) {
+func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context, sub *subscription) {
 	if reply.Type&domain.ReplyTypeFile > 0 && reply.File.Result == domain.ResultDirty {
 		// First, make sure it is a valid reply and if not, do nothing
 		if len(reply.Hashes) != 1 {
@@ -231,8 +231,8 @@ func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context) {
 		vtScore := fmt.Sprintf("%v / %v", reply.Hashes[0].VT.FileReport.Positives, reply.Hashes[0].VT.FileReport.Total)
 		xfeScore := strings.Join(reply.Hashes[0].XFE.Malware.Family, ",")
 		cyScore := fmt.Sprintf("%v - %v", reply.Hashes[0].Cy.Result.GeneralScore, reply.Hashes[0].Cy.Result.Classifiers)
-		b.r.StoreMaliciousContent(&domain.MaliciousContent{
-			Team:        ctx.Team,
+		if err := b.r.StoreMaliciousContent(&domain.MaliciousContent{
+			Team:        sub.team.ID,
 			Channel:     ctx.Channel,
 			MessageID:   reply.File.Details.ID,
 			ContentType: domain.ReplyTypeFile,
@@ -241,50 +241,58 @@ func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context) {
 			VT:          vtScore,
 			XFE:         xfeScore,
 			Cy:          cyScore,
-			ClamAV:      reply.File.Virus})
+			ClamAV:      reply.File.Virus}); err != nil {
+			logrus.WithError(err).Warnf("Unable to store convicted for team [%s]", sub.team.ID)
+		}
 	} else {
 		for i := range reply.Hashes {
 			if reply.Hashes[i].Result == domain.ResultDirty {
 				vtScore := fmt.Sprintf("%v / %v", reply.Hashes[i].VT.FileReport.Positives, reply.Hashes[i].VT.FileReport.Total)
 				xfeScore := strings.Join(reply.Hashes[i].XFE.Malware.Family, ",")
 				cyScore := fmt.Sprintf("%v - %v", reply.Hashes[i].Cy.Result.GeneralScore, reply.Hashes[i].Cy.Result.Classifiers)
-				b.r.StoreMaliciousContent(&domain.MaliciousContent{
-					Team:        ctx.Team,
+				if err := b.r.StoreMaliciousContent(&domain.MaliciousContent{
+					Team:        sub.team.ID,
 					Channel:     ctx.Channel,
 					MessageID:   reply.MessageID,
 					ContentType: domain.ReplyTypeHash,
 					Content:     reply.Hashes[i].Details,
 					VT:          vtScore,
 					XFE:         xfeScore,
-					Cy:          cyScore})
+					Cy:          cyScore}); err != nil {
+					logrus.WithError(err).Warnf("Unable to store convicted for team [%s]", sub.team.ID)
+				}
 			}
 		}
 		for i := range reply.URLs {
 			if reply.URLs[i].Result == domain.ResultDirty {
 				vtScore := fmt.Sprintf("%v / %v", reply.URLs[i].VT.URLReport.Positives, reply.URLs[i].VT.URLReport.Total)
 				xfeScore := fmt.Sprintf("%v", reply.URLs[i].XFE.URLDetails.Score)
-				b.r.StoreMaliciousContent(&domain.MaliciousContent{
-					Team:        ctx.Team,
+				if err := b.r.StoreMaliciousContent(&domain.MaliciousContent{
+					Team:        sub.team.ID,
 					Channel:     ctx.Channel,
 					MessageID:   reply.MessageID,
 					ContentType: domain.ReplyTypeURL,
 					Content:     reply.URLs[i].Details,
 					VT:          vtScore,
-					XFE:         xfeScore})
+					XFE:         xfeScore}); err != nil {
+					logrus.WithError(err).Warnf("Unable to store convicted for team [%s]", sub.team.ID)
+				}
 			}
 		}
 		for i := range reply.IPs {
 			if reply.IPs[i].Result == domain.ResultDirty {
 				vtScore := fmt.Sprintf("%v", len(reply.IPs[i].VT.IPReport.DetectedUrls))
 				xfeScore := fmt.Sprintf("%v", reply.IPs[i].XFE.IPReputation.Score)
-				b.r.StoreMaliciousContent(&domain.MaliciousContent{
-					Team:        ctx.Team,
+				if err := b.r.StoreMaliciousContent(&domain.MaliciousContent{
+					Team:        sub.team.ID,
 					Channel:     ctx.Channel,
 					MessageID:   reply.MessageID,
 					ContentType: domain.ReplyTypeIP,
 					Content:     reply.IPs[i].Details,
 					VT:          vtScore,
-					XFE:         xfeScore})
+					XFE:         xfeScore}); err != nil {
+					logrus.WithError(err).Warnf("Unable to store convicted for team [%s]", sub.team.ID)
+				}
 			}
 		}
 	}
@@ -297,10 +305,10 @@ func (a IPByDate) Len() int           { return len(a) }
 func (a IPByDate) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a IPByDate) Less(i, j int) bool { return a[i].ScanDate < a[j].ScanDate }
 
-func (b *Bot) relevantUser(ctx *domain.Context) *subscription {
+func (b *Bot) relevantTeam(team string) *subscription {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	return b.subscriptions[ctx.Team]
+	return b.subscriptions[team]
 }
 
 func nilOrUnknown(v interface{}) string {
@@ -321,12 +329,15 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 		logrus.Warnf("Error getting context from reply - %+v\n", reply)
 		return
 	}
-	b.handleReplyStats(reply, data)
-	b.handleConvicted(reply, data)
-	sub := b.relevantUser(data)
+	sub := b.relevantTeam(data.Team)
 	if sub == nil {
-		logrus.Warnf("Team not found in subscriptions for message %s", reply.MessageID)
+		if sub, err = b.loadSubscription(data.Team); err != nil {
+			logrus.WithError(err).Warnf("Team not found in subscriptions for message %s", reply.MessageID)
+			return
+		}
 	}
+	b.handleReplyStats(reply, sub)
+	b.handleConvicted(reply, data, sub)
 	verbose := false
 	if data.Channel != "" {
 		if data.Channel[0] == 'D' {
@@ -339,7 +350,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 	if reply.Type&domain.ReplyTypeFile > 0 {
 		b.handleFileReply(reply, data, sub, verbose)
 	} else {
-		link := fmt.Sprintf("%s/details?c=%s&m=%s&t=%s", conf.Options.ExternalAddress, data.Channel, reply.MessageID, data.Team)
+		link := fmt.Sprintf("%s/details?c=%s&m=%s&t=%s", conf.Options.ExternalAddress, data.Channel, reply.MessageID, sub.team.ID)
 		postMessage := slack.Response{"channel": data.Channel}
 		attachments := make([]map[string]interface{}, 0)
 		for i := range reply.URLs {
@@ -622,17 +633,12 @@ func parseChannels(sub *subscription, text string, pos int) ([]string, []string,
 	return parts, channels, nil
 }
 
-func (b *Bot) joinChannels(team, text, channel string) {
+func (b *Bot) joinChannels(team, text, channel string, sub *subscription) {
 	postMessage := map[string]interface{}{
 		"channel": channel,
 		"as_user": true,
 	}
-	sub := b.subscriptions[team]
-	if sub == nil {
-		logrus.Warnf("Got message but do not have subscription for team %s", team)
-		return
-	}
-	users, err := b.r.TeamMembers(team)
+	users, err := b.r.TeamMembers(sub.team.ID)
 	if err != nil {
 		logrus.Warnf("Unable to retrieve team members - %v", err)
 		return
@@ -688,19 +694,12 @@ func (b *Bot) joinChannels(team, text, channel string) {
 	}
 }
 
-func (b *Bot) handleVerbose(team, text, channel string) {
+func (b *Bot) handleVerbose(team, text, channel string, sub *subscription) {
 	postMessage := map[string]interface{}{
 		"channel": channel,
 		"as_user": true,
 	}
-	sub := b.subscriptions[team]
-	if sub == nil {
-		logrus.Warnf("Got message but do not have subscription for team %s", team)
-		return
-	}
 	changed := false
-	b.mu.Lock()
-	defer b.mu.Unlock()
 	parts, channels, err := parseChannels(sub, text, 2)
 	if err != nil {
 		postMessage["text"] = "I could not understand your command. Verbose command is:\nverbose on #channel1,#channel2 - to turn on verbose mode on for a list of channels.\nverbose off #channel1,#channel2 - to turn off verbose mode on for a list of channels."
@@ -745,29 +744,27 @@ func (b *Bot) handleVerbose(team, text, channel string) {
 	if changed {
 		err := b.r.SetChannelsAndGroups(sub.configuration)
 		if err != nil {
-			logrus.Warnf("Error storing verbose configuration for team %s - %v", team, err)
+			logrus.WithError(err).Warnf("error storing verbose configuration for team %s", team)
 			postMessage["text"] = "I had an issue saving the verbose state."
 		} else {
 			postMessage["text"] = "Verbose state was changed."
+			if err = b.q.PushConf(team); err != nil {
+				logrus.WithError(err).Warnf("error pushing configuration message for %s", team)
+				postMessage["text"] = "I had an issue saving the verbose state."
+			}
 		}
 	} else {
 		postMessage["text"] = "Verbose state did not change - could not find anything new to change"
 	}
-	_, err = sub.s.Do("POST", "chat.postMessage", postMessage)
-	if err != nil {
-		logrus.Warnf("Error posting config message - %v", err)
+	if _, err = sub.s.Do("POST", "chat.postMessage", postMessage); err != nil {
+		logrus.WithError(err).Warnf("error posting config message to Slack for team [%s] on channel [%s]", team, channel)
 	}
 }
 
-func (b *Bot) handleConfig(team string, msg slack.Response) {
+func (b *Bot) handleConfig(team string, msg slack.Response, sub *subscription) {
 	postMessage := map[string]interface{}{
-		"channel": msg["event.channel"],
+		"channel": msg.S("channel"),
 		"as_user": true,
-	}
-	sub := b.subscriptions[team]
-	if sub == nil {
-		logrus.Warnf("Got message but do not have subsciption for team %s", team)
-		return
 	}
 	ch, err := sub.s.Conversations("public_channel,private_channel")
 	if err != nil {
@@ -820,15 +817,10 @@ func (b *Bot) handleConfig(team string, msg slack.Response) {
 	}
 }
 
-func (b *Bot) handleVT(team, text, channel string) {
+func (b *Bot) handleVT(team, text, channel string, sub *subscription) {
 	postMessage := map[string]interface{}{
 		"channel": channel,
 		"as_user": true,
-	}
-	sub := b.subscriptions[team]
-	if sub == nil {
-		logrus.Warnf("Got message but do not have subsciption for team %s", team)
-		return
 	}
 	parts := strings.Split(text, " ")
 	if len(parts) == 2 {
@@ -859,15 +851,10 @@ func (b *Bot) handleVT(team, text, channel string) {
 	}
 }
 
-func (b *Bot) handleXFE(team, text, channel string) {
+func (b *Bot) handleXFE(team, text, channel string, sub *subscription) {
 	postMessage := map[string]interface{}{
 		"channel": channel,
 		"as_user": true,
-	}
-	sub := b.subscriptions[team]
-	if sub == nil {
-		logrus.Warnf("Got message but do not have subsciption for team %s", team)
-		return
 	}
 	parts := strings.Split(text, " ")
 	if len(parts) == 2 && parts[1] == "-" || len(parts) == 3 && parts[1] == "-" {

@@ -13,28 +13,20 @@ Make sure you have a Go environment set up (either using [GVM](https://github.co
 $ go get -t -u -d -v github.com/demisto/alfred
 ```
 
-To get the static part (html, css, js) built install Node.js and then:
-
+To get the client artifacts (html, css, js) built install node, npm and then:
 ```sh
-$ cd $GOPATH/src/github.com/demisto/alfred/static/master
-$ sudo npm -g install gulp karma bower
-$ npm install
-$ bower install
-$ gulp
+$ cd $GOPATH/src/github.com/demisto/alfred/client
+$ npm i
+$ npm run build
 ```
+(this will create client artifacts under `$GOPATH/src/github.com/demisto/alfred/client/build`)
 
-Please note that there are some files missing from the repository as they contain our sensitive information or our analytics code. To make gulp work, create the following two empty files:
-```sh
-$GOPATH/src/github.com/demisto/alfred/static/master/jade/_gtmid.json
-$GOPATH/src/github.com/demisto/alfred/static/master/jade/_ze.jade
-```
-
-Create the Go wrapper around the static files:
+Create the Go wrapper around the client files:
 
 ```sh
 $ go get -v github.com/slavikm/esc
 $ cd $GOPATH/src/github.com/demisto/alfred/
-$ $GOPATH/bin/esc -o web/static.go -pkg web -prefix static/site/ -ignore \\.DS_Store static/site/
+$ $GOPATH/bin/esc -o web/static.go -pkg web -prefix client/build -ignore \\.DS_Store client/build
 ```
 
 And finally, install and run:
@@ -51,6 +43,19 @@ If you are running from bin (as above), make sure to create a soft link to the s
 $ ln -s ln -s $GOPATH/src/github.com/demisto/alfred/static/ static
 ```
 
+Install `mysql`
+Run the following to configure sql database:
+```sh
+$ mysql -u root (if password is set then add -p)
+mysql> CREATE DATABASE demisto CHARACTER SET = utf8;
+mysql> CREATE DATABASE demistot CHARACTER SET = utf8;
+mysql> CREATE USER demisto IDENTIFIED BY 'password';
+mysql> GRANT ALL on demisto.* TO demisto;
+mysql> GRANT ALL on demistot.* TO demisto;
+mysql> drop user ''@'localhost';
+```
+
+
 Or, you can run directly from the source without installing by:
 ```sh
 $ cd $GOPATH/src/github.com/demisto/alfred/
@@ -60,4 +65,20 @@ $ go run alfred.go [-loglevel debug] [-conf path/to/conf] [-logfile path/to/log]
 Please make sure to run esc again to embed the fully updated site into Go before release.
 While developing, you don't need to run esc unless adding new files to the site.
 
-Make sure to specify the Slack client ID and secret in a configuration file. To get VirusTotal reputation, you must specify the VirusTotal key. See conf/conf.go for details.
+### Configuration
+- Make sure to specify the Slack client ID and secret in a configuration file
+- To get VirusTotal reputation, you must specify the VirusTotal key. See conf/conf.go for more details.
+- Add `"Web": true` to configuration file to support web service (access reputation data from the browser)
+- Add `"Worker": true` to configuration file to support web service (process work by the bot)
+- Configure mysql database configuration under `"DB"` key (See conf/conf.go for more detail):
+```
+{
+    "ConnectString": "tcp(127.0.0.1:3306)/demisto?parseTime=true", // where "demisto" is the DATABASE name from previous step and 127.0.0.1:3306 is the ip:port of the database
+    "Username": "demisto", // user created in previous step
+    "Password": "password", // user's password created in previous step
+    "ServerCA": "-----BEGIN CERTIFICATE---...", // Not necessary for local mysql
+    "ClientCert": "-----BEGIN CERTIFICATE----...", // Not necessary for local mysql
+    "ClientKey": "-----BEGIN RSA PRIVATE KEY--..." // Not necessary for local mysql
+}
+```
+

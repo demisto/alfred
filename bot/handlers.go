@@ -82,7 +82,7 @@ func (w *Worker) handle() {
 			return
 		}
 		if msg.ReplyQueue == "" {
-			logrus.Warnf("Got message without a reply queue destination %+v\n", msg)
+			logrus.Warnf("got message without a reply queue destination %+v", msg)
 			continue
 		}
 		reply := &domain.WorkReply{Context: msg.Context, MessageID: msg.MessageID}
@@ -101,7 +101,7 @@ func (w *Worker) handle() {
 			w.handleFile(msg, reply)
 		}
 		if err := w.q.PushWorkReply(msg.ReplyQueue, reply); err != nil {
-			logrus.Warnf("Error pushing message to reply queue %+v - %v\n", msg, err)
+			logrus.WithError(err).Warnf("error pushing message to reply queue %+v", msg)
 		}
 	}
 }
@@ -115,11 +115,11 @@ func (w *Worker) Start() {
 	for {
 		msg, err := w.q.PopWork(0)
 		if err != nil || msg == nil {
-			logrus.Infof("Stoping WorkManager process - %v, %v", err, msg)
+			logrus.Infof("stopping WorkManager process - %v, %v", err, msg)
 			close(w.c)
 			return
 		}
-		logrus.Debugf("Working on message - %+v", msg)
+		logrus.Debugf("working on message - %+v", msg)
 		w.c <- msg
 	}
 }

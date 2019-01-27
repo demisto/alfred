@@ -7,6 +7,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/demisto/alfred/util"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/bot"
 	"github.com/demisto/alfred/conf"
@@ -111,26 +113,12 @@ func run(signalCh chan os.Signal) {
 
 func main() {
 	flag.Parse()
+	util.InitLog(*logFile, *logLevel, *logFile == "")
+	defer conf.LogWriter.Close()
 	err := conf.Load(*confFile, true)
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	level, err := logrus.ParseLevel(*logLevel)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-	logrus.SetLevel(level)
-	logf := os.Stderr
-	if *logFile != "" {
-		logf, err = os.OpenFile(*logFile, os.O_CREATE|os.O_APPEND, 0640)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		defer logf.Close()
-	}
-	logrus.SetOutput(logf)
-	conf.LogWriter = logrus.StandardLogger().Writer()
-	defer conf.LogWriter.Close()
 
 	// Handle OS signals to gracefully shutdown
 	signalCh := make(chan os.Signal, 1)

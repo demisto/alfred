@@ -30,24 +30,18 @@ type Bot struct {
 	mu            sync.RWMutex // Guards the subscriptions
 	subscriptions map[string]*subscription
 	q             queue.Queue // Message queue for configuration updates
-	replyQueue    string
-	smu           sync.Mutex // Guards the statistics
+	smu           sync.Mutex  // Guards the statistics
 	stats         map[string]*domain.Statistics
 	firstMessages map[string]bool
 }
 
 // New returns a new bot
 func New(r *repo.MySQL, q queue.Queue) (*Bot, error) {
-	host, err := queue.ReplyQueueName()
-	if err != nil {
-		return nil, err
-	}
 	return &Bot{
 		stop:          make(chan bool, 1),
 		r:             r,
 		subscriptions: make(map[string]*subscription),
 		q:             q,
-		replyQueue:    host,
 		stats:         make(map[string]*domain.Statistics),
 		firstMessages: make(map[string]bool),
 	}, nil
@@ -69,7 +63,7 @@ func (b *Bot) loadSubscriptions() error {
 			continue
 		}
 		teamSub.s = &slack.Client{Token: teams[i].BotToken}
-		b.subscriptions[teams[i].ID] = teamSub
+		b.subscriptions[teams[i].ExternalID] = teamSub
 	}
 	return nil
 }
@@ -85,6 +79,9 @@ func (b *Bot) loadSubscription(team string) (*subscription, error) {
 		return nil, err
 	}
 	teamSub.s = &slack.Client{Token: t.BotToken}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.subscriptions[team] = teamSub
 	return teamSub, nil
 }
 
@@ -104,17 +101,13 @@ func (b *Bot) HandleMessage(msg slack.Response) {
 		logrus.Warnf("got empty team in message %s", util.ToJSONString(msg))
 		return
 	}
-	sub := b.subscriptions[team]
+	sub := b.relevantTeam(team)
 	if sub == nil {
 		var err error
-		sub, err = b.loadSubscription(team)
-		if err != nil {
+		if sub, err = b.loadSubscription(team); err != nil {
 			logrus.WithError(err).Warnf("Error loading team configuration for new team - %v", team)
 			return
 		}
-		b.mu.Lock()
-		b.subscriptions[team] = sub
-		b.mu.Unlock()
 	}
 	msg = msg.R("event")
 	msgType := msg.S("type")
@@ -144,31 +137,33 @@ func (b *Bot) HandleMessage(msg slack.Response) {
 			workReq := domain.WorkRequestFromMessage(msg, sub.team.BotToken, sub.team.VTKey, sub.team.XFEKey, sub.team.XFEPass)
 			logrus.Debug("Pushing to queue")
 			ctx := &domain.Context{Team: team, User: msgUser, Type: msgType, Channel: channel, OriginalUser: msgUser}
-			workReq.ReplyQueue, workReq.Context = b.replyQueue, ctx
-			b.q.PushWork(workReq)
+			workReq.ReplyQueue, workReq.Context = util.Hostname, ctx
+			if err := b.q.PushWork(workReq); err != nil {
+				logrus.WithError(err).Warnf("Unable to push work request %s", util.ToJSONStringNoIndent(workReq))
+			}
 		} else {
 			// Handle some internal commands
 			if channel != "" && channel[0] == 'D' {
 				switch {
 				case strings.HasPrefix(text, "join "):
-					b.joinChannels(team, text, channel)
+					b.joinChannels(team, text, channel, sub)
 				case strings.HasPrefix(text, "verbose "):
-					b.handleVerbose(team, text, channel) // Need the actual channel IDs
+					b.handleVerbose(team, text, channel, sub) // Need the actual channel IDs
 				case text == "config":
-					b.handleConfig(team, msg)
+					b.handleConfig(team, msg, sub)
 				case text == "?" || strings.HasPrefix(text, "help"):
 					b.showHelp(team, channel)
 				case strings.HasPrefix(text, "vt "):
-					b.handleVT(team, text, channel)
+					b.handleVT(team, text, channel, sub)
 				case strings.HasPrefix(text, "xfe "):
-					b.handleXFE(team, text, channel)
+					b.handleXFE(team, text, channel, sub)
 				}
 			}
 			b.smu.Lock()
 			defer b.smu.Unlock()
-			stats := b.stats[team]
-			if stats == nil {
-				stats = &domain.Statistics{Team: team}
+			stats, ok := b.stats[team]
+			if !ok {
+				stats = &domain.Statistics{Team: sub.team.ID}
 				b.stats[team] = stats
 			}
 			stats.Messages++
@@ -226,32 +221,28 @@ func (b *Bot) Stop() {
 }
 
 // subscriptionChanged updates the subscriptions if a user changes them
-func (b *Bot) subscriptionChanged(configuration *domain.Configuration) {
+func (b *Bot) subscriptionChanged(team string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	sub := b.subscriptions[configuration.Team]
-	if sub == nil {
-		logrus.Debugf("Subscription for team not found: %s\n", configuration.Team)
-		return
-	}
-	sub.configuration = configuration
+	// Remove the subscription, it will be reloaded when needed
+	delete(b.subscriptions, team)
 }
 
 func (b *Bot) monitorChanges() {
 	for {
-		configuration, err := b.q.PopConf(0)
-		if err != nil || configuration == nil {
-			logrus.Infof("Quiting monitoring changes - %v\n", err)
+		team, err := b.q.PopConf(0)
+		if err != nil || team == "" {
+			logrus.WithError(err).Info("Quiting monitoring changes")
 			break
 		}
-		logrus.Debugf("Configuration change received: %+v\n", configuration)
-		b.subscriptionChanged(configuration)
+		logrus.Debugf("Configuration change received for team: [%s]", team)
+		b.subscriptionChanged(team)
 	}
 }
 
 func (b *Bot) monitorReplies() {
 	for {
-		reply, err := b.q.PopWorkReply(b.replyQueue, 0)
+		reply, err := b.q.PopWorkReply(util.Hostname, 0)
 		if err != nil || reply == nil {
 			logrus.Infof("Quiting monitoring replies - %v\n", err)
 			break

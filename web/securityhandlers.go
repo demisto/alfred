@@ -34,11 +34,11 @@ func (ac *AppContext) initiateOAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Now, generate a random state
-	uuid, err := uuid.NewRandom()
+	uid, err := uuid.NewRandom()
 	if err != nil {
 		panic(err)
 	}
-	conf := &oauth2.Config{
+	con := &oauth2.Config{
 		ClientID:     conf.Options.Slack.ClientID,
 		ClientSecret: conf.Options.Slack.ClientSecret,
 		Scopes: []string{
@@ -49,35 +49,32 @@ func (ac *AppContext) initiateOAuth(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	// Store state
-	ac.r.SetOAuthState(&domain.OAuthState{State: uuid.String(), Timestamp: time.Now()})
-	url := conf.AuthCodeURL(uuid.String())
+	ac.r.SetOAuthState(&domain.OAuthState{State: uid.String(), Timestamp: time.Now()})
+	url := con.AuthCodeURL(uid.String())
 	logrus.Debugf("Redirecting to URL - %s", url)
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
 func sendThanks(team *domain.Team, user *domain.User) {
 	s := &slack.Client{Token: team.BotToken}
-	channels, err := s.Conversations("im")
+	channel, err := s.Do("POST", "im.open", map[string]interface{}{
+		"user": user.ExternalID,
+	})
 	if err != nil {
-		logrus.Warnf("Unable to retrieve im list for first message - %v", err)
+		logrus.WithError(err).Warnf("unable to open im for first message for user [%s (%s)], team [%s (%s)]", user.Name, user.ExternalID, team.Name, team.ExternalID)
 		return
 	}
-	for _, channel := range channels {
-		if channel.S("user") == user.ExternalID {
-			_, err = s.Do("POST", "chat.postMessage", map[string]interface{}{
-				"channel": channel.S("id"),
-				"as_user": true,
-				"test": fmt.Sprintf(`Hi %s, thanks for inviting me to this team.
+	_, err = s.Do("POST", "chat.postMessage", map[string]interface{}{
+		"channel": channel.S("channel.id"),
+		"as_user": true,
+		"text": fmt.Sprintf(`Hi %s, thanks for inviting me to this team.
 If you want me to monitor conversations, please add me to the relevant channels and groups.
 `+conf.DefaultHelpMessage, user.Name),
-			})
-			if err != nil {
-				logrus.Warnf("Error posting welcome message - %v", err)
-			}
-			return
-		}
+	})
+	if err != nil {
+		logrus.Warnf("Error posting welcome message - %v", err)
 	}
-	logrus.Warn("Unable to user channel")
+	return
 }
 
 func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +151,6 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 			team.S("team.name"), team.S("team.email_domain"), team.S("team.domain"), team.S("team.enterprise_id")+","+team.S("team.enterprise_name"),
 			oauthAccess.S("bot.bot_user_id"), oauthAccess.S("bot.bot_access_token"), domain.UserStatusActive
 	}
-	newUser := false
 	logrus.Debugln("Finding the user...")
 	ourUser, err := ac.r.UserByExternalID(user.S("user.id"))
 	if err != nil {
@@ -181,7 +177,6 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 			Token:             s.Token,
 			Created:           time.Now(),
 		}
-		newUser = true
 	} else {
 		ourUser.Name, ourUser.RealName, ourUser.Email, ourUser.Token, ourUser.Status =
 			user.S("user.name"), user.S("user.real_name"), user.S("user.profile.email"), s.Token, domain.UserStatusActive
@@ -191,15 +186,10 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	logrus.Infof("User %v logged in\n", ourUser.Name)
-	if newUser {
-		newConf := &domain.Configuration{Team: ourTeam.ID, All: true}
-		err = ac.r.SetChannelsAndGroups(newConf)
-		if err != nil {
-			// If we got here, allow empty configuration
-			logrus.Warnf("Unable to store initial configuration for user %s - %v\n", ourUser.ID, err)
-		}
+	if err = ac.q.PushConf(ourTeam.ExternalID); err != nil {
+		logrus.WithError(err).Warnf("Unable to push configuration reload for team [%s]", ourTeam.ExternalID)
 	}
+	logrus.Infof("User %v logged in\n", ourUser.Name)
 	// Send the first DM message to the user
 	sendThanks(ourTeam, ourUser)
 	sess := session{ourUser.Name, ourUser.ID, time.Now()}
@@ -219,6 +209,10 @@ func (ac *AppContext) logout(w http.ResponseWriter, r *http.Request) {
 
 func (ac *AppContext) currUser(w http.ResponseWriter, r *http.Request) {
 	u := getRequestUser(r)
+	if u == nil {
+		WriteError(w, ErrAuth)
+		return
+	}
 	t, err := ac.r.Team(u.Team)
 	if err != nil {
 		panic(err)

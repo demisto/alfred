@@ -127,20 +127,17 @@ func New(appC *AppContext) *Router {
 	r.Post("/events", eventsHandler.Append(contentTypeHandler, bodyHandler(slack.Response{})).ThenFunc(appC.events))
 	// Static
 	r.Get("/", staticHandlers.ThenFunc(pageHandler("/index.html")))
-	r.Get("/analyst", staticHandlers.ThenFunc(pageHandler("/index.html")))
-	r.Get("/slackuser", staticHandlers.ThenFunc(pageHandler("/slackuser.html")))
 	r.Get("/conf", staticHandlers.ThenFunc(pageHandler("/conf.html")))
 	r.Get("/details", staticHandlers.ThenFunc(pageHandler("/details.html")))
 	r.Get("/faq", staticHandlers.ThenFunc(pageHandler("/faq.html")))
 	r.Get("/privacy", staticHandlers.ThenFunc(pageHandler("/privacy.html")))
-	r.Get("/next", staticHandlers.ThenFunc(pageHandler("/next.html")))
 	r.Get("/terms", staticHandlers.ThenFunc(pageHandler("/terms.html")))
 	r.Get("/banned", staticHandlers.ThenFunc(pageHandler("/banned.html")))
+	r.ServeFiles("/static/*filepath", Dir(conf.IsDev(), "/static/"))
 	r.ServeFiles("/css/*filepath", Dir(conf.IsDev(), "/css/"))
+	r.ServeFiles("/fonts/*filepath", Dir(conf.IsDev(), "/fonts/"))
 	r.ServeFiles("/img/*filepath", Dir(conf.IsDev(), "/img/"))
 	r.ServeFiles("/js/*filepath", Dir(conf.IsDev(), "/js/"))
-	r.ServeFiles("/vendor/*filepath", Dir(conf.IsDev(), "/vendor/"))
-	r.ServeFiles("/video/*filepath", Dir(conf.IsDev(), "/video/"))
 	r.NotFound = staticHandlers.ThenFunc(pageHandler("/404.html"))
 	return r
 }
@@ -158,8 +155,12 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	if err != nil {
 		return
 	}
-	tc.SetKeepAlive(true)
-	tc.SetKeepAlivePeriod(3 * time.Minute)
+	if err = tc.SetKeepAlive(true); err != nil {
+		return
+	}
+	if err = tc.SetKeepAlivePeriod(3 * time.Minute); err != nil {
+		return
+	}
 	return tc, nil
 }
 

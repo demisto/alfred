@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/wayn3h0/go-uuid"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/slack"
@@ -11,8 +13,12 @@ import (
 
 func (ac *AppContext) events(w http.ResponseWriter, r *http.Request) {
 	msg := getRequestBody(r).(*slack.Response)
-	ac.b.HandleMessage(*msg)
-	w.Write([]byte{'\n'})
+	if msg.S("type") == "url_verification" {
+		w.Write([]byte(msg.S("challenge")))
+	} else {
+		ac.b.HandleMessage(*msg)
+		w.Write([]byte{'\n'})
+	}
 }
 
 func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
@@ -25,6 +31,9 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, ErrBadRequest)
 		return
 	}
+
+	logrus.Debugf("Working on request for team - %s, file - %s, message - %s, channel - %s, text - %s.", team, file, message, channel, text)
+
 	// We need this just for a small verification that the team is one of ours
 	t, err := ac.r.Team(team)
 	if err != nil {
@@ -32,6 +41,11 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, ErrInternalServer)
 		return
 	}
+	uuid, err := uuid.NewRandom()
+	if err != nil {
+		panic(err)
+	}
+	replyQueue := uuid.String()
 	var workReq *domain.WorkRequest
 	// If we have the actual text to show details for
 	if file == "" {
@@ -39,18 +53,19 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 			MessageID:  message,
 			Type:       "message",
 			Text:       text,
-			ReplyQueue: ac.replyQueue,
+			ReplyQueue: replyQueue,
 			Online:     true,
 			VTKey:      t.VTKey,
 			XFEKey:     t.XFEKey,
 			XFEPass:    t.XFEPass,
+			Context:    &domain.Context{},
 		}
 	} else {
 		// Bot scope does not have file info and history permissions so we need to iterate users
 		users, err := ac.r.TeamMembers(team)
 		if err != nil {
-			logrus.Warnf("Error loading team members - %v\n", err)
-			WriteError(w, ErrInternalServer)
+			logrus.Errorf("Error loading team members - %v\n", err)
+			WriteError(w, ErrCouldNotFindTeam)
 			return
 		}
 		users = append([]domain.User{{Name: "dbot", Token: t.BotToken, ID: t.BotUserID, Status: domain.UserStatusActive}}, users...)
@@ -66,8 +81,8 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 				workReq = &domain.WorkRequest{
 					Type:       "file",
 					File:       domain.File{URL: info.S("file.url_private"), Name: info.S("file.name"), Size: info.I("file.size"), Token: t.BotToken},
-					ReplyQueue: ac.replyQueue,
-					Context:    nil,
+					ReplyQueue: replyQueue,
+					Context:    &domain.Context{},
 					Online:     true,
 					VTKey:      t.VTKey,
 					XFEKey:     t.XFEKey,
@@ -82,7 +97,8 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 				MessageID:  "file-message",
 				Type:       "message",
 				Text:       text,
-				ReplyQueue: ac.replyQueue,
+				Context:    &domain.Context{},
+				ReplyQueue: replyQueue,
 				Online:     true,
 				VTKey:      t.VTKey,
 				XFEKey:     t.XFEKey,
@@ -91,17 +107,17 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if workReq == nil {
-		logrus.Infof("Unable to find a suitable user with credentials for team %s\n", team)
+		logrus.Errorf("Unable to find a suitable user with credentials for team %s\n", team)
 		WriteError(w, ErrInternalServer)
 		return
 	}
 	err = ac.q.PushWork(workReq)
 	if err != nil {
-		logrus.Warnf("Error pushing work - %v\n", err)
+		logrus.WithError(err).Error("Error pushing work")
 		WriteError(w, ErrInternalServer)
 		return
 	}
-	workReply, err := ac.q.PopWorkReply(ac.replyQueue, 0)
+	workReply, err := ac.q.PopWorkReply(replyQueue, 0)
 	json.NewEncoder(w).Encode(workReply)
 }
 
@@ -113,7 +129,9 @@ type messageCount struct {
 func (ac *AppContext) totalMessages(w http.ResponseWriter, r *http.Request) {
 	cnt, err := ac.r.TotalMessages()
 	if err != nil {
-		panic(err)
+		logrus.WithError(err).Error("Failed getting total messages")
+		WriteError(w, ErrInternalServer)
+		return
 	}
 	json.NewEncoder(w).Encode(messageCount{cnt})
 }
