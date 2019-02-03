@@ -130,6 +130,7 @@ func New(appC *AppContext) *Router {
 	r.Get("/conf", staticHandlers.ThenFunc(pageHandler("/conf.html")))
 	r.Get("/details", staticHandlers.ThenFunc(pageHandler("/details.html")))
 	r.Get("/faq", staticHandlers.ThenFunc(pageHandler("/faq.html")))
+	r.Get("/slackuser", staticHandlers.ThenFunc(pageHandler("/slackuser.html")))
 	r.Get("/privacy", staticHandlers.ThenFunc(pageHandler("/privacy.html")))
 	r.Get("/terms", staticHandlers.ThenFunc(pageHandler("/terms.html")))
 	r.Get("/banned", staticHandlers.ThenFunc(pageHandler("/banned.html")))
