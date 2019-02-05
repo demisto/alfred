@@ -130,10 +130,13 @@ func (b *Bot) HandleMessage(msg slack.Response) {
 			if msg.S("subtype") == "" {
 				push = strings.Contains(ltext, "<http") || ipReg.MatchString(text) || md5Reg.MatchString(text) || sha1Reg.MatchString(text) || sha256Reg.MatchString(text)
 			}
+			if msg.S("subtype") == "file_share" {
+				push = true
+			}
 		}
 		// If we need to handle the message, pass it to the queue
 		if push {
-			logrus.Debugf("Handling message - %+v\n", msg)
+			logrus.Debugf("Handling message - %+v\n", util.ToJSONString(msg))
 			workReq := domain.WorkRequestFromMessage(msg, sub.team.BotToken, sub.team.VTKey, sub.team.XFEKey, sub.team.XFEPass)
 			logrus.Debug("Pushing to queue")
 			ctx := &domain.Context{Team: team, User: msgUser, Type: msgType, Channel: channel, OriginalUser: msgUser}
@@ -168,8 +171,6 @@ func (b *Bot) HandleMessage(msg slack.Response) {
 			}
 			stats.Messages++
 		}
-	case "file_shared":
-		// TODO
 	}
 }
 

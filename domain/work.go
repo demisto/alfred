@@ -4,7 +4,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/slack"
+	"github.com/demisto/alfred/util"
 	"github.com/demisto/goxforce"
 	"github.com/demisto/infinigo"
 	"github.com/slavikm/govt"
@@ -78,7 +80,25 @@ func WorkRequestFromMessage(msg slack.Response, token, vtKey, xfeKey, xfePass st
 		case "message_changed":
 			req.MessageID, req.Type, req.Text = msg.S("message.ts"), "message", msg.S("message.text")
 		case "file_share", "file_mention":
-			req.MessageID, req.Type, req.File = msg.S("ts"), "file", File{ID: msg.S("file.id"), URL: msg.S("file.url_private"), Name: msg.S("file.name"), Size: msg.I("file.size"), Token: token}
+			if files, ok := msg["files"]; ok {
+				if filesArr, ok := files.([]interface{}); ok {
+					if len(filesArr) > 0 {
+						if file, ok := filesArr[0].(map[string]interface{}); ok {
+							fileResponse := slack.Response(file)
+							req.MessageID, req.Type, req.File = msg.S("ts"), "file", File{ID: fileResponse.S("id"),
+								URL: fileResponse.S("url_private"), Name: fileResponse.S("name"), Size: fileResponse.I("size"), Token: token}
+						} else {
+							logrus.Warnf("file shared and files section does not contain file objects: %s", util.ToJSONString(msg))
+						}
+					} else {
+						logrus.Warnf("file shared and files section is empty: %s", util.ToJSONString(msg))
+					}
+				} else {
+					logrus.Warnf("file shared and files section is not an array: %s", util.ToJSONString(msg))
+				}
+			} else {
+				logrus.Warnf("file shared without files section: %s", util.ToJSONString(msg))
+			}
 		case "file_comment":
 			req.MessageID, req.Type, req.Text = msg.S("ts"), "message", msg.S("comment.comment")
 		}

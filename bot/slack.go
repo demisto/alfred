@@ -78,7 +78,7 @@ func (b *Bot) handleFileReply(reply *domain.WorkReply, data *domain.Context, sub
 		logrus.Warnf("Weird, invalid reply with no MD5 part - %+v", reply)
 		return
 	}
-	link := fmt.Sprintf("%s/details?f=%s&t=%s", conf.Options.ExternalAddress, reply.File.Details.ID, data.Team)
+	link := fmt.Sprintf("%s/details?f=%s&t=%s", conf.Options.ExternalAddress, reply.File.Details.ID, sub.team.ID)
 	color := "warning"
 	comment := fileCommentWarning
 	shouldPost := false
