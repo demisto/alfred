@@ -50,6 +50,10 @@ etc/*.yaml
 etc/*mysql*
 etc/backup_script.sh
 etc/dbot_backup*
+etc/command-dbot-prod.sh
+etc/copy-*
+etc/dbot-init-prod.script
+af_test.go
 
 _analytics.jade
 _gtmid.json

@@ -1,13 +1,15 @@
 package slack
 
+import "github.com/demisto/alfred/util"
+
 // Conversations retrieval by type
 // Handle cursors as well
-func (s *Client) Conversations(t string) (channels []Response, err error) {
+func (s *Client) Conversations(t string) (channels []util.Object, err error) {
 	args := map[string]string{"exclude_archived": "true", "limit": "1000"}
 	if t != "" {
 		args["types"] = t
 	}
-	channels = make([]Response, 0)
+	channels = make([]util.Object, 0)
 	for {
 		res, err := s.Do("GET", "conversations.list", args)
 		if err != nil {
@@ -15,7 +17,7 @@ func (s *Client) Conversations(t string) (channels []Response, err error) {
 		}
 		if c, ok := res["channels"]; ok {
 			for _, cc := range c.([]interface{}) {
-				channels = append(channels, Response(cc.(map[string]interface{})))
+				channels = append(channels, util.Object(cc.(map[string]interface{})))
 			}
 		}
 		if res.S("response_metadata.next_cursor") == "" {

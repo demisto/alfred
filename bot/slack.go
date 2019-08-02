@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -250,6 +251,7 @@ func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context, sub 
 				vtScore := fmt.Sprintf("%v / %v", reply.Hashes[i].VT.FileReport.Positives, reply.Hashes[i].VT.FileReport.Total)
 				xfeScore := strings.Join(reply.Hashes[i].XFE.Malware.Family, ",")
 				cyScore := fmt.Sprintf("%v - %v", reply.Hashes[i].Cy.Result.GeneralScore, reply.Hashes[i].Cy.Result.Classifiers)
+				afScore := fmt.Sprintf("%s", reply.Hashes[i].AF.Result.String())
 				if err := b.r.StoreMaliciousContent(&domain.MaliciousContent{
 					Team:        sub.team.ID,
 					Channel:     ctx.Channel,
@@ -258,7 +260,8 @@ func (b *Bot) handleConvicted(reply *domain.WorkReply, ctx *domain.Context, sub 
 					Content:     reply.Hashes[i].Details,
 					VT:          vtScore,
 					XFE:         xfeScore,
-					Cy:          cyScore}); err != nil {
+					Cy:          cyScore,
+					AF:          afScore}); err != nil {
 					logrus.WithError(err).Warnf("Unable to store convicted for team [%s]", sub.team.ID)
 				}
 			}
@@ -351,7 +354,7 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 		b.handleFileReply(reply, data, sub, verbose)
 	} else {
 		link := fmt.Sprintf("%s/details?c=%s&m=%s&t=%s", conf.Options.ExternalAddress, data.Channel, reply.MessageID, sub.team.ID)
-		postMessage := slack.Response{"channel": data.Channel}
+		postMessage := util.Object{"channel": data.Channel}
 		attachments := make([]map[string]interface{}, 0)
 		for i := range reply.URLs {
 			color := "warning"
@@ -506,19 +509,39 @@ func (b *Bot) handleReply(reply *domain.WorkReply) {
 					"text":     hashMessage,
 					"color":    color,
 				})
+				if reply.Hashes[i].AF.Error == "" {
+					afColor := "good"
+					if reply.Hashes[0].AF.Result.Malware {
+						afColor = "danger"
+					}
+					attachments = append(attachments, map[string]interface{}{
+						"fallback":   reply.Hashes[i].AF.Result.String(),
+						"color":      afColor,
+						"title":      "Palo Alto Networks AutoFocus",
+						"title_link": "https://www.paloaltonetworks.com/products/secure-the-network/autofocus",
+						"fields": []map[string]interface{}{
+							{"title": "Malware", "value": strconv.FormatBool(reply.Hashes[i].AF.Result.Malware)},
+							{"title": "Created", "value": fmt.Sprintf("%v", reply.Hashes[i].AF.Result.Created)},
+							{"title": "Tags", "value": strings.Join(reply.Hashes[i].AF.Result.Tags, ", ")},
+							{"title": "Tag Groups", "value": strings.Join(reply.Hashes[i].AF.Result.TagGroups, ", ")},
+							{"title": "Regions", "value": strings.Join(reply.Hashes[i].AF.Result.Regions, ", ")},
+							{"title": "File Type", "value": reply.Hashes[i].AF.Result.FileType},
+						},
+					})
+				}
 				if reply.Hashes[i].Cy.Error == "" && reply.Hashes[0].Cy.Result.StatusCode == 1 {
 					cyColor := "good"
-					if reply.Hashes[0].Cy.Result.GeneralScore < cyScoreToConvict {
+					if reply.Hashes[i].Cy.Result.GeneralScore < cyScoreToConvict {
 						cyColor = "danger"
 					}
 					attachments = append(attachments, map[string]interface{}{
-						"fallback":   fmt.Sprintf("Score: %v, Classifiers: %v", reply.Hashes[0].Cy.Result.GeneralScore, reply.Hashes[0].Cy.Result.Classifiers),
+						"fallback":   fmt.Sprintf("Score: %v, Classifiers: %v", reply.Hashes[i].Cy.Result.GeneralScore, reply.Hashes[0].Cy.Result.Classifiers),
 						"color":      cyColor,
 						"title":      "Cylance Infinity",
 						"title_link": "https://www.cylance.com",
 						"fields": []map[string]interface{}{
-							{"title": "Score", "value": fmt.Sprintf("%v", reply.Hashes[0].Cy.Result.GeneralScore), "short": true},
-							{"title": "Classifiers", "value": joinMapFloat32(reply.Hashes[0].Cy.Result.Classifiers), "short": true},
+							{"title": "Score", "value": fmt.Sprintf("%v", reply.Hashes[i].Cy.Result.GeneralScore), "short": true},
+							{"title": "Classifiers", "value": joinMapFloat32(reply.Hashes[i].Cy.Result.Classifiers), "short": true},
 						},
 					})
 				}
@@ -761,7 +784,7 @@ func (b *Bot) handleVerbose(team, text, channel string, sub *subscription) {
 	}
 }
 
-func (b *Bot) handleConfig(team string, msg slack.Response, sub *subscription) {
+func (b *Bot) handleConfig(team string, msg util.Object, sub *subscription) {
 	postMessage := map[string]interface{}{
 		"channel": msg.S("channel"),
 		"as_user": true,
@@ -874,6 +897,40 @@ func (b *Bot) handleXFE(team, text, channel string, sub *subscription) {
 		} else {
 			postMessage["text"] = "Error setting XFE key - no worries, we are handling it"
 			logrus.WithError(err).Warnf("Unable to set XFE key for team %s", team)
+		}
+	} else {
+		postMessage["text"] = "Sorry, I could not understand you."
+	}
+	if _, err := sub.s.Do("POST", "chat.postMessage", postMessage); err != nil {
+		logrus.Warnf("Error posting config message - %v", err)
+	}
+}
+
+func (b *Bot) handleAF(team, text, channel string, sub *subscription) {
+	postMessage := map[string]interface{}{
+		"channel": channel,
+		"as_user": true,
+	}
+	parts := strings.Split(text, " ")
+	if len(parts) == 2 {
+		if parts[1] == "-" {
+			sub.team.AFKey = ""
+			err := b.r.SetTeam(sub.team)
+			if err == nil {
+				postMessage["text"] = "Cleared AF key - using default"
+			} else {
+				postMessage["text"] = "Error clearing AF key - no worries, we are handling it"
+				logrus.WithError(err).Warnf("Unable to clear AF key for team %s", team)
+			}
+		} else {
+			sub.team.AFKey = parts[1]
+			err := b.r.SetTeam(sub.team)
+			if err == nil {
+				postMessage["text"] = "AF key set."
+			} else {
+				postMessage["text"] = "Error setting AF key - no worries, we are handling it"
+				logrus.WithError(err).Warnf("Unable to set AF key for team %s", team)
+			}
 		}
 	} else {
 		postMessage["text"] = "Sorry, I could not understand you."

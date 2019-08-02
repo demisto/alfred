@@ -92,7 +92,7 @@ var (
 	sha256Reg = regexp.MustCompile("\\b[a-fA-F\\d]{64}\\b")
 )
 
-func (b *Bot) HandleMessage(msg slack.Response) {
+func (b *Bot) HandleMessage(msg util.Object) {
 	if msg == nil {
 		return
 	}
@@ -109,7 +109,7 @@ func (b *Bot) HandleMessage(msg slack.Response) {
 			return
 		}
 	}
-	msg = msg.R("event")
+	msg = msg.O("event")
 	msgType := msg.S("type")
 	switch msgType {
 	case "message":
@@ -137,7 +137,7 @@ func (b *Bot) HandleMessage(msg slack.Response) {
 		// If we need to handle the message, pass it to the queue
 		if push {
 			logrus.Debugf("Handling message - %+v\n", util.ToJSONString(msg))
-			workReq := domain.WorkRequestFromMessage(msg, sub.team.BotToken, sub.team.VTKey, sub.team.XFEKey, sub.team.XFEPass)
+			workReq := domain.WorkRequestFromMessage(msg, sub.team.BotToken, sub.team.VTKey, sub.team.XFEKey, sub.team.XFEPass, sub.team.AFKey)
 			logrus.Debug("Pushing to queue")
 			ctx := &domain.Context{Team: team, User: msgUser, Type: msgType, Channel: channel, OriginalUser: msgUser}
 			workReq.ReplyQueue, workReq.Context = util.Hostname, ctx
@@ -159,6 +159,8 @@ func (b *Bot) HandleMessage(msg slack.Response) {
 				case strings.HasPrefix(text, "vt "):
 					b.handleVT(team, text, channel, sub)
 				case strings.HasPrefix(text, "xfe "):
+					b.handleXFE(team, text, channel, sub)
+				case strings.HasPrefix(text, "af "):
 					b.handleXFE(team, text, channel, sub)
 				}
 			}

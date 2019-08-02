@@ -102,6 +102,7 @@ type Team struct {
 	VTKey       string     `json:"vt_key" db:"vt_key"`
 	XFEKey      string     `json:"xfe_key" db:"xfe_key"`
 	XFEPass     string     `json:"xfe_pass" db:"xfe_pass"`
+	AFKey       string     `json:"af_key" db:"af_key"`
 }
 
 // ClearToken is returned from the encrypted token
@@ -136,6 +137,14 @@ func (t *Team) ClearXFEPass() (string, error) {
 	return "", nil
 }
 
+// ClearAFKey is returned from the encrypted af key
+func (t *Team) ClearAFKey() (string, error) {
+	if t.AFKey != "" {
+		return util.Decrypt(t.AFKey, conf.Options.Security.DBKey)
+	}
+	return "", nil
+}
+
 // SecureToken is returned from the clear token
 func (t *Team) SecureToken() (string, error) {
 	if t.BotToken != "" {
@@ -164,6 +173,14 @@ func (t *Team) SecureXFEKey() (string, error) {
 func (t *Team) SecureXFEPass() (string, error) {
 	if t.XFEPass != "" {
 		return util.Encrypt(t.XFEPass, conf.Options.Security.DBKey)
+	}
+	return "", nil
+}
+
+// SecureAFKey is returned from the clear AF key
+func (t *Team) SecureAFKey() (string, error) {
+	if t.AFKey != "" {
+		return util.Encrypt(t.AFKey, conf.Options.Security.DBKey)
 	}
 	return "", nil
 }

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/demisto/alfred/slack"
+	"github.com/demisto/alfred/autofocus"
 	"github.com/demisto/alfred/util"
 	"github.com/demisto/goxforce"
 	"github.com/demisto/infinigo"
@@ -67,11 +67,12 @@ type WorkRequest struct {
 	VTKey      string      `json:"vt_key"`   // This team has his own vt key
 	XFEKey     string      `json:"xfe_key"`  // This team has his own xfe key
 	XFEPass    string      `json:"xfe_pass"` // This team has his own xfe pass
+	AFKey      string      `json:"af_key"`   // This team has his own AutoFocus key pass
 }
 
 // WorkRequestFromMessage converts a message to a work request
-func WorkRequestFromMessage(msg slack.Response, token, vtKey, xfeKey, xfePass string) *WorkRequest {
-	req := &WorkRequest{VTKey: vtKey, XFEKey: xfeKey, XFEPass: xfePass}
+func WorkRequestFromMessage(msg util.Object, token, vtKey, xfeKey, xfePass, afKey string) *WorkRequest {
+	req := &WorkRequest{VTKey: vtKey, XFEKey: xfeKey, XFEPass: xfePass, AFKey: afKey}
 	switch msg.S("type") {
 	case "message":
 		switch msg.S("subtype") {
@@ -84,7 +85,7 @@ func WorkRequestFromMessage(msg slack.Response, token, vtKey, xfeKey, xfePass st
 				if filesArr, ok := files.([]interface{}); ok {
 					if len(filesArr) > 0 {
 						if file, ok := filesArr[0].(map[string]interface{}); ok {
-							fileResponse := slack.Response(file)
+							fileResponse := util.Object(file)
 							req.MessageID, req.Type, req.File = msg.S("ts"), "file", File{ID: fileResponse.S("id"),
 								URL: fileResponse.S("url_private"), Name: fileResponse.S("name"), Size: fileResponse.I("size"), Token: token}
 						} else {
@@ -148,6 +149,12 @@ type CyHashReply struct {
 	Result infinigo.QueryResponse `json:"result"`
 }
 
+// AFHashReply ....
+type AFHashReply struct {
+	Error  string               `json:"error"`
+	Result autofocus.Reputation `json:"result"`
+}
+
 // HashReply holds the information about a hash
 type HashReply struct {
 	Details string       `json:"details"`
@@ -155,6 +162,7 @@ type HashReply struct {
 	XFE     XfeHashReply `json:"xfe"`
 	VT      VtHashReply  `json:"vt"`
 	Cy      CyHashReply  `json:"cy"`
+	AF      AFHashReply  `json:"af"`
 }
 
 type XfeURLReply struct {
@@ -233,6 +241,7 @@ type MaliciousContent struct {
 	XFE         string `json:"xfe"`
 	Cy          string `json:"cy"`
 	ClamAV      string `json:"clamav"`
+	AF          string `json:"af"`
 }
 
 // UniqueID of the message

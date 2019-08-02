@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/demisto/alfred/autofocus"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/queue"
@@ -39,6 +40,7 @@ type Worker struct {
 	vt   *govt.Client
 	cy   *infinigo.Client
 	clam *clamEngine
+	af   *autofocus.Client
 }
 
 // NewWorker that loads work messages from the queue
@@ -72,6 +74,7 @@ func NewWorker(q queue.Queue) (*Worker, error) {
 		vt:   vt,
 		cy:   cy,
 		clam: clam,
+		af:   &autofocus.Client{Token: conf.Options.AF},
 	}, nil
 }
 
@@ -124,7 +127,7 @@ func (w *Worker) Start() {
 	}
 }
 
-func (w *Worker) localVTXfe(request *domain.WorkRequest) (*goxforce.Client, *govt.Client) {
+func (w *Worker) localVTXfe(request *domain.WorkRequest) (*goxforce.Client, *govt.Client, *autofocus.Client) {
 	vt := w.vt
 	if request.VTKey != "" {
 		vtTmp, err := govt.New(
@@ -143,13 +146,17 @@ func (w *Worker) localVTXfe(request *domain.WorkRequest) (*goxforce.Client, *gov
 			xfe = xfeTmp
 		}
 	}
-	return xfe, vt
+	af := w.af
+	if request.AFKey != "" {
+		af = &autofocus.Client{Token: request.AFKey}
+	}
+	return xfe, vt, af
 }
 
 func (w *Worker) handleURL(request *domain.WorkRequest, reply *domain.WorkReply) {
 	text := request.Text
 	online := request.Online
-	xfe, vt := w.localVTXfe(request)
+	xfe, vt, _ := w.localVTXfe(request)
 	for {
 		start := strings.Index(text, "<http")
 		if start < 0 {
@@ -223,7 +230,7 @@ func (w *Worker) handleURL(request *domain.WorkRequest, reply *domain.WorkReply)
 func (w *Worker) handleIP(request *domain.WorkRequest, reply *domain.WorkReply) {
 	text := request.Text
 	online := request.Online
-	xfe, vt := w.localVTXfe(request)
+	xfe, vt, _ := w.localVTXfe(request)
 	ips := ipReg.FindAllString(text, -1)
 	for _, ip := range ips {
 		reply.IPs = append(reply.IPs, domain.IPReply{})
@@ -307,7 +314,7 @@ func (w *Worker) handleIP(request *domain.WorkRequest, reply *domain.WorkReply) 
 
 func (w *Worker) handleHashes(request *domain.WorkRequest, reply *domain.WorkReply) {
 	text := request.Text
-	xfe, vt := w.localVTXfe(request)
+	xfe, vt, af := w.localVTXfe(request)
 	hashes := md5Reg.FindAllString(text, -1)
 	hashes = append(hashes, sha1Reg.FindAllString(text, -1)...)
 	hashes = append(hashes, sha256Reg.FindAllString(text, -1)...)
@@ -316,7 +323,7 @@ func (w *Worker) handleHashes(request *domain.WorkRequest, reply *domain.WorkRep
 		reply.Type |= domain.ReplyTypeHash
 		res.Details = hash
 		var wg sync.WaitGroup
-		wg.Add(3)
+		wg.Add(4)
 		go func() {
 			defer wg.Done()
 			xfeResp, err := xfe.MalwareDetails(hash)
@@ -352,14 +359,24 @@ func (w *Worker) handleHashes(request *domain.WorkRequest, reply *domain.WorkRep
 				}
 			}
 		}()
+		go func() {
+			defer wg.Done()
+			afResp := af.HashReputation(hash)
+			if afResp != nil {
+				res.AF.Result = *afResp
+			} else {
+				res.AF.Error = "Sample not found"
+			}
+		}()
 		wg.Wait()
 		res.Result = domain.ResultUnknown
 		if len(res.XFE.Malware.Family) > 0 || len(res.XFE.Malware.Origins.External.Family) > 0 ||
 			res.VT.FileReport.Positives >= numOfPositivesToConvictForFiles ||
-			res.Cy.Result.GeneralScore < cyScoreToConvict {
+			res.Cy.Result.GeneralScore < cyScoreToConvict || res.AF.Result.Malware {
 			// This is known bad scenario
 			res.Result = domain.ResultDirty
-		} else if !res.XFE.NotFound || res.VT.FileReport.ResponseCode == 1 || res.Cy.Result.StatusCode == 1 {
+		} else if !res.XFE.NotFound || res.VT.FileReport.ResponseCode == 1 || res.Cy.Result.StatusCode == 1 ||
+			!res.AF.Result.Created.IsZero() && !res.AF.Result.Malware {
 			// At least one of reputation services found this to be known good
 			// Keep the default
 			res.Result = domain.ResultClean

@@ -83,7 +83,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	errStr := r.FormValue("error")
 	if errStr != "" {
 		WriteError(w, &Error{"oauth_err", 401, "Slack OAuth Error", errStr})
-		logrus.Warnf("Got an error from Slack - %s", errStr)
+		logrus.Warnf("got an error from Slack - %s", errStr)
 		return
 	}
 	if state == "" || code == "" {
@@ -107,7 +107,7 @@ func (ac *AppContext) loginOAuth(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		WriteError(w, &Error{"oauth_err", 401, "Slack OAuth Error", err.Error()})
-		logrus.Warnf("Got an error exchanging code for token - %v", err)
+		logrus.WithError(err).Warnf("got an error exchanging code for token")
 		return
 	}
 	logrus.Debugln("OAuth successful, creating Slack client")

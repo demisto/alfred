@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import autobind from 'autobind-decorator';
 import { compareDate, dateToString, keysToString } from '../../utils/utils';
-import { flatten, sortBy } from 'lodash';
+import { flatten } from 'lodash';
 import Table from '../UIComponents/Table';
 import { ReputationHeader } from './ReputationHeader';
 import { ExpandableHeader } from '../UIComponents/ExpandableHeader';
@@ -11,7 +11,7 @@ import { HeaderSection } from './HeaderSection';
 
 function foundXFE(xfe) {
   const { notFound, resolve } = xfe || {};
-  return !notFound || resolve && resolve.A;
+  return !notFound || (resolve && resolve.A);
 }
 
 class URLDetails extends Component {
@@ -52,7 +52,7 @@ class URLDetails extends Component {
 
     const headers = [{
       label: 'Risk Score:',
-      value: urlDetails && urlDetails.score || 'Unknown'
+      value: (urlDetails && urlDetails.score) || 'Unknown'
     }, {
       label: 'Categories:',
       value: keysToString(urlDetails && urlDetails.cats)
@@ -130,13 +130,13 @@ class URLDetails extends Component {
 
     const headers = [{
       label: 'Scan Date:',
-      value: urlReport && urlReport.scan_date || 'Unknown'
+      value: (urlReport && urlReport.scan_date) || 'Unknown'
     }, {
       label: 'Positives:',
-      value: urlReport && urlReport.positives || 0
+      value: (urlReport && urlReport.positives) || 0
     }, {
       label: 'Total:',
-      value: urlReport && urlReport.total || 0
+      value: (urlReport && urlReport.total) || 0
     }];
 
     return (
@@ -157,7 +157,7 @@ class URLDetails extends Component {
             <div className="row">
               <Table
                 title="Positive Detections"
-                data={Object.entries(urlReport && urlReport.scans || {})
+                data={Object.entries((urlReport && urlReport.scans) || {})
                   .filter(([engine, scan]) => scan.detected)
                   .map(([engine, scan]) => ({
                     ...scan,

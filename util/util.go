@@ -130,6 +130,24 @@ func ToJSONStringNoIndent(in interface{}) string {
 	return string(b)
 }
 
+// SplitAndTrim , split by token "," and trim rach result
+func SplitAndTrim(s string) []string {
+	return SplitAndTrimByChar(s, ",")
+}
+
+// SplitAndTrimByChar , split by sep and trim rach result
+func SplitAndTrimByChar(s string, sep string) []string {
+	if len(s) == 0 {
+		return make([]string, 0)
+	}
+	arr := strings.Split(s, sep)
+	resultArr := make([]string, len(arr))
+	for i := range arr {
+		resultArr[i] = strings.TrimSpace(arr[i])
+	}
+	return resultArr
+}
+
 // Hostname serves as the default queue name for work queues
 var Hostname string
 
