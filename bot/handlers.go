@@ -127,7 +127,8 @@ func (w *Worker) Start() {
 	}
 }
 
-func (w *Worker) localVTXfe(request *domain.WorkRequest) (*goxforce.Client, *govt.Client, *autofocus.Client) {
+// localGetReputation - get reputation from VT, XFE and AF
+func (w *Worker) localGetReputation(request *domain.WorkRequest) (*goxforce.Client, *govt.Client, *autofocus.Client) {
 	vt := w.vt
 	if request.VTKey != "" {
 		vtTmp, err := govt.New(
@@ -156,7 +157,7 @@ func (w *Worker) localVTXfe(request *domain.WorkRequest) (*goxforce.Client, *gov
 func (w *Worker) handleURL(request *domain.WorkRequest, reply *domain.WorkReply) {
 	text := request.Text
 	online := request.Online
-	xfe, vt, _ := w.localVTXfe(request)
+	xfe, vt, _ := w.localGetReputation(request)
 	for {
 		start := strings.Index(text, "<http")
 		if start < 0 {
@@ -230,7 +231,7 @@ func (w *Worker) handleURL(request *domain.WorkRequest, reply *domain.WorkReply)
 func (w *Worker) handleIP(request *domain.WorkRequest, reply *domain.WorkReply) {
 	text := request.Text
 	online := request.Online
-	xfe, vt, _ := w.localVTXfe(request)
+	xfe, vt, _ := w.localGetReputation(request)
 	ips := ipReg.FindAllString(text, -1)
 	for _, ip := range ips {
 		reply.IPs = append(reply.IPs, domain.IPReply{})
@@ -314,7 +315,7 @@ func (w *Worker) handleIP(request *domain.WorkRequest, reply *domain.WorkReply) 
 
 func (w *Worker) handleHashes(request *domain.WorkRequest, reply *domain.WorkReply) {
 	text := request.Text
-	xfe, vt, af := w.localVTXfe(request)
+	xfe, vt, af := w.localGetReputation(request)
 	hashes := md5Reg.FindAllString(text, -1)
 	hashes = append(hashes, sha1Reg.FindAllString(text, -1)...)
 	hashes = append(hashes, sha256Reg.FindAllString(text, -1)...)

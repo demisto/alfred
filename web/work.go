@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/demisto/alfred/util"
-	"github.com/wayn3h0/go-uuid"
+	"github.com/demisto/go-uuid"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/domain"
