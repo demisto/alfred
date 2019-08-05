@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/demisto/alfred/util"
-	"github.com/wayn3h0/go-uuid"
-
 	"github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/slack"
+	"github.com/demisto/alfred/util"
+	"github.com/demisto/go-uuid"
 )
 
 func (ac *AppContext) events(w http.ResponseWriter, r *http.Request) {

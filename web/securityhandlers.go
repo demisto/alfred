@@ -11,7 +11,7 @@ import (
 	"github.com/demisto/alfred/domain"
 	"github.com/demisto/alfred/slack"
 	"github.com/demisto/alfred/util"
-	"github.com/wayn3h0/go-uuid"
+	"github.com/demisto/go-uuid"
 	"golang.org/x/oauth2"
 )
 
