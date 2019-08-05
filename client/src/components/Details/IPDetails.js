@@ -62,7 +62,7 @@ class IPDetails extends Component {
       value: ipReputation.score
     }, {
       label: 'Country:',
-      value: ipReputation.geo && ipReputation.geo.country || 'Unknown'
+      value: (ipReputation.geo && ipReputation.geo.country) || 'Unknown'
     }, {
       label: 'Categories:',
       value: keysToString(ipReputation.cats)
@@ -97,7 +97,7 @@ class IPDetails extends Component {
                 />
                 <Table
                   title="History"
-                  data={(ipHistory && ipHistory.history  || []).sort(compareDate('created')).map(history => ({
+                  data={((ipHistory && ipHistory.history)  || []).sort(compareDate('created')).map(history => ({
                     ...history,
                     category: keysToString(history.cats),
                     location: (history.geo && history.geo.country) || 'Unknown',

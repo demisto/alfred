@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/demisto/alfred/util"
 	"github.com/wayn3h0/go-uuid"
 
 	"github.com/Sirupsen/logrus"
@@ -12,7 +13,7 @@ import (
 )
 
 func (ac *AppContext) events(w http.ResponseWriter, r *http.Request) {
-	msg := getRequestBody(r).(*slack.Response)
+	msg := getRequestBody(r).(*util.Object)
 	if msg.S("type") == "url_verification" {
 		w.Write([]byte(msg.S("challenge")))
 	} else {
@@ -58,6 +59,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 			VTKey:      t.VTKey,
 			XFEKey:     t.XFEKey,
 			XFEPass:    t.XFEPass,
+			AFKey:      t.AFKey,
 			Context:    &domain.Context{},
 		}
 	} else {
@@ -87,6 +89,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 					VTKey:      t.VTKey,
 					XFEKey:     t.XFEKey,
 					XFEPass:    t.XFEPass,
+					AFKey:      t.AFKey,
 				}
 				break
 			}
@@ -103,6 +106,7 @@ func (ac *AppContext) work(w http.ResponseWriter, r *http.Request) {
 				VTKey:      t.VTKey,
 				XFEKey:     t.XFEKey,
 				XFEPass:    t.XFEPass,
+				AFKey:      t.AFKey,
 			}
 		}
 	}

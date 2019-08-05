@@ -10,7 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/demisto/alfred/conf"
 	"github.com/demisto/alfred/domain"
-	"github.com/demisto/alfred/slack"
+	"github.com/demisto/alfred/util"
 	"github.com/julienschmidt/httprouter"
 	"github.com/justinas/alice"
 )
@@ -124,7 +124,7 @@ func New(appC *AppContext) *Router {
 	r.Get("/work", commonHandlers.ThenFunc(appC.work))
 	r.Post("/join", commonHandlers.Append(contentTypeHandler, bodyHandler(join{})).ThenFunc(appC.joinSlack))
 	r.Get("/messages", commonHandlers.ThenFunc(appC.totalMessages))
-	r.Post("/events", eventsHandler.Append(contentTypeHandler, bodyHandler(slack.Response{})).ThenFunc(appC.events))
+	r.Post("/events", eventsHandler.Append(contentTypeHandler, bodyHandler(util.Object{})).ThenFunc(appC.events))
 	// Static
 	r.Get("/", staticHandlers.ThenFunc(pageHandler("/index.html")))
 	r.Get("/conf", staticHandlers.ThenFunc(pageHandler("/conf.html")))

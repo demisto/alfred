@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS teams (
 	vt_key VARCHAR(512),
 	xfe_key VARCHAR(512),
 	xfe_pass VARCHAR(512),
+	af_key VARCHAR(512),
 	CONSTRAINT teams_pk PRIMARY KEY (id),
 	CONSTRAINT teams_external_id_uk UNIQUE (external_id)
 );
@@ -118,6 +119,7 @@ CREATE TABLE IF NOT EXISTS convicted (
 	xfe VARCHAR(128),
 	clamav VARCHAR(128),
 	cy VARCHAR(128),
+	af VARCHAR(128),
 	CONSTRAINT convicted_pk PRIMARY KEY (team, channel, message_id),
 	CONSTRAINT convicted_team_fk FOREIGN KEY (team) REFERENCES teams (id)
 );
@@ -253,7 +255,11 @@ func clearTeamFields(t *domain.Team) error {
 	if err != nil {
 		return err
 	}
-	t.BotToken, t.VTKey, t.XFEKey, t.XFEPass = clearToken, clearVTKey, clearXFEKey, clearXFEPass
+	clearAFKey, err := t.ClearAFKey()
+	if err != nil {
+		return err
+	}
+	t.BotToken, t.VTKey, t.XFEKey, t.XFEPass, t.AFKey = clearToken, clearVTKey, clearXFEKey, clearXFEPass, clearAFKey
 	return nil
 }
 
@@ -373,9 +379,13 @@ func (r *MySQL) SetTeamAndUser(team *domain.Team, user *domain.User) error {
 		if err != nil {
 			return err
 		}
+		secureAFKey, err := team.SecureAFKey()
+		if err != nil {
+			return err
+		}
 		_, err = tx.Exec(`INSERT INTO teams (
-id, name, status, email_domain, domain, plan, external_id, created, bot_user_id, bot_token, vt_key, xfe_key, xfe_pass)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+id, name, status, email_domain, domain, plan, external_id, created, bot_user_id, bot_token, vt_key, xfe_key, xfe_pass, af_key)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 name = ?,
 status = ?,
@@ -388,9 +398,10 @@ bot_user_id = ?,
 bot_token = ?,
 vt_key = ?,
 xfe_key = ?,
-xfe_pass = ?`,
-			team.ID, team.Name, team.Status, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created, team.BotUserID, secureToken, secureVTKey, secureXFEKey, secureXFEPass,
-			team.Name, team.Status, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created, team.BotUserID, secureToken, secureVTKey, secureXFEKey, secureXFEPass)
+xfe_pass = ?,
+af_key = ?`,
+			team.ID, team.Name, team.Status, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created, team.BotUserID, secureToken, secureVTKey, secureXFEKey, secureXFEPass, secureAFKey,
+			team.Name, team.Status, team.EmailDomain, team.Domain, team.Plan, team.ExternalID, team.Created, team.BotUserID, secureToken, secureVTKey, secureXFEKey, secureXFEPass, secureAFKey)
 		if err != nil {
 			return err
 		}
@@ -694,14 +705,14 @@ sum(ips_clean) as ips_clean, sum(ips_dirty) as ips_dirty, sum(ips_unknown) as ip
 
 func (r *MySQL) TotalMessages() (int, error) {
 	var sum int
-	err := r.db.Get(&sum, `SELECT sum(messages) FROM team_statistics`)
+	err := r.db.Get(&sum, `SELECT ifnull(sum(messages), 0) FROM team_statistics`)
 	return sum, err
 }
 
 func (r *MySQL) StoreMaliciousContent(convicted *domain.MaliciousContent) error {
-	_, err := r.db.Exec("INSERT INTO convicted (team, channel, message_id, ts, content_type, content, file_name, vt, xfe, clamav, cy) VALUES (?, ?, ?, now(), ?, ?, ?, ?, ?, ?, ?)",
+	_, err := r.db.Exec("INSERT INTO convicted (team, channel, message_id, ts, content_type, content, file_name, vt, xfe, clamav, cy, af) VALUES (?, ?, ?, now(), ?, ?, ?, ?, ?, ?, ?, ?)",
 		convicted.Team, convicted.Channel, convicted.MessageID, convicted.ContentType, util.Substr(convicted.Content, 0, 128), util.Substr(convicted.FileName, 0, 128),
-		util.Substr(convicted.VT, 0, 128), util.Substr(convicted.XFE, 0, 128), util.Substr(convicted.ClamAV, 0, 128), util.Substr(convicted.Cy, 0, 128))
+		util.Substr(convicted.VT, 0, 128), util.Substr(convicted.XFE, 0, 128), util.Substr(convicted.ClamAV, 0, 128), util.Substr(convicted.Cy, 0, 128), util.Substr(convicted.AF, 0, 128))
 	return err
 }
 
