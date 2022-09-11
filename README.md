@@ -2,6 +2,9 @@
 
 A Slack bot to add security info to messages containing URLs, hashes and IPs. You can see it in action at [dbot.demisto.com](https://dbot.demisto.com).
 
+## Deprecation Notice
+DBot has been deprecated and is no longer supported by the Demisto team.
+
 ## Authors
 This project was built by the [Demisto](https://www.demisto.com) team
 
