@@ -1,0 +1,26 @@
+{
+  "volo": {
+    "dependencies": {
+      "alfred": "local:/Users/stevenjames2/Documents/alfred"
+    }
+  },
+  "name": "alfred",
+  "description": "A Slack bot to add security info to messages containing URLs, hashes and IPs. You can see it in action at [dbot.demisto.com](https://dbot.demisto.com).",
+  "version": "1.1.1",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "test": "gulp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/princeofdarkness76/alfred.git"
+  },
+  "author": "princeofdarkness76",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/princeofdarkness76/alfred/issues"
+  },
+  "homepage": "https://github.com/princeofdarkness76/alfred#readme"
+}
